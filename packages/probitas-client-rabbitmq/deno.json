@@ -1,0 +1,12 @@
+{
+  "name": "@probitas/client-rabbitmq",
+  "version": "0.0.0",
+  "exports": "./mod.ts",
+  "publish": {
+    "exclude": ["**/*_test.ts", "**/*_bench.ts"]
+  },
+  "imports": {
+    "@probitas/client": "jsr:@probitas/client@^0",
+    "amqplib": "npm:amqplib@^0.10.5"
+  }
+}

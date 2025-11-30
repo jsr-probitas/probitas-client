@@ -100,6 +100,15 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: ${{ env.DENO_VERSION }}
+      # MongoDB is started via action instead of services because:
+      # - GitHub Actions services don't support custom command options
+      # - Transactions require replica set mode (--replSet flag)
+      # - supercharge/mongodb-github-action handles replica set initialization
+      - name: Start MongoDB with Replica Set
+        uses: supercharge/mongodb-github-action@1.12.0
+        with:
+          mongodb-version: "7.0"
+          mongodb-replica-set: rs0
       - run: |
           deno task test:coverage
         timeout-minutes: 5

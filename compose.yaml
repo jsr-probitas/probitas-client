@@ -85,6 +85,28 @@ services:
       timeout: 5s
       retries: 10
 
+  # MongoDB server for integration testing (replica set mode for transaction support)
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: testdb
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: >
+        mongosh --eval "
+          try {
+            rs.status().ok
+          } catch(e) {
+            rs.initiate({_id:'rs0', members:[{_id:0, host:'localhost:27017'}]});
+            1
+          }
+        "
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
   # RabbitMQ server for integration testing
   rabbitmq:
     image: rabbitmq:3-management

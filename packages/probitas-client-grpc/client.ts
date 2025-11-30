@@ -3,6 +3,15 @@ import * as protoLoader from "@grpc/proto-loader";
 import { Client as ReflectionClient } from "grpc-reflection-js";
 import { Buffer } from "node:buffer";
 import { type CommonOptions, ConnectionError } from "@probitas/client";
+import {
+  GrpcError,
+  GrpcInternalError,
+  GrpcNotFoundError,
+  GrpcPermissionDeniedError,
+  GrpcResourceExhaustedError,
+  GrpcUnauthenticatedError,
+  GrpcUnavailableError,
+} from "./errors.ts";
 import type { GrpcResponse } from "./response.ts";
 import { GrpcResponseImpl } from "./response.ts";
 import type { GrpcStatusCode } from "./status.ts";
@@ -46,6 +55,13 @@ export interface GrpcClientConfig extends CommonOptions {
    * Proto loader options.
    */
   readonly protoLoaderOptions?: protoLoader.Options;
+
+  /**
+   * Whether to throw GrpcError on non-OK responses (code !== 0).
+   * Can be overridden per-request via GrpcOptions.throwOnError.
+   * @default true
+   */
+  readonly throwOnError?: boolean;
 }
 
 /**
@@ -54,6 +70,13 @@ export interface GrpcClientConfig extends CommonOptions {
 export interface GrpcOptions extends CommonOptions {
   /** Metadata to send with the request. */
   readonly metadata?: Record<string, string>;
+
+  /**
+   * Whether to throw GrpcError on non-OK responses (code !== 0).
+   * Overrides GrpcClientConfig.throwOnError.
+   * @default true (when not specified in client config)
+   */
+  readonly throwOnError?: boolean;
 }
 
 /**
@@ -172,6 +195,56 @@ function createCallOptions(options?: GrpcOptions): grpc.CallOptions {
     callOptions.deadline = new Date(Date.now() + options.timeout);
   }
   return callOptions;
+}
+
+/**
+ * Create appropriate GrpcError subclass based on status code.
+ */
+function createGrpcError(
+  code: GrpcStatusCode,
+  message: string,
+  metadata?: Record<string, string>,
+): GrpcError {
+  const options = metadata ? { metadata } : undefined;
+
+  switch (code) {
+    case 5:
+      return new GrpcNotFoundError(message, options);
+    case 7:
+      return new GrpcPermissionDeniedError(message, options);
+    case 8:
+      return new GrpcResourceExhaustedError(message, options);
+    case 13:
+      return new GrpcInternalError(message, options);
+    case 14:
+      return new GrpcUnavailableError(message, options);
+    case 16:
+      return new GrpcUnauthenticatedError(message, options);
+    default:
+      return new GrpcError(
+        `gRPC error (code ${code}): ${message}`,
+        code,
+        message,
+        options,
+      );
+  }
+}
+
+/**
+ * Determine whether to throw on error based on config and options.
+ * Options take precedence over config, default is true.
+ */
+function shouldThrowOnError(
+  config: GrpcClientConfig,
+  options?: GrpcOptions,
+): boolean {
+  if (options?.throwOnError !== undefined) {
+    return options.throwOnError;
+  }
+  if (config.throwOnError !== undefined) {
+    return config.throwOnError;
+  }
+  return true;
 }
 
 /**
@@ -381,6 +454,7 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     const client = await this.#getServiceClientAsync(servicePath);
     const metadata = createMetadata(this.config.metadata, options?.metadata);
     const callOptions = createCallOptions(options);
+    const throwOnError = shouldThrowOnError(this.config, options);
 
     const startTime = performance.now();
 
@@ -401,14 +475,23 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
           const duration = performance.now() - startTime;
 
           if (error) {
+            const code = (error.code ?? 2) as GrpcStatusCode;
+            const errorMessage = error.message ?? "Unknown error";
+            const errorMetadata = error.metadata
+              ? metadataToRecord(error.metadata)
+              : {};
+
+            if (throwOnError) {
+              reject(createGrpcError(code, errorMessage, errorMetadata));
+              return;
+            }
+
             resolve(
               new GrpcResponseImpl({
-                code: (error.code ?? 2) as GrpcStatusCode,
-                message: error.message ?? "Unknown error",
+                code,
+                message: errorMessage,
                 body: null,
-                metadata: error.metadata
-                  ? metadataToRecord(error.metadata)
-                  : {},
+                metadata: errorMetadata,
                 duration,
                 deserializer: (bytes) => {
                   const text = new TextDecoder().decode(bytes);
@@ -447,6 +530,7 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     const client = await this.#getServiceClientAsync(servicePath);
     const metadata = createMetadata(this.config.metadata, options?.metadata);
     const callOptions = createCallOptions(options);
+    const throwOnError = shouldThrowOnError(this.config, options);
 
     const methodFn = client[methodName];
     if (typeof methodFn !== "function") {
@@ -503,13 +587,21 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
       }
 
       if (item.type === "error") {
+        const code = (item.error?.code ?? 2) as GrpcStatusCode;
+        const errorMessage = item.error?.message ?? "Unknown error";
+        const errorMetadata = item.error?.metadata
+          ? metadataToRecord(item.error.metadata)
+          : {};
+
+        if (throwOnError) {
+          throw createGrpcError(code, errorMessage, errorMetadata);
+        }
+
         yield new GrpcResponseImpl({
-          code: (item.error?.code ?? 2) as GrpcStatusCode,
-          message: item.error?.message ?? "Unknown error",
+          code,
+          message: errorMessage,
           body: null,
-          metadata: item.error?.metadata
-            ? metadataToRecord(item.error.metadata)
-            : {},
+          metadata: errorMetadata,
           duration,
         });
         break;
@@ -539,6 +631,7 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     const client = await this.#getServiceClientAsync(servicePath);
     const metadata = createMetadata(this.config.metadata, options?.metadata);
     const callOptions = createCallOptions(options);
+    const throwOnError = shouldThrowOnError(this.config, options);
 
     const methodFn = client[methodName];
     if (typeof methodFn !== "function") {
@@ -557,14 +650,23 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
           const duration = performance.now() - startTime;
 
           if (error) {
+            const code = (error.code ?? 2) as GrpcStatusCode;
+            const errorMessage = error.message ?? "Unknown error";
+            const errorMetadata = error.metadata
+              ? metadataToRecord(error.metadata)
+              : {};
+
+            if (throwOnError) {
+              reject(createGrpcError(code, errorMessage, errorMetadata));
+              return;
+            }
+
             resolve(
               new GrpcResponseImpl({
-                code: (error.code ?? 2) as GrpcStatusCode,
-                message: error.message ?? "Unknown error",
+                code,
+                message: errorMessage,
                 body: null,
-                metadata: error.metadata
-                  ? metadataToRecord(error.metadata)
-                  : {},
+                metadata: errorMetadata,
                 duration,
               }),
             );
@@ -610,6 +712,7 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     const client = await this.#getServiceClientAsync(servicePath);
     const metadata = createMetadata(this.config.metadata, options?.metadata);
     const callOptions = createCallOptions(options);
+    const throwOnError = shouldThrowOnError(this.config, options);
 
     const methodFn = client[methodName];
     if (typeof methodFn !== "function") {
@@ -677,13 +780,21 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
       }
 
       if (item.type === "error") {
+        const code = (item.error?.code ?? 2) as GrpcStatusCode;
+        const errorMessage = item.error?.message ?? "Unknown error";
+        const errorMetadata = item.error?.metadata
+          ? metadataToRecord(item.error.metadata)
+          : {};
+
+        if (throwOnError) {
+          throw createGrpcError(code, errorMessage, errorMetadata);
+        }
+
         yield new GrpcResponseImpl({
-          code: (item.error?.code ?? 2) as GrpcStatusCode,
-          message: item.error?.message ?? "Unknown error",
+          code,
+          message: errorMessage,
           body: null,
-          metadata: item.error?.metadata
-            ? metadataToRecord(item.error.metadata)
-            : {},
+          metadata: errorMetadata,
           duration,
         });
         break;

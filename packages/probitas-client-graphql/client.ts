@@ -297,11 +297,15 @@ class GraphqlClientImpl implements GraphqlClient {
       }
     } finally {
       // Clean up: send stop message and close WebSocket
+      ws.removeEventListener("message", messageHandler);
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ id: subscriptionId, type: "complete" }));
-        ws.close();
+        // Wait for WebSocket to close to avoid resource leaks
+        await new Promise<void>((resolve) => {
+          ws.onclose = () => resolve();
+          ws.close();
+        });
       }
-      ws.removeEventListener("message", messageHandler);
     }
   }
 

@@ -194,3 +194,22 @@ deno task test
 - Run all commands (git, deno, etc.) from within the worktree
 - If you need to check the root repository state, use absolute paths without
   changing directory
+
+### 6. Git Stash is Forbidden in Worktrees
+
+**NEVER use `git stash` in worktree environments.**
+
+Git stash is shared across all worktrees. This causes accidental cross-worktree
+contamination.
+
+**Use backup branch instead:**
+
+```bash
+git checkout -b "backup/$(git branch --show-current)/$(date +%Y%m%d-%H%M%S)"
+git commit -am "WIP: before risky refactoring"
+git checkout -
+git cherry-pick --no-commit HEAD@{1}
+```
+
+This creates a persistent backup branch while keeping changes in your working
+tree.

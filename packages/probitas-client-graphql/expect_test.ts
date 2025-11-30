@@ -355,3 +355,115 @@ Deno.test("expectGraphqlResponse.noData()", async (t) => {
     );
   });
 });
+
+Deno.test("expectGraphqlResponse.noErrors()", async (t) => {
+  await t.step("passes when no errors (alias for ok)", () => {
+    const response = createMockResponse({ data: { test: true }, errors: null });
+    expectGraphqlResponse(response).noErrors();
+  });
+
+  await t.step("passes when errors is empty array", () => {
+    const response = createMockResponse({ data: { test: true }, errors: [] });
+    expectGraphqlResponse(response).noErrors();
+  });
+
+  await t.step("throws when errors present", () => {
+    const response = createMockResponse({
+      errors: [{ message: "Error" }],
+    });
+    assertThrows(
+      () => expectGraphqlResponse(response).noErrors(),
+      Error,
+      "Expected ok response",
+    );
+  });
+});
+
+Deno.test("expectGraphqlResponse.error()", async (t) => {
+  await t.step("passes with string matcher when error contains message", () => {
+    const response = createMockResponse({
+      errors: [{ message: "User not found" }],
+    });
+    expectGraphqlResponse(response).error("not found");
+  });
+
+  await t.step("passes with RegExp matcher when error matches", () => {
+    const response = createMockResponse({
+      errors: [{ message: "User 123 not found" }],
+    });
+    expectGraphqlResponse(response).error(/User \d+ not found/);
+  });
+
+  await t.step("passes when any error matches RegExp", () => {
+    const response = createMockResponse({
+      errors: [
+        { message: "First error" },
+        { message: "User 456 not found" },
+      ],
+    });
+    expectGraphqlResponse(response).error(/User \d+ not found/);
+  });
+
+  await t.step("throws when no error matches string", () => {
+    const response = createMockResponse({
+      errors: [{ message: "Something else" }],
+    });
+    assertThrows(
+      () => expectGraphqlResponse(response).error("not found"),
+      Error,
+      'Expected an error matching "not found"',
+    );
+  });
+
+  await t.step("throws when no error matches RegExp", () => {
+    const response = createMockResponse({
+      errors: [{ message: "Something else" }],
+    });
+    assertThrows(
+      () => expectGraphqlResponse(response).error(/User \d+ not found/),
+      Error,
+      "Expected an error matching",
+    );
+  });
+
+  await t.step("throws when no errors", () => {
+    const response = createMockResponse({ data: { test: true }, errors: null });
+    assertThrows(
+      () => expectGraphqlResponse(response).error("error"),
+      Error,
+      "no errors present",
+    );
+  });
+});
+
+Deno.test("expectGraphqlResponse.noContent()", async (t) => {
+  await t.step("passes when data is null (alias for noData)", () => {
+    const response = createMockResponse({ data: null });
+    expectGraphqlResponse(response).noContent();
+  });
+
+  await t.step("throws when data is not null", () => {
+    const response = createMockResponse({ data: { test: true } });
+    assertThrows(
+      () => expectGraphqlResponse(response).noContent(),
+      Error,
+      "Expected no data, but data exists",
+    );
+  });
+});
+
+Deno.test("expectGraphqlResponse.hasContent()", async (t) => {
+  await t.step("passes when data is not null (alias for hasData)", () => {
+    const response = createMockResponse({ data: { test: true } });
+    expectGraphqlResponse(response).hasContent();
+  });
+
+  await t.step("throws when data is null", () => {
+    const response = createMockResponse({ data: null });
+    assertThrows(
+      () => expectGraphqlResponse(response).hasContent(),
+      Error,
+      "Expected data, but data is null",
+    );
+  });
+});

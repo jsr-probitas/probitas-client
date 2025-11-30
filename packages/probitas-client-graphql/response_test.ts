@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertInstanceOf } from "@std/assert";
 import { createGraphqlResponse } from "./response.ts";
 
 Deno.test("createGraphqlResponse", async (t) => {
@@ -13,7 +13,7 @@ Deno.test("createGraphqlResponse", async (t) => {
     });
 
     assertEquals(response.ok, true);
-    assertEquals(response.data, { user: { id: 1, name: "John" } });
+    assertEquals(response.data(), { user: { id: 1, name: "John" } });
     assertEquals(response.errors, null);
     assertEquals(response.duration, 100);
     assertEquals(response.status, 200);
@@ -31,7 +31,7 @@ Deno.test("createGraphqlResponse", async (t) => {
     });
 
     assertEquals(response.ok, false);
-    assertEquals(response.data, null);
+    assertEquals(response.data(), null);
     assertEquals(response.errors, errors);
   });
 
@@ -46,7 +46,7 @@ Deno.test("createGraphqlResponse", async (t) => {
     });
 
     assertEquals(response.ok, false);
-    assertEquals(response.data, { user: null });
+    assertEquals(response.data(), { user: null });
   });
 
   await t.step("ok is true when errors is empty array", () => {
@@ -87,5 +87,41 @@ Deno.test("createGraphqlResponse", async (t) => {
     });
 
     assertEquals(response.raw, rawResponse);
+  });
+
+  await t.step("includes headers from raw response", () => {
+    const rawResponse = new Response(null, {
+      headers: { "X-Custom-Header": "test-value" },
+    });
+    const response = createGraphqlResponse({
+      data: null,
+      errors: null,
+      extensions: undefined,
+      duration: 10,
+      status: 200,
+      raw: rawResponse,
+    });
+
+    assertInstanceOf(response.headers, Headers);
+    assertEquals(response.headers.get("X-Custom-Header"), "test-value");
+  });
+
+  await t.step("data() method returns typed data", () => {
+    interface User {
+      id: number;
+      name: string;
+    }
+    const response = createGraphqlResponse({
+      data: { user: { id: 1, name: "John" } },
+      errors: null,
+      extensions: undefined,
+      duration: 100,
+      status: 200,
+      raw: new Response(),
+    });
+
+    const result = response.data<{ user: User }>();
+    assertEquals(result?.user.id, 1);
+    assertEquals(result?.user.name, "John");
   });
 });

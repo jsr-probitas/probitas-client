@@ -1,4 +1,4 @@
-import type { GraphqlResponse } from "./types.ts";
+import type { GraphqlErrorItem, GraphqlResponse } from "./types.ts";
 
 /**
  * Fluent API for GraphQL response validation.
@@ -6,6 +6,9 @@ import type { GraphqlResponse } from "./types.ts";
 export interface GraphqlResponseExpectation {
   /** Assert that response has no errors */
   ok(): this;
+
+  /** Assert that response has no errors (alias for ok) */
+  noErrors(): this;
 
   /** Assert that response has errors */
   hasErrors(): this;
@@ -16,14 +19,23 @@ export interface GraphqlResponseExpectation {
   /** Assert that at least one error contains the message */
   errorContains(message: string): this;
 
+  /** Assert that at least one error message matches the string or regex */
+  error(messageMatcher: string | RegExp): this;
+
   /** Assert errors using custom matcher */
-  errorMatch(matcher: (errors: readonly { message: string }[]) => void): this;
+  errorMatch(matcher: (errors: readonly GraphqlErrorItem[]) => void): this;
 
   /** Assert that data is not null */
   hasData(): this;
 
+  /** Assert that data is not null (alias for hasData) */
+  hasContent(): this;
+
   /** Assert that data is null */
   noData(): this;
+
+  /** Assert that data is null (alias for noData) */
+  noContent(): this;
 
   /** Assert that data contains expected subset (deep partial match) */
   // deno-lint-ignore no-explicit-any
@@ -89,6 +101,10 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
     return this;
   }
 
+  noErrors(): this {
+    return this.ok();
+  }
+
   hasErrors(): this {
     if (this.#response.ok) {
       throw new Error("Expected response with errors, but got ok response");
@@ -121,7 +137,27 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
     return this;
   }
 
-  errorMatch(matcher: (errors: readonly { message: string }[]) => void): this {
+  error(messageMatcher: string | RegExp): this {
+    if (!this.#response.errors || this.#response.errors.length === 0) {
+      throw new Error(
+        `Expected an error matching "${messageMatcher}", but no errors present`,
+      );
+    }
+    const found = this.#response.errors.some((e) => {
+      if (typeof messageMatcher === "string") {
+        return e.message.includes(messageMatcher);
+      }
+      return messageMatcher.test(e.message);
+    });
+    if (!found) {
+      throw new Error(
+        `Expected an error matching "${messageMatcher}", but none found`,
+      );
+    }
+    return this;
+  }
+
+  errorMatch(matcher: (errors: readonly GraphqlErrorItem[]) => void): this {
     if (!this.#response.errors) {
       throw new Error("Cannot match errors: no errors present");
     }
@@ -130,28 +166,37 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
   }
 
   hasData(): this {
-    if (this.#response.data === null) {
+    if (this.#response.data() === null) {
       throw new Error("Expected data, but data is null");
     }
     return this;
   }
 
+  hasContent(): this {
+    return this.hasData();
+  }
+
   noData(): this {
-    if (this.#response.data !== null) {
+    if (this.#response.data() !== null) {
       throw new Error("Expected no data, but data exists");
     }
     return this;
   }
 
+  noContent(): this {
+    return this.noData();
+  }
+
   // deno-lint-ignore no-explicit-any
   dataContains<T = any>(subset: Partial<T>): this {
-    if (this.#response.data === null) {
+    const data = this.#response.data();
+    if (data === null) {
       throw new Error("Expected data to contain subset, but data is null");
     }
-    if (!containsSubset(this.#response.data, subset)) {
+    if (!containsSubset(data, subset)) {
       throw new Error(
         `Expected data to contain ${JSON.stringify(subset)}, got ${
-          JSON.stringify(this.#response.data)
+          JSON.stringify(data)
         }`,
       );
     }
@@ -160,10 +205,11 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
 
   // deno-lint-ignore no-explicit-any
   dataMatch<T = any>(matcher: (data: T) => void): this {
-    if (this.#response.data === null) {
+    const data = this.#response.data();
+    if (data === null) {
       throw new Error("Cannot match data: data is null");
     }
-    matcher(this.#response.data as T);
+    matcher(data as T);
     return this;
   }
 

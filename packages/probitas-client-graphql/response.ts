@@ -17,21 +17,28 @@ export interface GraphqlResponseOptions<T> {
  */
 class GraphqlResponseImpl<T> implements GraphqlResponse<T> {
   readonly ok: boolean;
-  readonly data: T | null;
   readonly errors: readonly GraphqlErrorItem[] | null;
   readonly extensions?: Record<string, unknown>;
   readonly duration: number;
   readonly status: number;
+  readonly headers: Headers;
   readonly raw: globalThis.Response;
 
+  readonly #data: T | null;
+
   constructor(options: GraphqlResponseOptions<T>) {
-    this.data = options.data;
+    this.#data = options.data;
     this.errors = options.errors;
     this.ok = options.errors === null || options.errors.length === 0;
     this.extensions = options.extensions;
     this.duration = options.duration;
     this.status = options.status;
+    this.headers = options.raw.headers;
     this.raw = options.raw;
+  }
+
+  data<U = T>(): U | null {
+    return this.#data as U | null;
   }
 }
 

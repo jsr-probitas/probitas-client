@@ -26,9 +26,6 @@ export interface GraphqlResponse<T = any> {
   /** Whether the request was successful (no errors) */
   readonly ok: boolean;
 
-  /** Response data (null if errors occurred with no partial data) */
-  readonly data: T | null;
-
   /** GraphQL errors array (null if no errors) */
   readonly errors: readonly GraphqlErrorItem[] | null;
 
@@ -41,8 +38,17 @@ export interface GraphqlResponse<T = any> {
   /** HTTP status code */
   readonly status: number;
 
+  /** Headers from the HTTP response */
+  readonly headers: Headers;
+
   /** Raw Web standard Response (for streaming or special cases) */
   readonly raw: globalThis.Response;
+
+  /**
+   * Get response data (null if no data).
+   * Does not throw even if errors are present.
+   */
+  data<U = T>(): U | null;
 }
 
 /**
@@ -71,6 +77,9 @@ export interface GraphqlClientConfig extends CommonOptions {
 
   /** Default headers for all requests */
   readonly headers?: Record<string, string>;
+
+  /** WebSocket endpoint URL (for subscriptions) */
+  readonly wsEndpoint?: string;
 
   /** Custom fetch implementation (for testing/mocking) */
   readonly fetch?: typeof fetch;
@@ -106,6 +115,14 @@ export interface GraphqlClient extends AsyncDisposable {
     options?: GraphqlOptions,
   ): Promise<GraphqlResponse<TData>>;
 
+  /** Execute a GraphQL mutation (alias for mutation) */
+  // deno-lint-ignore no-explicit-any
+  mutate<TData = any, TVariables = Record<string, any>>(
+    mutation: string,
+    variables?: TVariables,
+    options?: GraphqlOptions,
+  ): Promise<GraphqlResponse<TData>>;
+
   /** Execute a GraphQL document (query or mutation) */
   // deno-lint-ignore no-explicit-any
   execute<TData = any, TVariables = Record<string, any>>(
@@ -113,6 +130,14 @@ export interface GraphqlClient extends AsyncDisposable {
     variables?: TVariables,
     options?: GraphqlOptions,
   ): Promise<GraphqlResponse<TData>>;
+
+  /** Subscribe to a GraphQL subscription via WebSocket */
+  // deno-lint-ignore no-explicit-any
+  subscribe<TData = any, TVariables = Record<string, any>>(
+    document: string,
+    variables?: TVariables,
+    options?: GraphqlOptions,
+  ): AsyncIterable<GraphqlResponse<TData>>;
 
   /** Close the client and release resources */
   close(): Promise<void>;

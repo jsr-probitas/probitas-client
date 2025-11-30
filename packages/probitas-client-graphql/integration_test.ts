@@ -49,7 +49,7 @@ Deno.test({
         .status(200)
         .hasData();
 
-      assertEquals(res.data?.__typename, "Query");
+      assertEquals(res.data()?.__typename, "Query");
     });
 
     await t.step("introspection query - __schema", async () => {
@@ -59,7 +59,7 @@ Deno.test({
 
       expectGraphqlResponse(res).ok().hasData();
 
-      assertEquals(res.data?.__schema.queryType.name, "Query");
+      assertEquals(res.data()?.__schema.queryType.name, "Query");
     });
 
     await t.step("query with variables", async () => {
@@ -76,7 +76,7 @@ Deno.test({
       );
 
       expectGraphqlResponse(res).ok();
-      assertEquals(res.data?.__type?.name, "Query");
+      assertEquals(res.data()?.__type?.name, "Query");
     });
 
     await t.step("query with operationName", async () => {

@@ -113,7 +113,7 @@ Deno.test("GraphqlClient.query", async (t) => {
     await client.close();
 
     assertEquals(response.ok, true);
-    assertEquals(response.data, { user: { id: 1, name: "John" } });
+    assertEquals(response.data(), { user: { id: 1, name: "John" } });
     assertEquals(response.errors, null);
   });
 
@@ -249,6 +249,32 @@ Deno.test("GraphqlClient.mutation", async (t) => {
   });
 });
 
+Deno.test("GraphqlClient.mutate", async (t) => {
+  await t.step("is an alias for mutation", async () => {
+    let capturedRequest: Request | undefined;
+    const mockFetch = createMockFetch((req) => {
+      capturedRequest = req;
+      return new Response(JSON.stringify({ data: { createUser: { id: 1 } } }));
+    });
+
+    const client = createGraphqlClient({
+      endpoint: "http://localhost:4000/graphql",
+      fetch: mockFetch,
+    });
+
+    const response = await client.mutate(
+      "mutation CreateUser($name: String!) { createUser(name: $name) { id } }",
+      { name: "Jane" },
+    );
+    await client.close();
+
+    const body = await capturedRequest?.json();
+    assertEquals(body.query.includes("mutation"), true);
+    assertEquals(body.variables, { name: "Jane" });
+    assertEquals(response.data(), { createUser: { id: 1 } });
+  });
+});
+
 Deno.test("GraphqlClient.execute", async (t) => {
   await t.step("works for queries", async () => {
     const mockFetch = createMockFetch(() => {
@@ -263,7 +289,7 @@ Deno.test("GraphqlClient.execute", async (t) => {
     const response = await client.execute("query { test }");
     await client.close();
 
-    assertEquals(response.data, { test: true });
+    assertEquals(response.data(), { test: true });
   });
 
   await t.step("works for mutations", async () => {
@@ -279,7 +305,7 @@ Deno.test("GraphqlClient.execute", async (t) => {
     const response = await client.execute("mutation { updateSomething }");
     await client.close();
 
-    assertEquals(response.data, { updated: true });
+    assertEquals(response.data(), { updated: true });
   });
 });
 
@@ -517,8 +543,34 @@ Deno.test("GraphqlClient partial data with errors", async (t) => {
       await client.close();
 
       assertEquals(response.ok, false);
-      assertEquals(response.data, { user: { id: 1 }, posts: null });
+      assertEquals(response.data(), { user: { id: 1 }, posts: null });
       assertEquals(response.errors?.length, 1);
+    },
+  );
+});
+
+Deno.test("GraphqlClient.subscribe", async (t) => {
+  await t.step(
+    "throws GraphqlNetworkError when wsEndpoint is not configured",
+    async () => {
+      const client = createGraphqlClient({
+        endpoint: "http://localhost:4000/graphql",
+      });
+
+      const iterator = client.subscribe("subscription { newMessage { id } }");
+      const error = await assertRejects(
+        async () => {
+          for await (const _ of iterator) {
+            // Should not reach here
+          }
+        },
+        GraphqlNetworkError,
+      );
+      assertEquals(
+        error.message,
+        "WebSocket endpoint (wsEndpoint) is not configured",
+      );
+      await client.close();
     },
   );
 });

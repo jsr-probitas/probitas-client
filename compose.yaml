@@ -1,0 +1,5 @@
+services:
+  httpbin:
+    image: kennethreitz/httpbin
+    ports:
+      - "18080:80"

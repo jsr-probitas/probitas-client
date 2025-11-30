@@ -1,6 +1,7 @@
 {
   "workspace": [
-    "./packages/probitas-client"
+    "./packages/probitas-client",
+    "./packages/probitas-client-http"
   ],
   "exclude": [
     ".coverage/**",

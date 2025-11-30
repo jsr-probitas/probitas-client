@@ -44,6 +44,13 @@
       "jsr:@std/path@^1.0.8",
       "jsr:@std/semver@^1.0.4",
       "jsr:@std/testing@^1.0.16"
-    ]
+    ],
+    "members": {
+      "packages/probitas-client-http": {
+        "dependencies": [
+          "jsr:@probitas/client@0"
+        ]
+      }
+    }
   }
 }

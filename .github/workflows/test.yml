@@ -24,6 +24,11 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    services:
+      httpbin:
+        image: kennethreitz/httpbin
+        ports:
+          - 18080:80
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2

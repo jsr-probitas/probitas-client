@@ -285,5 +285,72 @@ Deno.test({
         await client.close();
       }
     });
+
+    await t.step("EchoRequestMetadata - verify metadata delivery", async () => {
+      const client = await createGrpcClient({
+        address: GRPC_ADDRESS,
+        schema: PROTO_PATH,
+        metadata: { "x-client-id": "probitas-test" },
+      });
+
+      try {
+        const response = await client.call(
+          "echo.v1.Echo/EchoRequestMetadata",
+          { keys: [] },
+          {
+            metadata: { "x-request-id": "req-123", "x-trace-id": "trace-456" },
+          },
+        );
+
+        expectGrpcResponse(response).ok().hasContent();
+
+        const data = response.json<{
+          metadata: Record<string, { values: string[] }>;
+        }>();
+
+        // Verify config-level metadata was sent
+        assertEquals(data?.metadata["x-client-id"]?.values[0], "probitas-test");
+        // Verify request-level metadata was sent
+        assertEquals(data?.metadata["x-request-id"]?.values[0], "req-123");
+        assertEquals(data?.metadata["x-trace-id"]?.values[0], "trace-456");
+      } finally {
+        await client.close();
+      }
+    });
+
+    await t.step("EchoDeadline - verify timeout propagation", async () => {
+      const client = await createGrpcClient({
+        address: GRPC_ADDRESS,
+        schema: PROTO_PATH,
+      });
+
+      try {
+        const response = await client.call(
+          "echo.v1.Echo/EchoDeadline",
+          { message: "Deadline test" },
+          { timeout: 5000 },
+        );
+
+        expectGrpcResponse(response).ok().hasContent();
+
+        const data = response.json<{
+          message: string;
+          deadline_remaining_ms: string;
+          has_deadline: boolean;
+        }>();
+
+        assertEquals(data?.message, "Deadline test");
+        assertEquals(data?.has_deadline, true);
+        // Deadline should be less than 5000ms (some time passed during RPC)
+        const remaining = parseInt(data?.deadline_remaining_ms ?? "0", 10);
+        assertEquals(
+          remaining > 0 && remaining <= 5000,
+          true,
+          `Expected deadline between 0-5000ms, got ${remaining}ms`,
+        );
+      } finally {
+        await client.close();
+      }
+    });
   },
 });

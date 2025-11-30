@@ -22,24 +22,6 @@ probitas-client/
 │       └── *_test.ts             # Tests (excluded from publish)
 ```
 
-## Planned Packages (see ~/Desktop/probitas-client-specs/)
-
-- `@probitas/client` - Core (CommonOptions, ClientError) ✅ Implemented
-- `@probitas/client-http` - HTTP client
-- `@probitas/client-grpc` - gRPC client
-- `@probitas/client-graphql` - GraphQL client
-- `@probitas/client-sql` - SQL common types
-- `@probitas/client-sql-postgres` - PostgreSQL client
-- `@probitas/client-sql-mysql` - MySQL client
-- `@probitas/client-sql-sqlite` - SQLite client
-- `@probitas/client-sql-duckdb` - DuckDB client
-- `@probitas/client-mongodb` - MongoDB client
-- `@probitas/client-redis` - Redis client
-- `@probitas/client-dynamodb` - DynamoDB client
-- `@probitas/client-deno-kv` - Deno KV client
-- `@probitas/client-sqs` - SQS client
-- `@probitas/client-rabbitmq` - RabbitMQ client
-
 ## Development Patterns
 
 ### Module Organization

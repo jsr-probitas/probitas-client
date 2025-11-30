@@ -29,6 +29,10 @@ jobs:
         image: kennethreitz/httpbin
         ports:
           - 18080:80
+      grpc-greeter:
+        image: romk/grpc-helloworld-reflection
+        ports:
+          - 50051:50051
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2

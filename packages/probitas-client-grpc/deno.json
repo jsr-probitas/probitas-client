@@ -1,0 +1,14 @@
+{
+  "name": "@probitas/client-grpc",
+  "version": "0.0.0",
+  "exports": "./mod.ts",
+  "publish": {
+    "exclude": ["**/*_test.ts", "**/*_bench.ts", "testdata/**"]
+  },
+  "imports": {
+    "@probitas/client": "jsr:@probitas/client@^0",
+    "@grpc/grpc-js": "npm:@grpc/grpc-js@~1.12.0",
+    "@grpc/proto-loader": "npm:@grpc/proto-loader@^0.7.0",
+    "grpc-reflection-js": "npm:grpc-reflection-js@^0.3.0"
+  }
+}

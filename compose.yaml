@@ -3,3 +3,9 @@ services:
     image: kennethreitz/httpbin
     ports:
       - "18080:80"
+
+  # gRPC server with reflection support for integration testing
+  grpc-greeter:
+    image: romk/grpc-helloworld-reflection
+    ports:
+      - "50051:50051"

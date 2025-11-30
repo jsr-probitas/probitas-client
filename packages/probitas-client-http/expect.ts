@@ -44,10 +44,12 @@ export interface HttpResponseExpectation {
   textMatch(matcher: (text: string) => void): this;
 
   /** Assert that JSON body contains expected properties */
-  jsonContains<T = unknown>(subset: Partial<T>): this;
+  // deno-lint-ignore no-explicit-any
+  jsonContains<T = any>(subset: Partial<T>): this;
 
   /** Assert JSON body using custom matcher function */
-  jsonMatch<T = unknown>(matcher: (body: T) => void): this;
+  // deno-lint-ignore no-explicit-any
+  jsonMatch<T = any>(matcher: (body: T) => void): this;
 
   /** Assert that response duration is less than threshold (ms) */
   durationLessThan(ms: number): this;
@@ -218,7 +220,8 @@ class HttpResponseExpectationImpl implements HttpResponseExpectation {
     return this;
   }
 
-  jsonContains<T = unknown>(subset: Partial<T>): this {
+  // deno-lint-ignore no-explicit-any
+  jsonContains<T = any>(subset: Partial<T>): this {
     const json = this.#response.json();
     if (json === null) {
       throw new Error("Expected JSON to contain properties, but body is null");
@@ -229,7 +232,8 @@ class HttpResponseExpectationImpl implements HttpResponseExpectation {
     return this;
   }
 
-  jsonMatch<T = unknown>(matcher: (body: T) => void): this {
+  // deno-lint-ignore no-explicit-any
+  jsonMatch<T = any>(matcher: (body: T) => void): this {
     const json = this.#response.json<T>();
     if (json === null) {
       throw new Error("Expected JSON for matching, but body is null");

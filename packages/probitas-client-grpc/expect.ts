@@ -45,16 +45,20 @@ export interface GrpcResponseExpectation {
   bodyMatch(matcher: (body: Uint8Array) => void): this;
 
   /** Verify that data() contains the specified properties. */
-  dataContains<T = unknown>(subset: Partial<T>): this;
+  // deno-lint-ignore no-explicit-any
+  dataContains<T = any>(subset: Partial<T>): this;
 
   /** Verify data() using a custom matcher. */
-  dataMatch<T = unknown>(matcher: (data: T) => void): this;
+  // deno-lint-ignore no-explicit-any
+  dataMatch<T = any>(matcher: (data: T) => void): this;
 
   /** Verify that json() contains the specified properties. */
-  jsonContains<T = unknown>(subset: Partial<T>): this;
+  // deno-lint-ignore no-explicit-any
+  jsonContains<T = any>(subset: Partial<T>): this;
 
   /** Verify json() using a custom matcher. */
-  jsonMatch<T = unknown>(matcher: (body: T) => void): this;
+  // deno-lint-ignore no-explicit-any
+  jsonMatch<T = any>(matcher: (body: T) => void): this;
 
   /** Verify the response duration is less than the threshold. */
   durationLessThan(ms: number): this;
@@ -229,7 +233,8 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
     return this;
   }
 
-  dataContains<T = unknown>(subset: Partial<T>): this {
+  // deno-lint-ignore no-explicit-any
+  dataContains<T = any>(subset: Partial<T>): this {
     const data = this.#response.data<T>();
     if (!containsSubset(data, subset)) {
       throw new Error(
@@ -241,7 +246,8 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
     return this;
   }
 
-  dataMatch<T = unknown>(matcher: (data: T) => void): this {
+  // deno-lint-ignore no-explicit-any
+  dataMatch<T = any>(matcher: (data: T) => void): this {
     const data = this.#response.data<T>();
     if (data === null) {
       throw new Error("Cannot match data: data is null");
@@ -250,7 +256,8 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
     return this;
   }
 
-  jsonContains<T = unknown>(subset: Partial<T>): this {
+  // deno-lint-ignore no-explicit-any
+  jsonContains<T = any>(subset: Partial<T>): this {
     const json = this.#response.json<T>();
     if (!containsSubset(json, subset)) {
       throw new Error(
@@ -262,7 +269,8 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
     return this;
   }
 
-  jsonMatch<T = unknown>(matcher: (body: T) => void): this {
+  // deno-lint-ignore no-explicit-any
+  jsonMatch<T = any>(matcher: (body: T) => void): this {
     const json = this.#response.json<T>();
     if (json === null) {
       throw new Error("Cannot match JSON: body is null");

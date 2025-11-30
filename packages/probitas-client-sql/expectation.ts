@@ -234,7 +234,8 @@ class SqlQueryResultExpectationImpl<T> implements SqlQueryResultExpectation<T> {
 /**
  * Create an expectation for a SQL query result.
  */
-export function expectSqlQueryResult<T = Record<string, unknown>>(
+// deno-lint-ignore no-explicit-any
+export function expectSqlQueryResult<T = Record<string, any>>(
   result: SqlQueryResult<T>,
 ): SqlQueryResultExpectation<T> {
   return new SqlQueryResultExpectationImpl(result);

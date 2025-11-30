@@ -34,7 +34,8 @@ export interface SqlQueryResultInit<T> {
 /**
  * SQL query result with rows, metadata, and transformation methods.
  */
-export class SqlQueryResult<T = Record<string, unknown>> {
+// deno-lint-ignore no-explicit-any
+export class SqlQueryResult<T = Record<string, any>> {
   readonly ok: boolean;
   readonly rows: SqlRows<T>;
   readonly rowCount: number;

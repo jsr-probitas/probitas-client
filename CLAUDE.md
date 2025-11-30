@@ -65,6 +65,24 @@ probitas-client/
 4. **Probitas integration** - All clients implement `AsyncDisposable`
 5. **Test-friendly** - Generic methods like `json<T = any>()` for type hints
 
+### Type Parameter Defaults: `any` vs `unknown`
+
+Use `any` only for user-facing APIs where test convenience matters. Use
+`unknown` for internal implementations and input parameters.
+
+**Use `any` (with `// deno-lint-ignore no-explicit-any`):**
+
+- Response data methods: `json<T = any>()`, `data<T = any>()`
+- Expectation methods: `jsonContains<T = any>()`, `jsonMatch<T = any>()`
+- Query result types: `SqlQueryResult<T = Record<string, any>>`
+
+**Use `unknown`:**
+
+- Internal helpers: `containsSubset(obj: unknown, ...)`
+- Input parameters: `params?: unknown[]`
+- Service type parameters: `GrpcClient<TService = unknown>`
+- Internal caches and deserializers
+
 ### Implementation Style (T-Wada Style)
 
 Follow test-driven development principles:
@@ -165,3 +183,13 @@ deno task test
 - Documentation (README, CLAUDE.md, etc.)
 - Commit messages
 - Error messages in code
+
+### 5. Stay in Worktree During Worktree Tasks
+
+**NEVER leave the worktree directory when working on a worktree task.**
+
+- If you start work in `.worktrees/{branch}/`, ALL operations must stay there
+- Do NOT `cd` to the root repository or other directories
+- Run all commands (git, deno, etc.) from within the worktree
+- If you need to check the root repository state, use absolute paths without
+  changing directory

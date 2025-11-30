@@ -34,7 +34,8 @@ function createMockResponse(
       return new Blob([buffer]);
     },
     text: () => body ? new TextDecoder().decode(body) : null,
-    json: <T = unknown>() =>
+    // deno-lint-ignore no-explicit-any
+    json: <T = any>() =>
       body ? JSON.parse(new TextDecoder().decode(body)) as T : null,
   };
 }

@@ -28,13 +28,15 @@ export interface GrpcResponse {
    * Throws an error if no schema is available for deserialization.
    * Configure schema in GrpcClientConfig to enable deserialization.
    */
-  data<T = unknown>(): T | null;
+  // deno-lint-ignore no-explicit-any
+  data<T = any>(): T | null;
 
   /**
    * Parse body as JSON (returns null if body is null).
    * Does not require schema configuration.
    */
-  json<T = unknown>(): T | null;
+  // deno-lint-ignore no-explicit-any
+  json<T = any>(): T | null;
 }
 
 /**
@@ -80,7 +82,8 @@ export class GrpcResponseImpl implements GrpcResponse {
     this.#deserializer = options.deserializer;
   }
 
-  data<T = unknown>(): T | null {
+  // deno-lint-ignore no-explicit-any
+  data<T = any>(): T | null {
     if (this.body === null) {
       return null;
     }
@@ -90,7 +93,8 @@ export class GrpcResponseImpl implements GrpcResponse {
     return this.#deserializer(this.body) as T;
   }
 
-  json<T = unknown>(): T | null {
+  // deno-lint-ignore no-explicit-any
+  json<T = any>(): T | null {
     if (this.body === null) {
       return null;
     }

@@ -27,7 +27,8 @@ export interface SqlTransaction {
    * @param sql - SQL query string
    * @param params - Optional query parameters
    */
-  query<T = Record<string, unknown>>(
+  // deno-lint-ignore no-explicit-any
+  query<T = Record<string, any>>(
     sql: string,
     params?: unknown[],
   ): Promise<SqlQueryResult<T>>;
@@ -37,7 +38,8 @@ export interface SqlTransaction {
    * @param sql - SQL query string
    * @param params - Optional query parameters
    */
-  queryOne<T = Record<string, unknown>>(
+  // deno-lint-ignore no-explicit-any
+  queryOne<T = Record<string, any>>(
     sql: string,
     params?: unknown[],
   ): Promise<T | undefined>;

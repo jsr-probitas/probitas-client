@@ -42,7 +42,8 @@ export interface HttpResponse {
    * Get body as parsed JSON (null if no body)
    * @template T - defaults to any for test convenience
    */
-  json<T = unknown>(): T | null;
+  // deno-lint-ignore no-explicit-any
+  json<T = any>(): T | null;
 
   // --- Additional properties ---
 

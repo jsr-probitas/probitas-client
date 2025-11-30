@@ -61,7 +61,8 @@ class HttpResponseImpl implements HttpResponse {
     return this.#textCache;
   }
 
-  json<T = unknown>(): T | null {
+  // deno-lint-ignore no-explicit-any
+  json<T = any>(): T | null {
     if (this.body === null) {
       return null;
     }

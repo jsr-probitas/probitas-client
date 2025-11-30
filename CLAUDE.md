@@ -2,6 +2,10 @@
 
 Client library collection for Probitas scenario testing framework.
 
+## Specifications
+
+Refer to `~/Desktop/probitas-client-specs/` for detailed specifications.
+
 ## Project Overview
 
 - **Runtime**: Deno 2.x

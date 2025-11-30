@@ -205,6 +205,67 @@ Deno.test({
       await clientWithHeaders.close();
     });
 
+    await t.step("redirect: follow (default) follows redirects", async () => {
+      const res = await client.get("/redirect/3");
+
+      expectHttpResponse(res).ok().status(200);
+
+      const json = res.json<{ redirected: boolean }>();
+      assertEquals(json?.redirected, true);
+    });
+
+    await t.step("redirect: manual returns redirect response", async () => {
+      const res = await client.get("/redirect/3", {
+        redirect: "manual",
+        throwOnError: false,
+      });
+
+      // Should return the redirect response without following
+      assertEquals(res.status, 302);
+      assertEquals(res.ok, false);
+      // Location header should be present
+      assertEquals(res.headers.has("location"), true);
+    });
+
+    await t.step("redirect: error throws on redirect", async () => {
+      try {
+        await client.get("/redirect/1", {
+          redirect: "error",
+          throwOnError: false,
+        });
+        throw new Error("Expected fetch to throw on redirect");
+      } catch (error) {
+        // fetch throws TypeError when redirect is "error" and response is redirect
+        assertInstanceOf(error, TypeError);
+      }
+    });
+
+    await t.step("config-level redirect setting", async () => {
+      const clientManual = createHttpClient({
+        baseUrl: ECHO_HTTP_URL,
+        redirect: "manual",
+        throwOnError: false,
+      });
+
+      const res = await clientManual.get("/redirect/1");
+      assertEquals(res.status, 302);
+
+      await clientManual.close();
+    });
+
+    await t.step("request redirect overrides config redirect", async () => {
+      const clientManual = createHttpClient({
+        baseUrl: ECHO_HTTP_URL,
+        redirect: "manual",
+      });
+
+      // Override manual with follow
+      const res = await clientManual.get("/redirect/1", { redirect: "follow" });
+      expectHttpResponse(res).ok().status(200);
+
+      await clientManual.close();
+    });
+
     await client.close();
   },
 });

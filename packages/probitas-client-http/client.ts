@@ -176,6 +176,7 @@ class HttpClientImpl implements HttpClient {
     );
 
     const fetchFn = this.config.fetch ?? globalThis.fetch;
+    const redirect = options?.redirect ?? this.config.redirect ?? "follow";
     const startTime = performance.now();
 
     const rawResponse = await fetchFn(url, {
@@ -183,6 +184,7 @@ class HttpClientImpl implements HttpClient {
       headers,
       body: prepared.body as globalThis.BodyInit,
       signal: options?.signal,
+      redirect,
     });
 
     const duration = performance.now() - startTime;

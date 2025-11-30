@@ -70,6 +70,14 @@ export type BodyInit =
   | URLSearchParams;
 
 /**
+ * Redirect handling mode.
+ * - "follow": Automatically follow redirects (default)
+ * - "manual": Return redirect response without following
+ * - "error": Throw error on redirect
+ */
+export type RedirectMode = "follow" | "manual" | "error";
+
+/**
  * Options for individual HTTP requests.
  */
 export interface HttpOptions extends CommonOptions {
@@ -78,6 +86,12 @@ export interface HttpOptions extends CommonOptions {
 
   /** Additional request headers */
   readonly headers?: Record<string, string>;
+
+  /**
+   * Redirect handling mode.
+   * @default "follow" (inherited from client config if not specified)
+   */
+  readonly redirect?: RedirectMode;
 
   /**
    * Whether to throw HttpError for non-2xx responses.
@@ -99,6 +113,13 @@ export interface HttpClientConfig extends CommonOptions {
 
   /** Custom fetch implementation (for testing/mocking) */
   readonly fetch?: typeof fetch;
+
+  /**
+   * Default redirect handling mode.
+   * Can be overridden per-request via HttpOptions.
+   * @default "follow"
+   */
+  readonly redirect?: RedirectMode;
 
   /**
    * Whether to throw HttpError for non-2xx responses.

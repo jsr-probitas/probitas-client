@@ -4,7 +4,8 @@ Client library collection for Probitas scenario testing framework.
 
 ## Specifications
 
-Refer to `~/Desktop/probitas-client-specs/` for detailed specifications.
+Refer to [`docs/specs/00-overview.md`](docs/specs/00-overview.md) for detailed
+specifications.
 
 ## Project Overview
 

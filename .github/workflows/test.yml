@@ -71,11 +71,6 @@ jobs:
         env:
           DENO_KV_SQLITE_PATH: ":memory:"
           DENO_KV_ACCESS_TOKEN: testtoken1234
-        options: >-
-          --health-cmd "nc -z localhost 4512"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       DENO_KV_ACCESS_TOKEN: testtoken1234
     steps:

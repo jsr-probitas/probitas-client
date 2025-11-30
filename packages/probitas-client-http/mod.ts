@@ -21,34 +21,8 @@
  * @module
  */
 
-// Types (type-only exports for tree-shaking)
-export type {
-  BodyInit,
-  HttpClient,
-  HttpClientConfig,
-  HttpOptions,
-  HttpResponse,
-  QueryValue,
-} from "./types.ts";
-
-// Errors
-export {
-  HttpBadRequestError,
-  HttpConflictError,
-  HttpError,
-  type HttpErrorOptions,
-  HttpForbiddenError,
-  HttpInternalServerError,
-  HttpNotFoundError,
-  HttpTooManyRequestsError,
-  HttpUnauthorizedError,
-} from "./errors.ts";
-
-// Client
-export { createHttpClient } from "./client.ts";
-
-// Response (internal, but exported for testing/advanced use)
-export { createHttpResponse } from "./response.ts";
-
-// Expectations
-export { expectHttpResponse, type HttpResponseExpectation } from "./expect.ts";
+export type * from "./types.ts";
+export * from "./errors.ts";
+export * from "./client.ts";
+export * from "./response.ts";
+export * from "./expect.ts";

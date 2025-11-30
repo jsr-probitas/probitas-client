@@ -183,3 +183,13 @@ deno task test
 - Documentation (README, CLAUDE.md, etc.)
 - Commit messages
 - Error messages in code
+
+### 5. Stay in Worktree During Worktree Tasks
+
+**NEVER leave the worktree directory when working on a worktree task.**
+
+- If you start work in `.worktrees/{branch}/`, ALL operations must stay there
+- Do NOT `cd` to the root repository or other directories
+- Run all commands (git, deno, etc.) from within the worktree
+- If you need to check the root repository state, use absolute paths without
+  changing directory

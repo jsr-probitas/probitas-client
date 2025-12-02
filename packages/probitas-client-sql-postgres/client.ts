@@ -1,6 +1,7 @@
 import postgres from "postgres";
 import type { CommonOptions } from "@probitas/client";
 import { ConnectionError } from "@probitas/client";
+import { getLogger } from "@probitas/logger";
 import {
   type SqlIsolationLevel,
   SqlQueryResult,
@@ -10,6 +11,27 @@ import {
 } from "@probitas/client-sql";
 import { mapPostgresError } from "./errors.ts";
 import { PostgresTransaction } from "./transaction.ts";
+
+const logger = getLogger("probitas", "client", "sql", "postgres");
+
+/**
+ * Format SQL for logging, truncating if necessary.
+ */
+function formatSql(sql: string): string {
+  return sql.length > 1000 ? sql.slice(0, 1000) + "..." : sql;
+}
+
+/**
+ * Format parameters for logging, truncating if necessary.
+ */
+function formatParams(params: unknown): string {
+  try {
+    const str = JSON.stringify(params);
+    return str.length > 500 ? str.slice(0, 500) + "..." : str;
+  } catch {
+    return "<unserializable>";
+  }
+}
 
 /**
  * Connection configuration for PostgreSQL.
@@ -188,6 +210,22 @@ class PostgresClientImpl implements PostgresClient {
   constructor(config: PostgresClientConfig, sql: postgres.Sql) {
     this.config = config;
     this.#sql = sql;
+
+    // Log client creation with sanitized connection info
+    const connInfo = typeof config.connection === "string"
+      ? { connection: "[connection-string]" }
+      : {
+        host: config.connection.host ?? "localhost",
+        port: config.connection.port ?? 5432,
+        database: config.connection.database,
+        user: config.connection.user,
+      };
+
+    logger.debug("PostgreSQL client created", {
+      ...connInfo,
+      poolMax: config.pool?.max ?? 10,
+      applicationName: config.applicationName,
+    });
   }
 
   // deno-lint-ignore no-explicit-any
@@ -198,6 +236,17 @@ class PostgresClientImpl implements PostgresClient {
     this.#assertNotClosed();
 
     const startTime = performance.now();
+    const sqlPreview = sql.length > 100 ? sql.substring(0, 100) + "..." : sql;
+
+    logger.debug("PostgreSQL query starting", {
+      sql: sqlPreview,
+      paramCount: params?.length ?? 0,
+    });
+
+    logger.trace("PostgreSQL query details", {
+      sql: formatSql(sql),
+      params: params ? formatParams(params) : undefined,
+    });
 
     try {
       const result = await this.#sql.unsafe<T[]>(
@@ -208,6 +257,18 @@ class PostgresClientImpl implements PostgresClient {
 
       const metadata: SqlQueryResultMetadata = {};
 
+      logger.debug("PostgreSQL query success", {
+        duration: `${duration.toFixed(2)}ms`,
+        rowCount: result.count ?? result.length,
+      });
+
+      if (result.length > 0) {
+        const sample = result.slice(0, 1);
+        logger.trace("PostgreSQL query row sample", {
+          rows: formatParams(sample),
+        });
+      }
+
       return new SqlQueryResult<T>({
         ok: true,
         rows: result as unknown as readonly T[],
@@ -216,6 +277,12 @@ class PostgresClientImpl implements PostgresClient {
         metadata,
       });
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("PostgreSQL query failed", {
+        sql: sqlPreview,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw mapPostgresError(error as { message: string; code?: string });
     }
   }
@@ -235,14 +302,18 @@ class PostgresClientImpl implements PostgresClient {
   ): Promise<T> {
     this.#assertNotClosed();
 
+    const isolationLevel = options?.isolationLevel
+      ? mapIsolationLevel(options.isolationLevel)
+      : "READ COMMITTED";
+
+    logger.debug("PostgreSQL transaction begin", {
+      isolationLevel,
+    });
+
+    const startTime = performance.now();
     const reserved = await this.#sql.reserve();
 
     try {
-      // Start the transaction with the specified isolation level
-      const isolationLevel = options?.isolationLevel
-        ? mapIsolationLevel(options.isolationLevel)
-        : "READ COMMITTED";
-
       await reserved.unsafe(`BEGIN ISOLATION LEVEL ${isolationLevel}`);
 
       const tx = new PostgresTransaction(reserved);
@@ -250,9 +321,20 @@ class PostgresClientImpl implements PostgresClient {
       try {
         const result = await fn(tx);
         await reserved.unsafe("COMMIT");
+
+        const duration = performance.now() - startTime;
+        logger.debug("PostgreSQL transaction commit", {
+          duration: `${duration.toFixed(2)}ms`,
+        });
+
         return result;
       } catch (error) {
         await reserved.unsafe("ROLLBACK");
+        const duration = performance.now() - startTime;
+        logger.debug("PostgreSQL transaction rollback", {
+          duration: `${duration.toFixed(2)}ms`,
+          error: error instanceof Error ? error.message : String(error),
+        });
         throw error;
       }
     } catch (error) {
@@ -268,7 +350,12 @@ class PostgresClientImpl implements PostgresClient {
   ): Promise<number> {
     this.#assertNotClosed();
 
+    logger.debug("PostgreSQL COPY FROM starting", {
+      table,
+    });
+
     let count = 0;
+    const startTime = performance.now();
     const reserved = await this.#sql.reserve();
 
     try {
@@ -283,8 +370,22 @@ class PostgresClientImpl implements PostgresClient {
       }
 
       await reserved.unsafe("\\.");
+
+      const duration = performance.now() - startTime;
+      logger.debug("PostgreSQL COPY FROM success", {
+        table,
+        rowCount: count,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return count;
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("PostgreSQL COPY FROM failed", {
+        table,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw mapPostgresError(error as { message: string; code?: string });
     } finally {
       reserved.release();
@@ -294,15 +395,49 @@ class PostgresClientImpl implements PostgresClient {
   async *copyTo(query: string): AsyncIterable<unknown[]> {
     this.#assertNotClosed();
 
+    const sqlPreview = query.length > 100
+      ? query.substring(0, 100) + "..."
+      : query;
+
+    logger.debug("PostgreSQL COPY TO starting", {
+      sql: sqlPreview,
+    });
+
+    logger.trace("PostgreSQL COPY TO details", {
+      sql: formatSql(query),
+    });
+
+    const startTime = performance.now();
     const reserved = await this.#sql.reserve();
+    let rowCount = 0;
+    let rowSampleLogged = false;
 
     try {
       const result = await reserved.unsafe<Record<string, unknown>[]>(query);
 
       for (const row of result) {
+        rowCount++;
+        if (!rowSampleLogged && rowCount === 1) {
+          logger.trace("PostgreSQL COPY TO row sample", {
+            row: formatParams(Object.values(row)),
+          });
+          rowSampleLogged = true;
+        }
         yield Object.values(row);
       }
+
+      const duration = performance.now() - startTime;
+      logger.debug("PostgreSQL COPY TO success", {
+        rowCount,
+        duration: `${duration.toFixed(2)}ms`,
+      });
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("PostgreSQL COPY TO failed", {
+        sql: sqlPreview,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw mapPostgresError(error as { message: string; code?: string });
     } finally {
       reserved.release();
@@ -312,10 +447,16 @@ class PostgresClientImpl implements PostgresClient {
   async *listen(channel: string): AsyncIterable<PostgresNotification> {
     this.#assertNotClosed();
 
+    logger.debug("PostgreSQL LISTEN starting", {
+      channel,
+    });
+
     const notifications: PostgresNotification[] = [];
     let resolve: (() => void) | null = null;
+    let notificationCount = 0;
 
     const listenRequest = this.#sql.listen(channel, (payload) => {
+      notificationCount++;
       notifications.push({
         channel,
         payload,
@@ -329,6 +470,9 @@ class PostgresClientImpl implements PostgresClient {
 
     // Wait for listen to be established
     await listenRequest;
+    logger.debug("PostgreSQL LISTEN established", {
+      channel,
+    });
 
     try {
       while (!this.#closed) {
@@ -346,15 +490,32 @@ class PostgresClientImpl implements PostgresClient {
       // postgres.js listen returns a ListenRequest with an unlisten method
       await (listenRequest as unknown as { unlisten: () => Promise<void> })
         .unlisten();
+
+      logger.debug("PostgreSQL LISTEN closed", {
+        channel,
+        notificationCount,
+      });
     }
   }
 
   async notify(channel: string, payload?: string): Promise<void> {
     this.#assertNotClosed();
 
+    logger.debug("PostgreSQL NOTIFY sending", {
+      channel,
+      payloadLength: payload?.length ?? 0,
+    });
+
     try {
       await this.#sql.notify(channel, payload ?? "");
+      logger.debug("PostgreSQL NOTIFY sent", {
+        channel,
+      });
     } catch (error) {
+      logger.error("PostgreSQL NOTIFY failed", {
+        channel,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw mapPostgresError(error as { message: string; code?: string });
     }
   }
@@ -362,7 +523,9 @@ class PostgresClientImpl implements PostgresClient {
   async close(): Promise<void> {
     if (this.#closed) return;
     this.#closed = true;
+    logger.debug("PostgreSQL client closing");
     await this.#sql.end();
+    logger.debug("PostgreSQL client closed");
   }
 
   [Symbol.asyncDispose](): Promise<void> {

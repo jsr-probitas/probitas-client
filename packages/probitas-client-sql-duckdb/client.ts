@@ -1,5 +1,6 @@
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { DuckDBInstance } from "@duckdb/node-api";
+import { getLogger } from "@probitas/logger";
 import {
   SqlQueryResult,
   type SqlTransaction,
@@ -11,6 +12,27 @@ import {
   DuckDbTransactionImpl,
   type DuckDbTransactionOptions,
 } from "./transaction.ts";
+
+const logger = getLogger("probitas", "client", "sql", "duckdb");
+
+/**
+ * Format SQL for logging, truncating if necessary.
+ */
+function formatSql(sql: string): string {
+  return sql.length > 1000 ? sql.slice(0, 1000) + "..." : sql;
+}
+
+/**
+ * Format parameters for logging, truncating if necessary.
+ */
+function formatParams(params: unknown): string {
+  try {
+    const str = JSON.stringify(params);
+    return str.length > 500 ? str.slice(0, 500) + "..." : str;
+  } catch {
+    return "<unserializable>";
+  }
+}
 
 /**
  * DuckDB client interface.
@@ -153,6 +175,11 @@ class DuckDbClientImpl implements DuckDbClient {
     this.config = config;
     this.#instance = instance;
     this.#connection = connection;
+
+    logger.debug("DuckDB client created", {
+      path: config.path ?? ":memory:",
+      readonly: config.readonly ?? false,
+    });
   }
 
   // deno-lint-ignore no-explicit-any
@@ -165,6 +192,17 @@ class DuckDbClientImpl implements DuckDbClient {
     }
 
     const startTime = performance.now();
+    const sqlPreview = sql.length > 100 ? sql.substring(0, 100) + "..." : sql;
+
+    logger.debug("DuckDB query starting", {
+      sql: sqlPreview,
+      paramCount: params?.length ?? 0,
+    });
+
+    logger.trace("DuckDB query details", {
+      sql: formatSql(sql),
+      params: params ? formatParams(params) : undefined,
+    });
 
     try {
       // Check if this is a SELECT query
@@ -219,6 +257,18 @@ class DuckDbClientImpl implements DuckDbClient {
 
       const duration = performance.now() - startTime;
 
+      logger.debug("DuckDB query success", {
+        duration: `${duration.toFixed(2)}ms`,
+        rowCount: rows.length,
+      });
+
+      if (rows.length > 0) {
+        const sample = rows.slice(0, 1);
+        logger.trace("DuckDB query row sample", {
+          rows: formatParams(sample),
+        });
+      }
+
       if (isSelect) {
         return new SqlQueryResult<T>({
           ok: true,
@@ -238,6 +288,12 @@ class DuckDbClientImpl implements DuckDbClient {
         });
       }
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("DuckDB query failed", {
+        sql: sqlPreview,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw convertDuckDbError(error);
     }
   }
@@ -259,6 +315,9 @@ class DuckDbClientImpl implements DuckDbClient {
       throw convertDuckDbError(new Error("Client is closed"));
     }
 
+    logger.debug("DuckDB transaction begin");
+
+    const startTime = performance.now();
     const tx = await DuckDbTransactionImpl.begin(
       this.#connection,
       options as DuckDbTransactionOptions,
@@ -267,9 +326,20 @@ class DuckDbClientImpl implements DuckDbClient {
     try {
       const result = await fn(tx);
       await tx.commit();
+
+      const duration = performance.now() - startTime;
+      logger.debug("DuckDB transaction commit", {
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return result;
     } catch (error) {
       await tx.rollback();
+      const duration = performance.now() - startTime;
+      logger.debug("DuckDB transaction rollback", {
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -278,6 +348,10 @@ class DuckDbClientImpl implements DuckDbClient {
   queryParquet<T = Record<string, any>>(
     path: string,
   ): Promise<SqlQueryResult<T>> {
+    logger.debug("DuckDB queryParquet starting", {
+      path,
+    });
+
     // Escape single quotes in path
     const escapedPath = path.replace(/'/g, "''");
     return this.query<T>(`SELECT * FROM read_parquet('${escapedPath}')`);
@@ -285,6 +359,10 @@ class DuckDbClientImpl implements DuckDbClient {
 
   // deno-lint-ignore no-explicit-any
   queryCsv<T = Record<string, any>>(path: string): Promise<SqlQueryResult<T>> {
+    logger.debug("DuckDB queryCsv starting", {
+      path,
+    });
+
     // Escape single quotes in path
     const escapedPath = path.replace(/'/g, "''");
     return this.query<T>(`SELECT * FROM read_csv_auto('${escapedPath}')`);
@@ -293,7 +371,9 @@ class DuckDbClientImpl implements DuckDbClient {
   close(): Promise<void> {
     if (this.#closed) return Promise.resolve();
     this.#closed = true;
+    logger.debug("DuckDB client closing");
     this.#connection.closeSync();
+    logger.debug("DuckDB client closed");
     // Note: DuckDBInstance doesn't have an explicit close method in the API
     // The instance is garbage collected when no longer referenced
     return Promise.resolve();

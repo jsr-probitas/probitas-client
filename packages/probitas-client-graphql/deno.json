@@ -7,6 +7,7 @@
   },
   "imports": {
     "@probitas/client": "jsr:@probitas/client@^0",
+    "@probitas/logger": "jsr:@probitas/logger@^0",
     "@cspotcode/outdent": "jsr:@cspotcode/outdent@^0.8.0"
   }
 }

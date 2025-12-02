@@ -7,6 +7,7 @@
   },
   "imports": {
     "@probitas/client": "jsr:@probitas/client@^0",
+    "@probitas/logger": "jsr:@probitas/logger@^0.2.1",
     "amqplib": "npm:amqplib@^0.10.5"
   }
 }

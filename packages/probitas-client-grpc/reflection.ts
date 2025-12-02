@@ -3,7 +3,23 @@ import * as protoLoader from "@grpc/proto-loader";
 import protobuf from "protobufjs";
 import { Buffer } from "node:buffer";
 import descriptor from "protobufjs-descriptor";
+import { getLogger } from "@probitas/logger";
 import { config } from "./config.ts";
+
+const logger = getLogger("probitas", "client", "grpc", "reflection");
+
+/**
+ * Format message for trace logging.
+ * Truncates to 500 chars if necessary, handles unserializable values.
+ */
+function formatMessage(msg: unknown): string {
+  try {
+    const str = JSON.stringify(msg);
+    return str.length > 500 ? str.slice(0, 500) + "..." : str;
+  } catch {
+    return "<unserializable>";
+  }
+}
 
 type FileDescriptorObject = ReturnType<
   typeof descriptor.FileDescriptorProto.toObject
@@ -235,6 +251,11 @@ export class GrpcReflectionClient implements AsyncDisposable {
     this.#credentials = credentials;
     this.#options = options;
     this.#preferredVersion = reflectionOptions?.preferredVersion ?? "v1";
+
+    logger.debug("gRPC reflection client created", {
+      address,
+      preferredVersion: this.#preferredVersion,
+    });
   }
 
   /**
@@ -268,12 +289,26 @@ export class GrpcReflectionClient implements AsyncDisposable {
 
     let lastError: Error | undefined;
 
+    logger.debug("Initializing reflection client", {
+      address: this.#address,
+      versionsToTry: versions,
+    });
+
     for (const version of versions) {
       let client: ReflectionClient | undefined;
       try {
+        logger.debug("Attempting reflection initialization", {
+          version,
+          address: this.#address,
+        });
+
+        const startTime = performance.now();
         const root = await loadReflectionProto(version);
         const serializers = createSerializers(root, version);
-        const serviceDefinition = createServiceDefinition(version, serializers);
+        const serviceDefinition = createServiceDefinition(
+          version,
+          serializers,
+        );
         const ClientCtor = createReflectionClientCtor(serviceDefinition);
         client = new ClientCtor(
           this.#address,
@@ -283,9 +318,16 @@ export class GrpcReflectionClient implements AsyncDisposable {
 
         // Test the connection with a simple list_services request
         await this.#testConnection(client, version);
+        const duration = performance.now() - startTime;
 
         this.#client = client;
         this.#activeVersion = version;
+
+        logger.debug("Reflection client initialized successfully", {
+          version,
+          address: this.#address,
+          duration: `${duration.toFixed(2)}ms`,
+        });
 
         if (config.debugReflection) {
           console.debug(`Using reflection version: ${version}`);
@@ -301,6 +343,11 @@ export class GrpcReflectionClient implements AsyncDisposable {
 
         // Check if this is UNIMPLEMENTED error - try next version
         if (this.#isUnimplementedError(error)) {
+          logger.debug("Reflection version not implemented", {
+            version,
+            address: this.#address,
+            error: lastError.message,
+          });
           if (config.debugReflection) {
             console.debug(
               `Reflection ${version} not implemented, trying next version`,
@@ -310,10 +357,20 @@ export class GrpcReflectionClient implements AsyncDisposable {
         }
 
         // For other errors, throw immediately
+        logger.warn("Reflection initialization failed", {
+          version,
+          address: this.#address,
+          error: lastError.message,
+        });
         throw error;
       }
     }
 
+    logger.error("All reflection versions failed", {
+      address: this.#address,
+      versionsAttempted: versions,
+      error: lastError?.message ?? "Unknown error",
+    });
     throw lastError ?? new Error("Failed to initialize reflection client");
   }
 
@@ -374,13 +431,26 @@ export class GrpcReflectionClient implements AsyncDisposable {
   }
 
   async getDescriptorBySymbol(symbol: string): Promise<ReflectedDescriptor> {
+    logger.debug("Getting descriptor by symbol", { symbol });
+
+    const startTime = performance.now();
     const descriptors = await this.#requestDescriptor({
       file_containing_symbol: symbol,
     });
     if (!descriptors.length) {
+      logger.error("No descriptor returned for symbol", { symbol });
       throw new Error(`No descriptor returned for symbol: ${symbol}`);
     }
+
     const allDescriptors = await this.#collectDescriptors(descriptors);
+    const duration = performance.now() - startTime;
+
+    logger.debug("Descriptor retrieved for symbol", {
+      symbol,
+      totalDescriptors: allDescriptors.length,
+      duration: `${duration.toFixed(2)}ms`,
+    });
+
     return new ReflectedDescriptor(allDescriptors);
   }
 
@@ -427,6 +497,23 @@ export class GrpcReflectionClient implements AsyncDisposable {
   async #requestDescriptor(request: ReflectionRequest): Promise<Uint8Array[]> {
     const client = await this.#ensureClient();
 
+    const startTime = performance.now();
+    const requestType = request.file_containing_symbol
+      ? "symbol"
+      : request.file_by_filename
+      ? "filename"
+      : "list_services";
+
+    logger.debug("Reflection request starting", {
+      type: requestType,
+      symbol: request.file_containing_symbol,
+      filename: request.file_by_filename,
+    });
+    logger.trace("Reflection request message", {
+      type: requestType,
+      request: formatMessage(request),
+    });
+
     return new Promise((resolve, reject) => {
       const stream = client.serverReflectionInfo();
       let settled = false;
@@ -443,6 +530,18 @@ export class GrpcReflectionClient implements AsyncDisposable {
             .file_descriptor_proto.map((proto) =>
               proto instanceof Uint8Array ? proto : new Uint8Array(proto)
             );
+          const duration = performance.now() - startTime;
+
+          logger.debug("Reflection request succeeded", {
+            type: requestType,
+            descriptorCount: descriptors.length,
+            duration: `${duration.toFixed(2)}ms`,
+          });
+          logger.trace("Reflection response message", {
+            type: requestType,
+            response: formatMessage(response),
+          });
+
           if (config.debugReflection) {
             const files = descriptors.map((bytes) => {
               const message = descriptor.FileDescriptorProto.decode(bytes);
@@ -466,6 +565,19 @@ export class GrpcReflectionClient implements AsyncDisposable {
             grpc.status.UNKNOWN;
           const message = response.error_response.error_message ??
             "Unknown reflection error";
+          const duration = performance.now() - startTime;
+
+          logger.warn("Reflection request returned error", {
+            type: requestType,
+            code,
+            message,
+            duration: `${duration.toFixed(2)}ms`,
+          });
+          logger.trace("Reflection error response details", {
+            type: requestType,
+            response: formatMessage(response.error_response),
+          });
+
           reject(new Error(`Reflection error (${code}): ${message}`));
           stream.cancel();
         }
@@ -474,12 +586,31 @@ export class GrpcReflectionClient implements AsyncDisposable {
       stream.on("error", (error) => {
         if (settled) return;
         settled = true;
+        const duration = performance.now() - startTime;
+
+        logger.error("Reflection request failed", {
+          type: requestType,
+          error: error instanceof Error ? error.message : String(error),
+          duration: `${duration.toFixed(2)}ms`,
+        });
+        logger.trace("Reflection error details", {
+          type: requestType,
+          error: formatMessage(error),
+        });
+
         reject(error);
       });
 
       stream.on("end", () => {
         if (settled) return;
         settled = true;
+        const duration = performance.now() - startTime;
+
+        logger.warn("Reflection response ended without data", {
+          type: requestType,
+          duration: `${duration.toFixed(2)}ms`,
+        });
+
         reject(new Error("Reflection response ended without data"));
       });
 

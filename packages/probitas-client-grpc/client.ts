@@ -2,6 +2,7 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import { Buffer } from "node:buffer";
 import { type CommonOptions, ConnectionError } from "@probitas/client";
+import { getLogger } from "@probitas/logger";
 import {
   type ErrorDetail,
   GrpcError,
@@ -17,6 +18,21 @@ import type { GrpcResponse } from "./response.ts";
 import { GrpcResponseImpl } from "./response.ts";
 import type { GrpcStatusCode } from "./status.ts";
 import { GrpcReflectionClient } from "./reflection.ts";
+
+const logger = getLogger("probitas", "client", "grpc");
+
+/**
+ * Format message for trace logging.
+ * Truncates to 500 chars if necessary, handles unserializable values.
+ */
+function formatMessage(msg: unknown): string {
+  try {
+    const str = JSON.stringify(msg);
+    return str.length > 500 ? str.slice(0, 500) + "..." : str;
+  } catch {
+    return "<unserializable>";
+  }
+}
 
 /**
  * TLS configuration for gRPC connections.
@@ -368,6 +384,22 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     this.#grpcObject = grpcObject;
     this.#reflectionClient = reflectionClient;
     this.#protoLoaderOptions = protoLoaderOptions;
+
+    // Log client creation
+    logger.debug("gRPC client created", {
+      address: config.address,
+      tlsConfigured: !!config.tls,
+      tlsInsecure: config.tls?.insecure ?? false,
+      schemaType: typeof config.schema === "string"
+        ? "string"
+        : Array.isArray(config.schema)
+        ? "string[]"
+        : config.schema instanceof Uint8Array
+        ? "FileDescriptorSet"
+        : "reflection",
+      throwOnError: config.throwOnError ?? true,
+      metadataCount: config.metadata ? Object.keys(config.metadata).length : 0,
+    });
   }
 
   async #getServiceClientAsync(servicePath: string): Promise<ServiceClient> {
@@ -377,6 +409,9 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
 
     const cached = this.#clients.get(servicePath);
     if (cached) {
+      logger.debug("Service client retrieved from cache", {
+        servicePath,
+      });
       return cached;
     }
 
@@ -384,13 +419,30 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     if (this.#reflectionClient && !this.#grpcObject) {
       const cachedGrpcObject = this.#reflectionCache.get(servicePath);
       if (cachedGrpcObject) {
+        logger.debug(
+          "Service definition retrieved from reflection cache",
+          {
+            servicePath,
+          },
+        );
         return this.#createClientFromGrpcObject(servicePath, cachedGrpcObject);
       }
 
       // Use reflection to get service definition
+      logger.debug("Fetching service descriptor via reflection", {
+        servicePath,
+        reflectionVersion: this.#reflectionClient.activeVersion,
+      });
+      const startTime = performance.now();
       const descriptor = await this.#reflectionClient.getDescriptorBySymbol(
         servicePath,
       );
+      const duration = performance.now() - startTime;
+      logger.debug("Service descriptor fetched via reflection", {
+        servicePath,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       const packageDefinition = descriptor.getPackageDefinition(
         this.#protoLoaderOptions,
       );
@@ -482,11 +534,30 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     const callOptions = createCallOptions(options);
     const throwOnError = shouldThrowOnError(this.config, options);
 
+    const methodPath = `/${servicePath}/${methodName}`;
+
+    // Log request start
+    logger.debug("gRPC unary call starting", {
+      method: methodPath,
+      service: servicePath,
+      timeout: options?.timeout,
+      metadataKeys: Object.keys(metadataToRecord(metadata)),
+    });
+    logger.trace("gRPC unary request message", {
+      method: methodPath,
+      message: formatMessage(request),
+    });
+
     const startTime = performance.now();
 
     return new Promise<GrpcResponse>((resolve, reject) => {
       const methodFn = client[methodName];
       if (typeof methodFn !== "function") {
+        logger.error("Method not found", {
+          method: methodPath,
+          methodName,
+          servicePath,
+        });
         reject(new Error(`Method not found: ${methodName}`));
         return;
       }
@@ -506,6 +577,17 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
         const body = pendingResponse
           ? new TextEncoder().encode(JSON.stringify(pendingResponse))
           : null;
+
+        logger.debug("gRPC unary call succeeded", {
+          method: methodPath,
+          duration: `${duration.toFixed(2)}ms`,
+          code: 0,
+          trailerKeys: Object.keys(trailers),
+        });
+        logger.trace("gRPC unary response message", {
+          method: methodPath,
+          message: formatMessage(pendingResponse),
+        });
 
         resolve(
           new GrpcResponseImpl({
@@ -536,9 +618,34 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
               : {};
 
             if (throwOnError) {
+              logger.warn("gRPC unary call failed", {
+                method: methodPath,
+                duration: `${duration.toFixed(2)}ms`,
+                code,
+                message: errorMessage,
+              });
+              logger.trace("gRPC unary call error details", {
+                method: methodPath,
+                code,
+                message: errorMessage,
+                trailers: formatMessage(errorTrailers),
+              });
               reject(createGrpcError(code, errorMessage, errorTrailers));
               return;
             }
+
+            logger.debug("gRPC unary call completed with error", {
+              method: methodPath,
+              duration: `${duration.toFixed(2)}ms`,
+              code,
+              message: errorMessage,
+            });
+            logger.trace("gRPC unary call error details", {
+              method: methodPath,
+              code,
+              message: errorMessage,
+              trailers: formatMessage(errorTrailers),
+            });
 
             resolve(
               new GrpcResponseImpl({
@@ -585,8 +692,27 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     const callOptions = createCallOptions(options);
     const throwOnError = shouldThrowOnError(this.config, options);
 
+    const methodPath = `/${servicePath}/${methodName}`;
+
+    // Log request start
+    logger.debug("gRPC server stream starting", {
+      method: methodPath,
+      service: servicePath,
+      timeout: options?.timeout,
+      metadataKeys: Object.keys(metadataToRecord(metadata)),
+    });
+    logger.trace("gRPC server stream request message", {
+      method: methodPath,
+      message: formatMessage(request),
+    });
+
     const methodFn = client[methodName];
     if (typeof methodFn !== "function") {
+      logger.error("Method not found", {
+        method: methodPath,
+        methodName,
+        servicePath,
+      });
       throw new Error(`Method not found: ${methodName}`);
     }
 
@@ -606,6 +732,7 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
       error?: grpc.ServiceError;
     }> = [];
     let resolver: (() => void) | null = null;
+    let messageCount = 0;
 
     stream.on("data", (data) => {
       queue.push({ type: "data", value: data });
@@ -636,6 +763,11 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
       const duration = performance.now() - startTime;
 
       if (item.type === "end") {
+        logger.debug("gRPC server stream ended", {
+          method: methodPath,
+          duration: `${duration.toFixed(2)}ms`,
+          messageCount,
+        });
         break;
       }
 
@@ -647,8 +779,35 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
           : {};
 
         if (throwOnError) {
+          logger.warn("gRPC server stream failed", {
+            method: methodPath,
+            duration: `${duration.toFixed(2)}ms`,
+            code,
+            message: errorMessage,
+            messageCount,
+          });
+          logger.trace("gRPC server stream error details", {
+            method: methodPath,
+            code,
+            message: errorMessage,
+            trailers: formatMessage(errorTrailers),
+          });
           throw createGrpcError(code, errorMessage, errorTrailers);
         }
+
+        logger.debug("gRPC server stream completed with error", {
+          method: methodPath,
+          duration: `${duration.toFixed(2)}ms`,
+          code,
+          message: errorMessage,
+          messageCount,
+        });
+        logger.trace("gRPC server stream error details", {
+          method: methodPath,
+          code,
+          message: errorMessage,
+          trailers: formatMessage(errorTrailers),
+        });
 
         yield new GrpcResponseImpl({
           code,
@@ -660,6 +819,7 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
         break;
       }
 
+      messageCount++;
       const body = item.value
         ? new TextEncoder().encode(JSON.stringify(item.value))
         : null;
@@ -686,14 +846,31 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     const callOptions = createCallOptions(options);
     const throwOnError = shouldThrowOnError(this.config, options);
 
+    const methodPath = `/${servicePath}/${methodName}`;
+
+    // Log request start
+    logger.debug("gRPC client stream starting", {
+      method: methodPath,
+      service: servicePath,
+      timeout: options?.timeout,
+      metadataKeys: Object.keys(metadataToRecord(metadata)),
+    });
+
     const methodFn = client[methodName];
     if (typeof methodFn !== "function") {
+      logger.error("Method not found", {
+        method: methodPath,
+        methodName,
+        servicePath,
+      });
       throw new Error(`Method not found: ${methodName}`);
     }
 
     const startTime = performance.now();
 
     return new Promise<GrpcResponse>((resolve, reject) => {
+      let requestCount = 0;
+
       const stream = methodFn.call(
         client,
         metadata,
@@ -710,9 +887,36 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
               : {};
 
             if (throwOnError) {
+              logger.warn("gRPC client stream failed", {
+                method: methodPath,
+                duration: `${duration.toFixed(2)}ms`,
+                code,
+                message: errorMessage,
+                requestCount,
+              });
+              logger.trace("gRPC client stream error details", {
+                method: methodPath,
+                code,
+                message: errorMessage,
+                trailers: formatMessage(errorTrailers),
+              });
               reject(createGrpcError(code, errorMessage, errorTrailers));
               return;
             }
+
+            logger.debug("gRPC client stream completed with error", {
+              method: methodPath,
+              duration: `${duration.toFixed(2)}ms`,
+              code,
+              message: errorMessage,
+              requestCount,
+            });
+            logger.trace("gRPC client stream error details", {
+              method: methodPath,
+              code,
+              message: errorMessage,
+              trailers: formatMessage(errorTrailers),
+            });
 
             resolve(
               new GrpcResponseImpl({
@@ -725,6 +929,17 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
             );
             return;
           }
+
+          logger.debug("gRPC client stream succeeded", {
+            method: methodPath,
+            duration: `${duration.toFixed(2)}ms`,
+            code: 0,
+            requestCount,
+          });
+          logger.trace("gRPC client stream response message", {
+            method: methodPath,
+            message: formatMessage(response),
+          });
 
           const body = response
             ? new TextEncoder().encode(JSON.stringify(response))
@@ -747,9 +962,19 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
         try {
           for await (const request of requests) {
             stream.write(request);
+            requestCount++;
           }
+          logger.debug("gRPC client stream all requests sent", {
+            method: methodPath,
+            requestCount,
+          });
           stream.end();
         } catch (err) {
+          logger.error("gRPC client stream write error", {
+            method: methodPath,
+            error: err instanceof Error ? err.message : String(err),
+            requestCount,
+          });
           reject(err);
         }
       })();
@@ -767,10 +992,27 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     const callOptions = createCallOptions(options);
     const throwOnError = shouldThrowOnError(this.config, options);
 
+    const methodPath = `/${servicePath}/${methodName}`;
+
+    // Log request start
+    logger.debug("gRPC bidirectional stream starting", {
+      method: methodPath,
+      service: servicePath,
+      timeout: options?.timeout,
+      metadataKeys: Object.keys(metadataToRecord(metadata)),
+    });
+
     const methodFn = client[methodName];
     if (typeof methodFn !== "function") {
+      logger.error("Method not found", {
+        method: methodPath,
+        methodName,
+        servicePath,
+      });
       throw new Error(`Method not found: ${methodName}`);
     }
+
+    // Note: Bidirectional stream requests are sent incrementally, so we trace at send time
 
     const stream = methodFn.call(
       client,
@@ -780,14 +1022,27 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
 
     const startTime = performance.now();
 
+    let requestCount = 0;
+    let messageCount = 0;
+
     // Write requests in the background
     (async () => {
       try {
         for await (const request of requests) {
           stream.write(request);
+          requestCount++;
         }
+        logger.debug("gRPC bidirectional stream all requests sent", {
+          method: methodPath,
+          requestCount,
+        });
         stream.end();
-      } catch {
+      } catch (err) {
+        logger.error("gRPC bidirectional stream write error", {
+          method: methodPath,
+          error: err instanceof Error ? err.message : String(err),
+          requestCount,
+        });
         stream.end();
       }
     })();
@@ -829,6 +1084,12 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
       const duration = performance.now() - startTime;
 
       if (item.type === "end") {
+        logger.debug("gRPC bidirectional stream ended", {
+          method: methodPath,
+          duration: `${duration.toFixed(2)}ms`,
+          requestCount,
+          messageCount,
+        });
         break;
       }
 
@@ -840,8 +1101,37 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
           : {};
 
         if (throwOnError) {
+          logger.warn("gRPC bidirectional stream failed", {
+            method: methodPath,
+            duration: `${duration.toFixed(2)}ms`,
+            code,
+            message: errorMessage,
+            requestCount,
+            messageCount,
+          });
+          logger.trace("gRPC bidirectional stream error details", {
+            method: methodPath,
+            code,
+            message: errorMessage,
+            trailers: formatMessage(errorTrailers),
+          });
           throw createGrpcError(code, errorMessage, errorTrailers);
         }
+
+        logger.debug("gRPC bidirectional stream completed with error", {
+          method: methodPath,
+          duration: `${duration.toFixed(2)}ms`,
+          code,
+          message: errorMessage,
+          requestCount,
+          messageCount,
+        });
+        logger.trace("gRPC bidirectional stream error details", {
+          method: methodPath,
+          code,
+          message: errorMessage,
+          trailers: formatMessage(errorTrailers),
+        });
 
         yield new GrpcResponseImpl({
           code,
@@ -853,6 +1143,7 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
         break;
       }
 
+      messageCount++;
       const body = item.value
         ? new TextEncoder().encode(JSON.stringify(item.value))
         : null;

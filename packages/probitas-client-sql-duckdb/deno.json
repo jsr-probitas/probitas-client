@@ -8,6 +8,7 @@
   "imports": {
     "@probitas/client": "jsr:@probitas/client@^0",
     "@probitas/client-sql": "jsr:@probitas/client-sql@^0",
+    "@probitas/logger": "jsr:@probitas/logger@^0",
     "@duckdb/node-api": "npm:@duckdb/node-api@1.4.2-r.1"
   }
 }

@@ -1,4 +1,5 @@
 import { type BindValue, Database } from "@db/sqlite";
+import { getLogger } from "@probitas/logger";
 import {
   SqlQueryResult,
   type SqlTransaction,
@@ -11,8 +12,29 @@ import {
   type SqliteTransactionOptions,
 } from "./transaction.ts";
 
+const logger = getLogger("probitas", "client", "sql", "sqlite");
+
 /** Internal type alias for bind parameters */
 type BindParams = BindValue[];
+
+/**
+ * Format SQL for logging, truncating if necessary.
+ */
+function formatSql(sql: string): string {
+  return sql.length > 1000 ? sql.slice(0, 1000) + "..." : sql;
+}
+
+/**
+ * Format parameters for logging, truncating if necessary.
+ */
+function formatParams(params: unknown): string {
+  try {
+    const str = JSON.stringify(params);
+    return str.length > 500 ? str.slice(0, 500) + "..." : str;
+  } catch {
+    return "<unserializable>";
+  }
+}
 
 /**
  * SQLite client interface.
@@ -157,6 +179,12 @@ class SqliteClientImpl implements SqliteClient {
   constructor(config: SqliteClientConfig, db: Database) {
     this.config = config;
     this.#db = db;
+
+    logger.debug("SQLite client created", {
+      path: config.path,
+      readonly: config.readonly ?? false,
+      wal: config.wal ?? true,
+    });
   }
 
   // deno-lint-ignore no-explicit-any
@@ -171,6 +199,17 @@ class SqliteClientImpl implements SqliteClient {
     }
 
     const startTime = performance.now();
+    const sqlPreview = sql.length > 100 ? sql.substring(0, 100) + "..." : sql;
+
+    logger.debug("SQLite query starting", {
+      sql: sqlPreview,
+      paramCount: params?.length ?? 0,
+    });
+
+    logger.trace("SQLite query details", {
+      sql: formatSql(sql),
+      params: params ? formatParams(params) : undefined,
+    });
 
     try {
       // Check if this is a SELECT query
@@ -191,6 +230,18 @@ class SqliteClientImpl implements SqliteClient {
         ) as T[];
         stmt.finalize();
         const duration = performance.now() - startTime;
+
+        logger.debug("SQLite query success", {
+          duration: `${duration.toFixed(2)}ms`,
+          rowCount: rows.length,
+        });
+
+        if (rows.length > 0) {
+          const sample = rows.slice(0, 1);
+          logger.trace("SQLite query row sample", {
+            rows: formatParams(sample),
+          });
+        }
 
         return Promise.resolve(
           new SqlQueryResult<T>({
@@ -216,6 +267,12 @@ class SqliteClientImpl implements SqliteClient {
         const changes = this.#db.changes;
         const lastInsertRowId = this.#db.lastInsertRowId;
 
+        logger.debug("SQLite query success", {
+          duration: `${duration.toFixed(2)}ms`,
+          affectedRows: changes,
+          lastInsertId: lastInsertRowId > 0 ? lastInsertRowId : undefined,
+        });
+
         return Promise.resolve(
           new SqlQueryResult<T>({
             ok: true,
@@ -231,6 +288,12 @@ class SqliteClientImpl implements SqliteClient {
         );
       }
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("SQLite query failed", {
+        sql: sqlPreview,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return Promise.reject(convertSqliteError(error));
     }
   }
@@ -252,6 +315,9 @@ class SqliteClientImpl implements SqliteClient {
       throw convertSqliteError(new Error("Client is closed"));
     }
 
+    logger.debug("SQLite transaction begin");
+
+    const startTime = performance.now();
     const tx = SqliteTransactionImpl.begin(
       this.#db,
       options as SqliteTransactionOptions,
@@ -260,9 +326,20 @@ class SqliteClientImpl implements SqliteClient {
     try {
       const result = await fn(tx);
       await tx.commit();
+
+      const duration = performance.now() - startTime;
+      logger.debug("SQLite transaction commit", {
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return result;
     } catch (error) {
       await tx.rollback();
+      const duration = performance.now() - startTime;
+      logger.debug("SQLite transaction rollback", {
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -274,12 +351,31 @@ class SqliteClientImpl implements SqliteClient {
       );
     }
 
+    logger.debug("SQLite backup starting", {
+      destPath,
+    });
+
+    const startTime = performance.now();
+
     try {
       // SQLite backup using VACUUM INTO (available since SQLite 3.27.0)
       // This creates a complete backup of the database to the specified file
       this.#db.exec(`VACUUM INTO '${destPath.replace(/'/g, "''")}'`);
+
+      const duration = performance.now() - startTime;
+      logger.debug("SQLite backup success", {
+        destPath,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return Promise.resolve();
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("SQLite backup failed", {
+        destPath,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return Promise.reject(convertSqliteError(error));
     }
   }
@@ -291,10 +387,25 @@ class SqliteClientImpl implements SqliteClient {
       );
     }
 
+    logger.debug("SQLite vacuum starting");
+
+    const startTime = performance.now();
+
     try {
       this.#db.exec("VACUUM");
+
+      const duration = performance.now() - startTime;
+      logger.debug("SQLite vacuum success", {
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return Promise.resolve();
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("SQLite vacuum failed", {
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return Promise.reject(convertSqliteError(error));
     }
   }
@@ -302,7 +413,9 @@ class SqliteClientImpl implements SqliteClient {
   close(): Promise<void> {
     if (this.#closed) return Promise.resolve();
     this.#closed = true;
+    logger.debug("SQLite client closing");
     this.#db.close();
+    logger.debug("SQLite client closed");
     return Promise.resolve();
   }
 

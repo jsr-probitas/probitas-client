@@ -17,6 +17,31 @@ import {
   HttpUnauthorizedError,
 } from "./errors.ts";
 import { createHttpResponse } from "./response.ts";
+import { getLogger } from "@probitas/logger";
+
+const logger = getLogger("probitas", "client", "http");
+
+/**
+ * Format request/response body for logging preview (truncated for large bodies).
+ */
+function formatBodyPreview(body: unknown): string | undefined {
+  if (!body) return undefined;
+  if (typeof body === "string") {
+    return body.length > 500 ? body.slice(0, 500) + "..." : body;
+  }
+  if (body instanceof Uint8Array) {
+    return `<binary ${body.length} bytes>`;
+  }
+  if (body instanceof FormData || body instanceof URLSearchParams) {
+    return `<${body.constructor.name}>`;
+  }
+  try {
+    const str = JSON.stringify(body);
+    return str.length > 500 ? str.slice(0, 500) + "..." : str;
+  } catch {
+    return "<unserializable>";
+  }
+}
 
 /**
  * Build URL with query parameters.
@@ -146,11 +171,21 @@ class HttpClientImpl implements HttpClient {
     this.#cookiesEnabled = !(config.cookies?.disabled ?? false);
     this.#cookieJar = new Map();
 
+    // Log client creation
+    logger.debug("HTTP client created", {
+      baseUrl: config.baseUrl,
+      cookiesEnabled: this.#cookiesEnabled,
+      redirect: config.redirect ?? "follow",
+    });
+
     // Initialize with initial cookies if provided
     if (config.cookies?.initial) {
       for (const [name, value] of Object.entries(config.cookies.initial)) {
         this.#cookieJar.set(name, value);
       }
+      logger.debug("Initial cookies set", {
+        count: Object.keys(config.cookies.initial).length,
+      });
     }
   }
 
@@ -230,43 +265,101 @@ class HttpClientImpl implements HttpClient {
       headers["Cookie"] = serializeCookies(Object.fromEntries(this.#cookieJar));
     }
 
+    // Log request start
+    logger.debug("HTTP request starting", {
+      method,
+      url,
+      headers: Object.keys(headers),
+      hasBody: prepared.body !== undefined,
+      queryParams: options?.query ? Object.keys(options.query) : [],
+    });
+    logger.trace("HTTP request details", {
+      headers,
+      bodyPreview: formatBodyPreview(prepared.body),
+    });
+
     const fetchFn = this.config.fetch ?? globalThis.fetch;
     const redirect = options?.redirect ?? this.config.redirect ?? "follow";
     const startTime = performance.now();
 
-    const rawResponse = await fetchFn(url, {
-      method,
-      headers,
-      body: prepared.body as globalThis.BodyInit,
-      signal: options?.signal,
-      redirect,
-    });
+    try {
+      const rawResponse = await fetchFn(url, {
+        method,
+        headers,
+        body: prepared.body as globalThis.BodyInit,
+        signal: options?.signal,
+        redirect,
+      });
 
-    const duration = performance.now() - startTime;
-    const response = await createHttpResponse(rawResponse, duration);
+      const duration = performance.now() - startTime;
+      const response = await createHttpResponse(rawResponse, duration);
 
-    // Store cookies from Set-Cookie headers if cookies are enabled
-    if (this.#cookiesEnabled) {
-      // Use getSetCookie() if available (modern API), otherwise fallback to get()
-      const setCookies = rawResponse.headers.getSetCookie?.() ??
-        (rawResponse.headers.get("set-cookie")?.split(/,(?=\s*\w+=)/) ?? []);
-      for (const cookieStr of setCookies) {
-        const parsed = parseSetCookie(cookieStr.trim());
-        if (parsed) {
-          this.#cookieJar.set(parsed.name, parsed.value);
+      // Log response
+      logger.debug("HTTP response received", {
+        method,
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        duration: `${duration.toFixed(2)}ms`,
+        contentType: response.headers.get("content-type"),
+        contentLength: response.body?.length,
+      });
+      logger.trace("HTTP response details", {
+        headers: Object.fromEntries(rawResponse.headers.entries()),
+        bodyPreview: response.body
+          ? formatBodyPreview(response.text)
+          : undefined,
+      });
+
+      // Store cookies from Set-Cookie headers if cookies are enabled
+      if (this.#cookiesEnabled) {
+        // Use getSetCookie() if available (modern API), otherwise fallback to get()
+        const setCookies = rawResponse.headers.getSetCookie?.() ??
+          (rawResponse.headers.get("set-cookie")?.split(/,(?=\s*\w+=)/) ?? []);
+        const parsedCount = setCookies.length;
+        for (const cookieStr of setCookies) {
+          const parsed = parseSetCookie(cookieStr.trim());
+          if (parsed) {
+            this.#cookieJar.set(parsed.name, parsed.value);
+          }
+        }
+        if (parsedCount > 0) {
+          logger.debug("Cookies received and stored", {
+            count: parsedCount,
+          });
         }
       }
+
+      // Determine whether to throw on error (request option > config > default true)
+      const shouldThrow = options?.throwOnError ?? this.config.throwOnError ??
+        true;
+
+      if (!response.ok && shouldThrow) {
+        logger.warn("HTTP error response", {
+          method,
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          duration: `${duration.toFixed(2)}ms`,
+        });
+        throwHttpError(response);
+      }
+
+      return response;
+    } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("HTTP request failed", {
+        method,
+        url,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      logger.trace("HTTP request error details", {
+        stack: error instanceof Error ? error.stack : undefined,
+        cause: error instanceof Error ? error.cause : undefined,
+      });
+      throw error;
     }
-
-    // Determine whether to throw on error (request option > config > default true)
-    const shouldThrow = options?.throwOnError ?? this.config.throwOnError ??
-      true;
-
-    if (!response.ok && shouldThrow) {
-      throwHttpError(response);
-    }
-
-    return response;
   }
 
   close(): Promise<void> {

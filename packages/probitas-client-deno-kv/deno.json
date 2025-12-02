@@ -6,6 +6,7 @@
     "exclude": ["**/*_test.ts", "**/*_bench.ts"]
   },
   "imports": {
-    "@probitas/client": "jsr:@probitas/client@^0"
+    "@probitas/client": "jsr:@probitas/client@^0",
+    "@probitas/logger": "jsr:@probitas/logger@^0"
   }
 }

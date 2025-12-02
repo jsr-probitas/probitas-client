@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import * as amqp from "amqplib";
 import { AbortError, TimeoutError } from "@probitas/client";
+import { getLogger } from "@probitas/logger";
 import type { CommonOptions } from "@probitas/client";
 import type {
   RabbitMqAckResult,
@@ -27,6 +28,27 @@ import {
   RabbitMqNotFoundError,
   RabbitMqPreconditionFailedError,
 } from "./errors.ts";
+
+const logger = getLogger("probitas", "client", "rabbitmq");
+
+/**
+ * Format a value for logging, truncating long values.
+ */
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) return String(value);
+  if (typeof value === "string") {
+    return value.length > 200 ? value.slice(0, 200) + "..." : value;
+  }
+  if (value instanceof Uint8Array) {
+    return `<binary ${value.length} bytes>`;
+  }
+  try {
+    const str = JSON.stringify(value);
+    return str.length > 200 ? str.slice(0, 200) + "..." : str;
+  } catch {
+    return "<unserializable>";
+  }
+}
 
 /**
  * Execute a promise with timeout and abort signal support.
@@ -168,6 +190,22 @@ function convertMessage(msg: amqp.ConsumeMessage): RabbitMqMessage {
 }
 
 /**
+ * Sanitize URL for logging by removing credentials.
+ */
+function sanitizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.password || parsed.username) {
+      parsed.password = "***";
+      parsed.username = "***";
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Create a RabbitMQ client.
  *
  * @example
@@ -198,12 +236,25 @@ export async function createRabbitMqClient(
       connectOptions.heartbeat = config.heartbeat;
     }
 
+    logger.debug("RabbitMQ client connecting", {
+      url: sanitizeUrl(config.url),
+      heartbeat: config.heartbeat,
+    });
+
     connection = await withOptions(
       amqp.connect(config.url, connectOptions),
       config,
       "connect",
     );
+
+    logger.debug("RabbitMQ client connected", {
+      url: sanitizeUrl(config.url),
+    });
   } catch (error) {
+    logger.error("RabbitMQ connection failed", {
+      url: sanitizeUrl(config.url),
+      error: error instanceof Error ? error.message : String(error),
+    });
     if (error instanceof TimeoutError || error instanceof AbortError) {
       throw error;
     }
@@ -223,7 +274,10 @@ class RabbitMqClientImpl implements RabbitMqClient {
   readonly #connection: amqp.ChannelModel;
   #closed = false;
 
-  constructor(config: RabbitMqClientConfig, connection: amqp.ChannelModel) {
+  constructor(
+    config: RabbitMqClientConfig,
+    connection: amqp.ChannelModel,
+  ) {
     this.config = config;
     this.#connection = connection;
   }
@@ -232,14 +286,24 @@ class RabbitMqClientImpl implements RabbitMqClient {
     this.#ensureOpen();
 
     try {
+      logger.debug("Creating RabbitMQ channel");
+
       const ch = await this.#connection.createChannel();
 
       if (this.config.prefetch !== undefined) {
         await ch.prefetch(this.config.prefetch);
+        logger.debug("Channel prefetch set", {
+          prefetch: this.config.prefetch,
+        });
       }
+
+      logger.debug("RabbitMQ channel created");
 
       return new RabbitMqChannelImpl(ch);
     } catch (error) {
+      logger.error("Failed to create channel", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, "createChannel");
     }
   }
@@ -249,9 +313,13 @@ class RabbitMqClientImpl implements RabbitMqClient {
     this.#closed = true;
 
     try {
+      logger.debug("Closing RabbitMQ connection");
       await this.#connection.close();
-    } catch {
-      // Ignore close errors
+      logger.debug("RabbitMQ connection closed");
+    } catch (error) {
+      logger.warn("Error closing connection", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -287,6 +355,14 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     const operation = `assertExchange(${name})`;
 
     try {
+      logger.debug("Asserting exchange", {
+        name,
+        type,
+        durable: options?.durable,
+        autoDelete: options?.autoDelete,
+        internal: options?.internal,
+      });
+
       await withOptions(
         this.#channel.assertExchange(name, type, {
           durable: options?.durable,
@@ -298,11 +374,25 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         operation,
       );
 
+      const duration = performance.now() - startTime;
+      logger.debug("Exchange asserted", {
+        name,
+        type,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return {
         ok: true,
-        duration: performance.now() - startTime,
+        duration,
       };
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to assert exchange", {
+        name,
+        type,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, operation);
     }
   }
@@ -316,17 +406,31 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     const operation = `deleteExchange(${name})`;
 
     try {
+      logger.debug("Deleting exchange", { name });
+
       await withOptions(
         this.#channel.deleteExchange(name),
         options,
         operation,
       );
 
+      const duration = performance.now() - startTime;
+      logger.debug("Exchange deleted", {
+        name,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return {
         ok: true,
-        duration: performance.now() - startTime,
+        duration,
       };
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to delete exchange", {
+        name,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, operation);
     }
   }
@@ -342,6 +446,15 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     const operation = `assertQueue(${name})`;
 
     try {
+      logger.debug("Asserting queue", {
+        name,
+        durable: options?.durable,
+        exclusive: options?.exclusive,
+        autoDelete: options?.autoDelete,
+        messageTtl: options?.messageTtl,
+        maxLength: options?.maxLength,
+      });
+
       // deno-lint-ignore no-explicit-any
       const queueOptions: any = {
         durable: options?.durable,
@@ -371,14 +484,28 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         operation,
       ) as amqp.Replies.AssertQueue;
 
+      const duration = performance.now() - startTime;
+      logger.debug("Queue asserted", {
+        name,
+        messageCount: result.messageCount,
+        consumerCount: result.consumerCount,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return {
         ok: true,
         queue: result.queue,
         messageCount: result.messageCount,
         consumerCount: result.consumerCount,
-        duration: performance.now() - startTime,
+        duration,
       };
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to assert queue", {
+        name,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, operation);
     }
   }
@@ -392,20 +519,35 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     const operation = `deleteQueue(${name})`;
 
     try {
+      logger.debug("Deleting queue", { name });
+
       const result = await withOptions(
         this.#channel.deleteQueue(name),
         options,
         operation,
       ) as amqp.Replies.DeleteQueue;
 
+      const duration = performance.now() - startTime;
+      logger.debug("Queue deleted", {
+        name,
+        messageCount: result.messageCount,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return {
         ok: true,
         queue: name,
         messageCount: result.messageCount,
         consumerCount: 0,
-        duration: performance.now() - startTime,
+        duration,
       };
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to delete queue", {
+        name,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, operation);
     }
   }
@@ -419,20 +561,35 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     const operation = `purgeQueue(${name})`;
 
     try {
+      logger.debug("Purging queue", { name });
+
       const result = await withOptions(
         this.#channel.purgeQueue(name),
         options,
         operation,
       ) as amqp.Replies.PurgeQueue;
 
+      const duration = performance.now() - startTime;
+      logger.debug("Queue purged", {
+        name,
+        messageCount: result.messageCount,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return {
         ok: true,
         queue: name,
         messageCount: result.messageCount,
         consumerCount: 0,
-        duration: performance.now() - startTime,
+        duration,
       };
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to purge queue", {
+        name,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, operation);
     }
   }
@@ -448,17 +605,39 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     const operation = `bindQueue(${queue}, ${exchange}, ${routingKey})`;
 
     try {
+      logger.debug("Binding queue", {
+        queue,
+        exchange,
+        routingKey,
+      });
+
       await withOptions(
         this.#channel.bindQueue(queue, exchange, routingKey),
         options,
         operation,
       );
 
+      const duration = performance.now() - startTime;
+      logger.debug("Queue bound", {
+        queue,
+        exchange,
+        routingKey,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return {
         ok: true,
-        duration: performance.now() - startTime,
+        duration,
       };
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to bind queue", {
+        queue,
+        exchange,
+        routingKey,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, operation);
     }
   }
@@ -474,17 +653,39 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     const operation = `unbindQueue(${queue}, ${exchange}, ${routingKey})`;
 
     try {
+      logger.debug("Unbinding queue", {
+        queue,
+        exchange,
+        routingKey,
+      });
+
       await withOptions(
         this.#channel.unbindQueue(queue, exchange, routingKey),
         options,
         operation,
       );
 
+      const duration = performance.now() - startTime;
+      logger.debug("Queue unbound", {
+        queue,
+        exchange,
+        routingKey,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return {
         ok: true,
-        duration: performance.now() - startTime,
+        duration,
       };
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to unbind queue", {
+        queue,
+        exchange,
+        routingKey,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, operation);
     }
   }
@@ -502,6 +703,14 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     const operation = `publish(${exchange}, ${routingKey})`;
 
     try {
+      logger.debug("Publishing message", {
+        exchange,
+        routingKey,
+        messageSize: content.length,
+        persistent: options?.persistent,
+        contentType: options?.contentType,
+      });
+
       const publishOptions: amqp.Options.Publish = {
         persistent: options?.persistent,
         contentType: options?.contentType,
@@ -527,11 +736,32 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         });
       }
 
+      const duration = performance.now() - startTime;
+      logger.debug("Message published", {
+        exchange,
+        routingKey,
+        messageSize: content.length,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
+      // Log detailed content
+      logger.trace("Message published details", {
+        content: formatValue(new TextDecoder().decode(content)),
+      });
+
       return {
         ok: true,
-        duration: performance.now() - startTime,
+        duration,
       };
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to publish message", {
+        exchange,
+        routingKey,
+        messageSize: content.length,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, operation);
     }
   }
@@ -555,29 +785,55 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     const operation = `get(${queue})`;
 
     try {
+      logger.debug("Getting message", { queue });
+
       const msg = await withOptions(
         this.#channel.get(queue, { noAck: false }),
         options,
         operation,
       ) as amqp.GetMessage | false;
 
+      const duration = performance.now() - startTime;
+
       if (msg === false) {
+        logger.debug("No message available", {
+          queue,
+          duration: `${duration.toFixed(2)}ms`,
+        });
         return {
           ok: true,
           message: null,
-          duration: performance.now() - startTime,
+          duration,
         };
       }
 
       const message = convertMessage(msg);
       this.#deliveryTagMap.set(message, msg.fields.deliveryTag);
 
+      logger.debug("Message received", {
+        queue,
+        routingKey: message.fields.routingKey,
+        size: message.content.length,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
+      // Log detailed content
+      logger.trace("Message received details", {
+        content: formatValue(new TextDecoder().decode(message.content)),
+      });
+
       return {
         ok: true,
         message,
-        duration: performance.now() - startTime,
+        duration,
       };
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to get message", {
+        queue,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, operation);
     }
   }
@@ -594,6 +850,13 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     let done = false;
 
     try {
+      logger.debug("Starting consume", {
+        queue,
+        noAck: options?.noAck,
+        exclusive: options?.exclusive,
+        priority: options?.priority,
+      });
+
       const consumeResult = await this.#channel.consume(
         queue,
         (msg: amqp.ConsumeMessage | null) => {
@@ -624,6 +887,10 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
       );
 
       consumerTag = consumeResult.consumerTag;
+      logger.debug("Consumer started", {
+        queue,
+        consumerTag,
+      });
 
       while (!done && !this.#closed) {
         if (messageQueue.length > 0) {
@@ -645,9 +912,15 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     } finally {
       if (consumerTag && !this.#closed) {
         try {
+          logger.debug("Cancelling consumer", { queue, consumerTag });
           await this.#channel.cancel(consumerTag);
-        } catch {
-          // Ignore cancel errors
+          logger.debug("Consumer cancelled", { queue, consumerTag });
+        } catch (error) {
+          logger.warn("Failed to cancel consumer", {
+            queue,
+            consumerTag,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
     }
@@ -668,13 +941,26 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         throw new RabbitMqChannelError("Message delivery tag not found");
       }
 
+      logger.debug("Acknowledging message", { deliveryTag });
+
       this.#channel.ack({ fields: { deliveryTag } } as amqp.Message);
+
+      const duration = performance.now() - startTime;
+      logger.debug("Message acknowledged", {
+        deliveryTag,
+        duration: `${duration.toFixed(2)}ms`,
+      });
 
       return Promise.resolve({
         ok: true,
-        duration: performance.now() - startTime,
+        duration,
       });
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to acknowledge message", {
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       if (
         error instanceof RabbitMqChannelError ||
         error instanceof TimeoutError ||
@@ -699,17 +985,34 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         throw new RabbitMqChannelError("Message delivery tag not found");
       }
 
+      logger.debug("Nacking message", {
+        deliveryTag,
+        allUpTo: options?.allUpTo ?? false,
+        requeue: options?.requeue ?? true,
+      });
+
       this.#channel.nack(
         { fields: { deliveryTag } } as amqp.Message,
         options?.allUpTo ?? false,
         options?.requeue ?? true,
       );
 
+      const duration = performance.now() - startTime;
+      logger.debug("Message nacked", {
+        deliveryTag,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return Promise.resolve({
         ok: true,
-        duration: performance.now() - startTime,
+        duration,
       });
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to nack message", {
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       if (
         error instanceof RabbitMqChannelError ||
         error instanceof TimeoutError ||
@@ -734,16 +1037,34 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         throw new RabbitMqChannelError("Message delivery tag not found");
       }
 
+      logger.debug("Rejecting message", {
+        deliveryTag,
+        requeue: requeue ?? false,
+      });
+
       this.#channel.reject(
         { fields: { deliveryTag } } as amqp.Message,
         requeue ?? false,
       );
 
+      const duration = performance.now() - startTime;
+      logger.debug("Message rejected", {
+        deliveryTag,
+        requeue: requeue ?? false,
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return Promise.resolve({
         ok: true,
-        duration: performance.now() - startTime,
+        duration,
       });
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("Failed to reject message", {
+        requeue: requeue ?? false,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       if (
         error instanceof RabbitMqChannelError ||
         error instanceof TimeoutError ||
@@ -761,8 +1082,16 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     this.#ensureOpen();
 
     try {
+      logger.debug("Setting prefetch", { count });
+
       await this.#channel.prefetch(count);
+
+      logger.debug("Prefetch set", { count });
     } catch (error) {
+      logger.error("Failed to set prefetch", {
+        count,
+        error: error instanceof Error ? error.message : String(error),
+      });
       convertAmqpError(error, "prefetch");
     }
   }
@@ -772,9 +1101,13 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
     this.#closed = true;
 
     try {
+      logger.debug("Closing channel");
       await this.#channel.close();
-    } catch {
-      // Ignore close errors
+      logger.debug("Channel closed");
+    } catch (error) {
+      logger.warn("Error closing channel", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

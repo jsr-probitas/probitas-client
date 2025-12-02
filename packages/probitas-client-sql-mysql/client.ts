@@ -1,4 +1,5 @@
 import mysql from "mysql2/promise";
+import { getLogger } from "@probitas/logger";
 import {
   SqlQueryResult,
   type SqlTransaction,
@@ -8,6 +9,27 @@ import type { MySqlClientConfig, MySqlConnectionConfig } from "./types.ts";
 import { convertMySqlError } from "./errors.ts";
 import { MySqlTransactionImpl } from "./transaction.ts";
 import type { MySqlTransaction } from "./transaction.ts";
+
+const logger = getLogger("probitas", "client", "sql", "mysql");
+
+/**
+ * Format SQL for logging, truncating if necessary.
+ */
+function formatSql(sql: string): string {
+  return sql.length > 1000 ? sql.slice(0, 1000) + "..." : sql;
+}
+
+/**
+ * Format parameters for logging, truncating if necessary.
+ */
+function formatParams(params: unknown): string {
+  try {
+    const str = JSON.stringify(params);
+    return str.length > 500 ? str.slice(0, 500) + "..." : str;
+  } catch {
+    return "<unserializable>";
+  }
+}
 
 /**
  * MySQL client interface.
@@ -162,6 +184,23 @@ class MySqlClientImpl implements MySqlClient {
   constructor(config: MySqlClientConfig, pool: mysql.Pool) {
     this.config = config;
     this.#pool = pool;
+
+    // Log client creation with sanitized connection info
+    const connInfo = typeof config.connection === "string"
+      ? { connection: "[connection-url]" }
+      : {
+        host: config.connection.host,
+        port: config.connection.port ?? 3306,
+        database: config.connection.database,
+        user: config.connection.user,
+      };
+
+    logger.debug("MySQL client created", {
+      ...connInfo,
+      charset: config.charset,
+      timezone: config.timezone,
+      connectionLimit: config.pool?.connectionLimit ?? 10,
+    });
   }
 
   // deno-lint-ignore no-explicit-any
@@ -174,6 +213,17 @@ class MySqlClientImpl implements MySqlClient {
     }
 
     const startTime = performance.now();
+    const sqlPreview = sql.length > 100 ? sql.substring(0, 100) + "..." : sql;
+
+    logger.debug("MySQL query starting", {
+      sql: sqlPreview,
+      paramCount: params?.length ?? 0,
+    });
+
+    logger.trace("MySQL query details", {
+      sql: formatSql(sql),
+      params: params ? formatParams(params) : undefined,
+    });
 
     try {
       // deno-lint-ignore no-explicit-any
@@ -182,6 +232,18 @@ class MySqlClientImpl implements MySqlClient {
 
       // Handle SELECT queries
       if (Array.isArray(rows)) {
+        logger.debug("MySQL query success", {
+          duration: `${duration.toFixed(2)}ms`,
+          rowCount: rows.length,
+        });
+
+        if (rows.length > 0) {
+          const sample = rows.slice(0, 1);
+          logger.trace("MySQL query row sample", {
+            rows: formatParams(sample),
+          });
+        }
+
         return new SqlQueryResult<T>({
           ok: true,
           rows: rows as unknown as T[],
@@ -196,6 +258,14 @@ class MySqlClientImpl implements MySqlClient {
       // Handle INSERT/UPDATE/DELETE queries (ResultSetHeader)
       // deno-lint-ignore no-explicit-any
       const resultHeader = rows as any;
+
+      logger.debug("MySQL query success", {
+        duration: `${duration.toFixed(2)}ms`,
+        affectedRows: resultHeader.affectedRows,
+        lastInsertId: resultHeader.insertId ? resultHeader.insertId : undefined,
+        warnings: resultHeader.warningStatus,
+      });
+
       return new SqlQueryResult<T>({
         ok: true,
         rows: [],
@@ -211,6 +281,12 @@ class MySqlClientImpl implements MySqlClient {
         },
       });
     } catch (error) {
+      const duration = performance.now() - startTime;
+      logger.error("MySQL query failed", {
+        sql: sqlPreview,
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw convertMySqlError(error);
     }
   }
@@ -232,6 +308,12 @@ class MySqlClientImpl implements MySqlClient {
       throw convertMySqlError(new Error("Client is closed"));
     }
 
+    logger.debug("MySQL transaction begin", {
+      isolationLevel: options?.isolationLevel,
+    });
+
+    const startTime = performance.now();
+
     let tx: MySqlTransaction;
     try {
       const connection = await this.#pool.getConnection();
@@ -242,9 +324,20 @@ class MySqlClientImpl implements MySqlClient {
     try {
       const result = await fn(tx);
       await tx.commit();
+
+      const duration = performance.now() - startTime;
+      logger.debug("MySQL transaction commit", {
+        duration: `${duration.toFixed(2)}ms`,
+      });
+
       return result;
     } catch (error) {
       await tx.rollback();
+      const duration = performance.now() - startTime;
+      logger.debug("MySQL transaction rollback", {
+        duration: `${duration.toFixed(2)}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -252,7 +345,9 @@ class MySqlClientImpl implements MySqlClient {
   async close(): Promise<void> {
     if (this.#closed) return;
     this.#closed = true;
+    logger.debug("MySQL client closing");
     await this.#pool.end();
+    logger.debug("MySQL client closed");
   }
 
   [Symbol.asyncDispose](): Promise<void> {

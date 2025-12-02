@@ -334,38 +334,52 @@ export class GrpcReflectionClient implements AsyncDisposable {
       const stream = client.serverReflectionInfo();
       let settled = false;
 
+      const cleanup = () => {
+        stream.removeListener("data", onData);
+        stream.removeListener("error", onError);
+        stream.removeListener("end", onEnd);
+      };
+
       const timeout = setTimeout(() => {
         if (!settled) {
           settled = true;
+          cleanup();
           stream.cancel();
           reject(new Error("Reflection connection test timed out"));
         }
       }, 5000);
 
-      stream.on("data", () => {
+      const onData = () => {
         if (!settled) {
           settled = true;
           clearTimeout(timeout);
+          cleanup();
           stream.cancel();
           resolve();
         }
-      });
+      };
 
-      stream.on("error", (error) => {
+      const onError = (error: unknown) => {
         if (!settled) {
           settled = true;
           clearTimeout(timeout);
+          cleanup();
           reject(error);
         }
-      });
+      };
 
-      stream.on("end", () => {
+      const onEnd = () => {
         if (!settled) {
           settled = true;
           clearTimeout(timeout);
+          cleanup();
           resolve();
         }
-      });
+      };
+
+      stream.on("data", onData);
+      stream.on("error", onError);
+      stream.on("end", onEnd);
 
       // Send a simple list_services request to test the connection
       stream.write({ list_services: "" });
@@ -431,7 +445,13 @@ export class GrpcReflectionClient implements AsyncDisposable {
       const stream = client.serverReflectionInfo();
       let settled = false;
 
-      stream.on("data", (response: ReflectionResponse) => {
+      const cleanup = () => {
+        stream.removeListener("data", onData);
+        stream.removeListener("error", onError);
+        stream.removeListener("end", onEnd);
+      };
+
+      const onData = (response: ReflectionResponse) => {
         if (settled) return;
 
         if (
@@ -455,6 +475,7 @@ export class GrpcReflectionClient implements AsyncDisposable {
               files.map((file) => file.name),
             );
           }
+          cleanup();
           resolve(descriptors);
           stream.cancel();
           return;
@@ -466,22 +487,29 @@ export class GrpcReflectionClient implements AsyncDisposable {
             grpc.status.UNKNOWN;
           const message = response.error_response.error_message ??
             "Unknown reflection error";
+          cleanup();
           reject(new Error(`Reflection error (${code}): ${message}`));
           stream.cancel();
         }
-      });
+      };
 
-      stream.on("error", (error) => {
+      const onError = (error: unknown) => {
         if (settled) return;
         settled = true;
+        cleanup();
         reject(error);
-      });
+      };
 
-      stream.on("end", () => {
+      const onEnd = () => {
         if (settled) return;
         settled = true;
+        cleanup();
         reject(new Error("Reflection response ended without data"));
-      });
+      };
+
+      stream.on("data", onData);
+      stream.on("error", onError);
+      stream.on("end", onEnd);
 
       stream.write(request);
       stream.end();

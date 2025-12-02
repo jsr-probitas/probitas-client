@@ -498,10 +498,16 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
       let statusReceived = false;
       let callbackReceived = false;
 
+      // Helper to clean up the status listener
+      const cleanup = () => {
+        call.removeListener("status", onStatus);
+      };
+
       const tryResolve = () => {
         // Only resolve when both callback and status event have been received
         if (!callbackReceived || !statusReceived) return;
 
+        cleanup();
         const duration = performance.now() - startTime;
         const body = pendingResponse
           ? new TextEncoder().encode(JSON.stringify(pendingResponse))
@@ -527,6 +533,7 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
         // deno-lint-ignore no-explicit-any
         (error: grpc.ServiceError | null, response: any) => {
           if (error) {
+            cleanup();
             const duration = performance.now() - startTime;
             const code = (error.code ?? 2) as GrpcStatusCode;
             const errorMessage = error.message ?? "Unknown error";
@@ -564,13 +571,14 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
       ) as grpc.ClientUnaryCall;
 
       // Listen for status event to capture trailing metadata
-      call.on("status", (status: grpc.StatusObject) => {
+      const onStatus = (status: grpc.StatusObject) => {
         if (status.metadata) {
           trailers = metadataToRecord(status.metadata);
         }
         statusReceived = true;
         tryResolve();
-      });
+      };
+      call.on("status", onStatus);
     });
   }
 
@@ -607,71 +615,83 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     }> = [];
     let resolver: (() => void) | null = null;
 
-    stream.on("data", (data) => {
+    // deno-lint-ignore no-explicit-any
+    const onData = (data: any) => {
       queue.push({ type: "data", value: data });
       resolver?.();
-    });
+    };
 
-    stream.on("error", (error: grpc.ServiceError) => {
+    const onError = (error: grpc.ServiceError) => {
       queue.push({ type: "error", error });
       resolver?.();
-    });
+    };
 
-    stream.on("end", () => {
+    const onEnd = () => {
       queue.push({ type: "end" });
       resolver?.();
-    });
+    };
 
-    while (true) {
-      if (queue.length === 0) {
-        await new Promise<void>((resolve) => {
-          resolver = resolve;
-        });
-        resolver = null;
-      }
+    stream.on("data", onData);
+    stream.on("error", onError);
+    stream.on("end", onEnd);
 
-      const item = queue.shift();
-      if (!item) continue;
-
-      const duration = performance.now() - startTime;
-
-      if (item.type === "end") {
-        break;
-      }
-
-      if (item.type === "error") {
-        const code = (item.error?.code ?? 2) as GrpcStatusCode;
-        const errorMessage = item.error?.message ?? "Unknown error";
-        const errorTrailers = item.error?.metadata
-          ? metadataToRecord(item.error.metadata)
-          : {};
-
-        if (throwOnError) {
-          throw createGrpcError(code, errorMessage, errorTrailers);
+    try {
+      while (true) {
+        if (queue.length === 0) {
+          await new Promise<void>((resolve) => {
+            resolver = resolve;
+          });
+          resolver = null;
         }
 
+        const item = queue.shift();
+        if (!item) continue;
+
+        const duration = performance.now() - startTime;
+
+        if (item.type === "end") {
+          break;
+        }
+
+        if (item.type === "error") {
+          const code = (item.error?.code ?? 2) as GrpcStatusCode;
+          const errorMessage = item.error?.message ?? "Unknown error";
+          const errorTrailers = item.error?.metadata
+            ? metadataToRecord(item.error.metadata)
+            : {};
+
+          if (throwOnError) {
+            throw createGrpcError(code, errorMessage, errorTrailers);
+          }
+
+          yield new GrpcResponseImpl({
+            code,
+            message: errorMessage,
+            body: null,
+            trailers: errorTrailers,
+            duration,
+          });
+          break;
+        }
+
+        const body = item.value
+          ? new TextEncoder().encode(JSON.stringify(item.value))
+          : null;
+
         yield new GrpcResponseImpl({
-          code,
-          message: errorMessage,
-          body: null,
-          trailers: errorTrailers,
+          code: 0,
+          message: "",
+          body,
+          trailers: {},
           duration,
+          deserializer: () => item.value,
         });
-        break;
       }
-
-      const body = item.value
-        ? new TextEncoder().encode(JSON.stringify(item.value))
-        : null;
-
-      yield new GrpcResponseImpl({
-        code: 0,
-        message: "",
-        body,
-        trailers: {},
-        duration,
-        deserializer: () => item.value,
-      });
+    } finally {
+      stream.removeListener("data", onData);
+      stream.removeListener("error", onError);
+      stream.removeListener("end", onEnd);
+      stream.destroy();
     }
   }
 
@@ -750,6 +770,7 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
           }
           stream.end();
         } catch (err) {
+          stream.destroy(err instanceof Error ? err : new Error(String(err)));
           reject(err);
         }
       })();
@@ -780,6 +801,9 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
 
     const startTime = performance.now();
 
+    // Track write errors to propagate to the reader
+    let writeError: Error | null = null;
+
     // Write requests in the background
     (async () => {
       try {
@@ -787,8 +811,9 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
           stream.write(request);
         }
         stream.end();
-      } catch {
-        stream.end();
+      } catch (err) {
+        writeError = err instanceof Error ? err : new Error(String(err));
+        stream.destroy(writeError);
       }
     })();
 
@@ -800,71 +825,93 @@ class GrpcClientImpl<TService> implements GrpcClient<TService> {
     }> = [];
     let resolver: (() => void) | null = null;
 
-    stream.on("data", (data) => {
+    // deno-lint-ignore no-explicit-any
+    const onData = (data: any) => {
       queue.push({ type: "data", value: data });
       resolver?.();
-    });
+    };
 
-    stream.on("error", (error: grpc.ServiceError) => {
+    const onError = (error: grpc.ServiceError) => {
       queue.push({ type: "error", error });
       resolver?.();
-    });
+    };
 
-    stream.on("end", () => {
+    const onEnd = () => {
       queue.push({ type: "end" });
       resolver?.();
-    });
+    };
 
-    while (true) {
-      if (queue.length === 0) {
-        await new Promise<void>((resolve) => {
-          resolver = resolve;
-        });
-        resolver = null;
-      }
+    stream.on("data", onData);
+    stream.on("error", onError);
+    stream.on("end", onEnd);
 
-      const item = queue.shift();
-      if (!item) continue;
-
-      const duration = performance.now() - startTime;
-
-      if (item.type === "end") {
-        break;
-      }
-
-      if (item.type === "error") {
-        const code = (item.error?.code ?? 2) as GrpcStatusCode;
-        const errorMessage = item.error?.message ?? "Unknown error";
-        const errorTrailers = item.error?.metadata
-          ? metadataToRecord(item.error.metadata)
-          : {};
-
-        if (throwOnError) {
-          throw createGrpcError(code, errorMessage, errorTrailers);
+    try {
+      while (true) {
+        // Check for write errors before waiting
+        if (writeError) {
+          throw writeError;
         }
 
+        if (queue.length === 0) {
+          await new Promise<void>((resolve) => {
+            resolver = resolve;
+          });
+          resolver = null;
+        }
+
+        // Check for write errors after waiting
+        if (writeError) {
+          throw writeError;
+        }
+
+        const item = queue.shift();
+        if (!item) continue;
+
+        const duration = performance.now() - startTime;
+
+        if (item.type === "end") {
+          break;
+        }
+
+        if (item.type === "error") {
+          const code = (item.error?.code ?? 2) as GrpcStatusCode;
+          const errorMessage = item.error?.message ?? "Unknown error";
+          const errorTrailers = item.error?.metadata
+            ? metadataToRecord(item.error.metadata)
+            : {};
+
+          if (throwOnError) {
+            throw createGrpcError(code, errorMessage, errorTrailers);
+          }
+
+          yield new GrpcResponseImpl({
+            code,
+            message: errorMessage,
+            body: null,
+            trailers: errorTrailers,
+            duration,
+          });
+          break;
+        }
+
+        const body = item.value
+          ? new TextEncoder().encode(JSON.stringify(item.value))
+          : null;
+
         yield new GrpcResponseImpl({
-          code,
-          message: errorMessage,
-          body: null,
-          trailers: errorTrailers,
+          code: 0,
+          message: "",
+          body,
+          trailers: {},
           duration,
+          deserializer: () => item.value,
         });
-        break;
       }
-
-      const body = item.value
-        ? new TextEncoder().encode(JSON.stringify(item.value))
-        : null;
-
-      yield new GrpcResponseImpl({
-        code: 0,
-        message: "",
-        body,
-        trailers: {},
-        duration,
-        deserializer: () => item.value,
-      });
+    } finally {
+      stream.removeListener("data", onData);
+      stream.removeListener("error", onError);
+      stream.removeListener("end", onEnd);
+      stream.destroy();
     }
   }
 

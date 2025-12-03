@@ -1298,37 +1298,40 @@ class RedisClientImpl implements RedisClient {
     const startTime = performance.now();
     let messageCount = 0;
 
+    const messageQueue: RedisMessage[] = [];
+    let resolver: ((value: RedisMessage) => void) | null = null;
+    let done = false;
+
+    const messageHandler = (ch: string, msg: string) => {
+      const message = { channel: ch, message: msg };
+      logger.trace("Redis SUBSCRIBE message received", {
+        channel: ch,
+        message: formatValue(msg),
+      });
+      if (resolver) {
+        resolver(message);
+        resolver = null;
+      } else {
+        messageQueue.push(message);
+      }
+    };
+
+    const endHandler = () => {
+      done = true;
+      if (resolver) {
+        // Signal end by resolving with a special marker
+        resolver = null;
+      }
+    };
+
     try {
       await subscriber.subscribe(channel);
       logger.debug("Redis subscribe connected", {
         channel,
       });
 
-      const messageQueue: RedisMessage[] = [];
-      let resolver: ((value: RedisMessage) => void) | null = null;
-      let done = false;
-
-      subscriber.on("message", (ch: string, msg: string) => {
-        const message = { channel: ch, message: msg };
-        logger.trace("Redis SUBSCRIBE message received", {
-          channel: ch,
-          message: formatValue(msg),
-        });
-        if (resolver) {
-          resolver(message);
-          resolver = null;
-        } else {
-          messageQueue.push(message);
-        }
-      });
-
-      subscriber.on("end", () => {
-        done = true;
-        if (resolver) {
-          // Signal end by resolving with a special marker
-          resolver = null;
-        }
-      });
+      subscriber.on("message", messageHandler);
+      subscriber.on("end", endHandler);
 
       while (!done && !this.#closed) {
         if (messageQueue.length > 0) {
@@ -1369,6 +1372,9 @@ class RedisClientImpl implements RedisClient {
       });
       throw error;
     } finally {
+      // Clean up event listeners
+      subscriber.removeListener("message", messageHandler);
+      subscriber.removeListener("end", endHandler);
       await subscriber.unsubscribe(channel);
       subscriber.disconnect();
     }

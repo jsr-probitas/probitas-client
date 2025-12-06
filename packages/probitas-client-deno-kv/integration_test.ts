@@ -11,11 +11,7 @@ import { assertEquals, assertGreater } from "@std/assert";
 import {
   createDenoKvClient,
   type DenoKvClient,
-  expectDenoKvAtomicResult,
-  expectDenoKvDeleteResult,
-  expectDenoKvGetResult,
-  expectDenoKvListResult,
-  expectDenoKvSetResult,
+  expectDenoKvResult,
 } from "./mod.ts";
 
 const DENOKV_URL = Deno.env.get("DENOKV_URL") ?? "http://localhost:4512";
@@ -59,7 +55,7 @@ Deno.test({
       try {
         const result = await kv.get(["integration", "nonexistent"]);
 
-        expectDenoKvGetResult(result)
+        expectDenoKvResult(result)
           .ok()
           .noContent();
 
@@ -83,14 +79,14 @@ Deno.test({
 
         const setResult = await kv.set(testKey, testValue);
 
-        expectDenoKvSetResult(setResult)
+        expectDenoKvResult(setResult)
           .ok()
           .hasVersionstamp()
           .durationLessThan(5000);
 
         const getResult = await kv.get<typeof testValue>(testKey);
 
-        expectDenoKvGetResult(getResult)
+        expectDenoKvResult(getResult)
           .ok()
           .hasContent()
           .value(testValue)
@@ -115,12 +111,12 @@ Deno.test({
         await kv.set(testKey, "to-be-deleted");
         const deleteResult = await kv.delete(testKey);
 
-        expectDenoKvDeleteResult(deleteResult)
+        expectDenoKvResult(deleteResult)
           .ok()
           .durationLessThan(5000);
 
         const getResult = await kv.get(testKey);
-        expectDenoKvGetResult(getResult).noContent();
+        expectDenoKvResult(getResult).noContent();
       } finally {
         await kv.close();
       }
@@ -167,7 +163,7 @@ Deno.test({
 
         const result = await kv.list<{ order: number }>({ prefix });
 
-        expectDenoKvListResult(result)
+        expectDenoKvResult(result)
           .ok()
           .hasContent()
           .count(3);
@@ -195,7 +191,7 @@ Deno.test({
 
         const result = await kv.list<number>({ prefix }, { limit: 2 });
 
-        expectDenoKvListResult(result)
+        expectDenoKvResult(result)
           .ok()
           .count(2);
 
@@ -220,7 +216,7 @@ Deno.test({
 
         const result = await kv.list<string>({ prefix }, { reverse: true });
 
-        expectDenoKvListResult(result)
+        expectDenoKvResult(result)
           .ok()
           .count(3);
 
@@ -248,7 +244,7 @@ Deno.test({
           .set(key2, { created: true })
           .commit();
 
-        expectDenoKvAtomicResult(result)
+        expectDenoKvResult(result)
           .ok()
           .hasVersionstamp();
 
@@ -279,7 +275,7 @@ Deno.test({
           .set(key, "updated")
           .commit();
 
-        expectDenoKvAtomicResult(result)
+        expectDenoKvResult(result)
           .ok()
           .hasVersionstamp();
 
@@ -343,10 +339,10 @@ Deno.test({
           .delete(key)
           .commit();
 
-        expectDenoKvAtomicResult(result).ok();
+        expectDenoKvResult(result).ok();
 
         const getResult = await kv.get(key);
-        expectDenoKvGetResult(getResult).noContent();
+        expectDenoKvResult(getResult).noContent();
       } finally {
         await kv.close();
       }
@@ -413,7 +409,7 @@ Deno.test({
         const result = await kv.get<{ name: string; age: number }>(key);
 
         // Demonstrate fluent chaining
-        expectDenoKvGetResult(result)
+        expectDenoKvResult(result)
           .ok()
           .hasContent()
           .valueContains({ name: "Bob" })

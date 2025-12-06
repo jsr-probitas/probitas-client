@@ -1,12 +1,7 @@
 import { assertEquals, assertInstanceOf, assertRejects } from "@std/assert";
 import { AbortError } from "@probitas/client";
 import { createRabbitMqClient } from "./client.ts";
-import {
-  expectRabbitMqConsumeResult,
-  expectRabbitMqExchangeResult,
-  expectRabbitMqPublishResult,
-  expectRabbitMqQueueResult,
-} from "./expect.ts";
+import { expectRabbitMqResult } from "./expect.ts";
 import { RabbitMqChannelError } from "./errors.ts";
 
 const RABBITMQ_URL = Deno.env.get("RABBITMQ_URL") ??
@@ -48,18 +43,18 @@ Deno.test({
               durable: false,
               autoDelete: true,
             });
-            expectRabbitMqQueueResult(result).ok().messageCount(0);
+            expectRabbitMqResult(result).ok().messageCount(0);
             assertEquals(result.queue, testQueue);
           });
 
           await t.step("purgeQueue clears the queue", async () => {
             const result = await channel.purgeQueue(testQueue);
-            expectRabbitMqQueueResult(result).ok();
+            expectRabbitMqResult(result).ok();
           });
 
           await t.step("deleteQueue removes the queue", async () => {
             const result = await channel.deleteQueue(testQueue);
-            expectRabbitMqQueueResult(result).ok();
+            expectRabbitMqResult(result).ok();
           });
         } finally {
           await channel.close();
@@ -80,12 +75,12 @@ Deno.test({
                 autoDelete: true,
               },
             );
-            expectRabbitMqExchangeResult(result).ok();
+            expectRabbitMqResult(result).ok();
           });
 
           await t.step("deleteExchange removes the exchange", async () => {
             const result = await channel.deleteExchange(testExchange);
-            expectRabbitMqExchangeResult(result).ok();
+            expectRabbitMqResult(result).ok();
           });
         } finally {
           await channel.close();
@@ -110,12 +105,12 @@ Deno.test({
               contentType: "application/json",
               persistent: false,
             });
-            expectRabbitMqPublishResult(result).ok();
+            expectRabbitMqResult(result).ok();
           });
 
           await t.step("get retrieves a message", async () => {
             const result = await channel.get(testQueue);
-            expectRabbitMqConsumeResult(result)
+            expectRabbitMqResult(result)
               .ok()
               .hasContent()
               .routingKey(testQueue)
@@ -134,7 +129,7 @@ Deno.test({
 
           await t.step("get returns null for empty queue", async () => {
             const result = await channel.get(testQueue);
-            expectRabbitMqConsumeResult(result).ok().noContent();
+            expectRabbitMqResult(result).ok().noContent();
           });
 
           await channel.deleteQueue(testQueue);
@@ -165,7 +160,7 @@ Deno.test({
               testExchange,
               routingKey,
             );
-            expectRabbitMqExchangeResult(result).ok();
+            expectRabbitMqResult(result).ok();
           });
 
           await t.step(
@@ -175,7 +170,7 @@ Deno.test({
               await channel.publish(testExchange, routingKey, content);
 
               const result = await channel.get(testQueue);
-              expectRabbitMqConsumeResult(result)
+              expectRabbitMqResult(result)
                 .ok()
                 .hasContent()
                 .exchange(testExchange)
@@ -193,7 +188,7 @@ Deno.test({
               testExchange,
               routingKey,
             );
-            expectRabbitMqExchangeResult(result).ok();
+            expectRabbitMqResult(result).ok();
           });
 
           await channel.deleteQueue(testQueue);
@@ -220,14 +215,14 @@ Deno.test({
               await channel.sendToQueue(testQueue, content);
 
               const result1 = await channel.get(testQueue);
-              expectRabbitMqConsumeResult(result1).ok().hasContent();
+              expectRabbitMqResult(result1).ok().hasContent();
 
               if (result1.message) {
                 await channel.nack(result1.message, { requeue: true });
               }
 
               const result2 = await channel.get(testQueue);
-              expectRabbitMqConsumeResult(result2).ok().hasContent();
+              expectRabbitMqResult(result2).ok().hasContent();
 
               if (result2.message) {
                 assertEquals(result2.message.fields.redelivered, true);
@@ -241,14 +236,14 @@ Deno.test({
             await channel.sendToQueue(testQueue, content);
 
             const result = await channel.get(testQueue);
-            expectRabbitMqConsumeResult(result).ok().hasContent();
+            expectRabbitMqResult(result).ok().hasContent();
 
             if (result.message) {
               await channel.reject(result.message, false);
             }
 
             const result2 = await channel.get(testQueue);
-            expectRabbitMqConsumeResult(result2).ok().noContent();
+            expectRabbitMqResult(result2).ok().noContent();
           });
 
           await channel.deleteQueue(testQueue);
@@ -297,7 +292,7 @@ Deno.test({
             const result = await channel.get(testQueue, {
               signal: controller.signal,
             });
-            expectRabbitMqConsumeResult(result).ok();
+            expectRabbitMqResult(result).ok();
           });
 
           await t.step(

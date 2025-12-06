@@ -192,6 +192,19 @@ export interface SqsDeleteQueueResult {
 }
 
 /**
+ * Union type of all SQS result types.
+ * Used for type-safe handling in the unified expectSqsResult function.
+ */
+export type SqsResult =
+  | SqsSendResult
+  | SqsSendBatchResult
+  | SqsReceiveResult
+  | SqsDeleteResult
+  | SqsDeleteBatchResult
+  | SqsEnsureQueueResult
+  | SqsDeleteQueueResult;
+
+/**
  * SQS client interface.
  */
 export interface SqsClient extends AsyncDisposable {

@@ -10,18 +10,9 @@ import type {
   SqsSendResult,
 } from "./types.ts";
 import { createSqsMessages } from "./messages.ts";
-import {
-  expectSqsDeleteBatchResult,
-  expectSqsDeleteQueueResult,
-  expectSqsDeleteResult,
-  expectSqsEnsureQueueResult,
-  expectSqsMessage,
-  expectSqsReceiveResult,
-  expectSqsSendBatchResult,
-  expectSqsSendResult,
-} from "./expect.ts";
+import { expectSqsMessage, expectSqsResult } from "./expect.ts";
 
-Deno.test("expectSqsSendResult", async (t) => {
+Deno.test("expectSqsResult with SqsSendResult", async (t) => {
   const successResult: SqsSendResult = {
     type: "sqs:send",
     ok: true,
@@ -39,62 +30,62 @@ Deno.test("expectSqsSendResult", async (t) => {
   };
 
   await t.step("ok() passes for successful result", () => {
-    expectSqsSendResult(successResult).ok();
+    expectSqsResult(successResult).ok();
   });
 
   await t.step("ok() throws for failed result", () => {
     assertThrows(
-      () => expectSqsSendResult(failedResult).ok(),
+      () => expectSqsResult(failedResult).ok(),
       Error,
       "Expected ok result",
     );
   });
 
   await t.step("notOk() passes for failed result", () => {
-    expectSqsSendResult(failedResult).notOk();
+    expectSqsResult(failedResult).notOk();
   });
 
   await t.step("notOk() throws for successful result", () => {
     assertThrows(
-      () => expectSqsSendResult(successResult).notOk(),
+      () => expectSqsResult(successResult).notOk(),
       Error,
       "Expected not ok result",
     );
   });
 
   await t.step("hasMessageId() passes when messageId exists", () => {
-    expectSqsSendResult(successResult).hasMessageId();
+    expectSqsResult(successResult).hasMessageId();
   });
 
   await t.step("hasMessageId() throws when messageId is empty", () => {
     assertThrows(
-      () => expectSqsSendResult(failedResult).hasMessageId(),
+      () => expectSqsResult(failedResult).hasMessageId(),
       Error,
       "Expected messageId",
     );
   });
 
   await t.step("durationLessThan() passes when duration is less", () => {
-    expectSqsSendResult(successResult).durationLessThan(100);
+    expectSqsResult(successResult).durationLessThan(100);
   });
 
   await t.step("durationLessThan() throws when duration is greater", () => {
     assertThrows(
-      () => expectSqsSendResult(successResult).durationLessThan(30),
+      () => expectSqsResult(successResult).durationLessThan(30),
       Error,
       "Expected duration",
     );
   });
 
   await t.step("chaining works", () => {
-    expectSqsSendResult(successResult)
+    expectSqsResult(successResult)
       .ok()
       .hasMessageId()
       .durationLessThan(100);
   });
 });
 
-Deno.test("expectSqsSendBatchResult", async (t) => {
+Deno.test("expectSqsResult with SqsSendBatchResult", async (t) => {
   const allSuccess: SqsSendBatchResult = {
     type: "sqs:send-batch",
     ok: true,
@@ -115,55 +106,55 @@ Deno.test("expectSqsSendBatchResult", async (t) => {
   };
 
   await t.step("ok() passes for all successful", () => {
-    expectSqsSendBatchResult(allSuccess).ok();
+    expectSqsResult(allSuccess).ok();
   });
 
   await t.step("notOk() passes for partial failure", () => {
-    expectSqsSendBatchResult(partialFailure).notOk();
+    expectSqsResult(partialFailure).notOk();
   });
 
   await t.step("allSuccessful() passes when no failures", () => {
-    expectSqsSendBatchResult(allSuccess).allSuccessful();
+    expectSqsResult(allSuccess).allSuccessful();
   });
 
   await t.step("allSuccessful() throws when there are failures", () => {
     assertThrows(
-      () => expectSqsSendBatchResult(partialFailure).allSuccessful(),
+      () => expectSqsResult(partialFailure).allSuccessful(),
       Error,
       "Expected all messages successful",
     );
   });
 
   await t.step("successfulCount() passes with correct count", () => {
-    expectSqsSendBatchResult(allSuccess).successfulCount(2);
+    expectSqsResult(allSuccess).successfulCount(2);
   });
 
   await t.step("successfulCount() throws with wrong count", () => {
     assertThrows(
-      () => expectSqsSendBatchResult(allSuccess).successfulCount(3),
+      () => expectSqsResult(allSuccess).successfulCount(3),
       Error,
       "Expected 3 successful",
     );
   });
 
   await t.step("failedCount() passes with correct count", () => {
-    expectSqsSendBatchResult(partialFailure).failedCount(1);
+    expectSqsResult(partialFailure).failedCount(1);
   });
 
   await t.step("noFailures() passes when no failures", () => {
-    expectSqsSendBatchResult(allSuccess).noFailures();
+    expectSqsResult(allSuccess).noFailures();
   });
 
   await t.step("noFailures() throws when there are failures", () => {
     assertThrows(
-      () => expectSqsSendBatchResult(partialFailure).noFailures(),
+      () => expectSqsResult(partialFailure).noFailures(),
       Error,
       "Expected no failures",
     );
   });
 
   await t.step("chaining works", () => {
-    expectSqsSendBatchResult(allSuccess)
+    expectSqsResult(allSuccess)
       .ok()
       .allSuccessful()
       .successfulCount(2)
@@ -171,7 +162,7 @@ Deno.test("expectSqsSendBatchResult", async (t) => {
   });
 });
 
-Deno.test("expectSqsReceiveResult", async (t) => {
+Deno.test("expectSqsResult with SqsReceiveResult", async (t) => {
   const messages: SqsMessage[] = [
     {
       messageId: "1",
@@ -204,75 +195,75 @@ Deno.test("expectSqsReceiveResult", async (t) => {
   };
 
   await t.step("ok() passes for successful result", () => {
-    expectSqsReceiveResult(withMessages).ok();
+    expectSqsResult(withMessages).ok();
   });
 
   await t.step("noContent() passes for empty messages", () => {
-    expectSqsReceiveResult(emptyResult).noContent();
+    expectSqsResult(emptyResult).noContent();
   });
 
   await t.step("noContent() throws when messages exist", () => {
     assertThrows(
-      () => expectSqsReceiveResult(withMessages).noContent(),
+      () => expectSqsResult(withMessages).noContent(),
       Error,
       "Expected no messages",
     );
   });
 
   await t.step("hasContent() passes when messages exist", () => {
-    expectSqsReceiveResult(withMessages).hasContent();
+    expectSqsResult(withMessages).hasContent();
   });
 
   await t.step("hasContent() throws when no messages", () => {
     assertThrows(
-      () => expectSqsReceiveResult(emptyResult).hasContent(),
+      () => expectSqsResult(emptyResult).hasContent(),
       Error,
       "Expected messages",
     );
   });
 
   await t.step("count() passes with correct count", () => {
-    expectSqsReceiveResult(withMessages).count(2);
+    expectSqsResult(withMessages).count(2);
   });
 
   await t.step("count() throws with wrong count", () => {
     assertThrows(
-      () => expectSqsReceiveResult(withMessages).count(3),
+      () => expectSqsResult(withMessages).count(3),
       Error,
       "Expected 3 messages",
     );
   });
 
   await t.step("countAtLeast() passes when count is sufficient", () => {
-    expectSqsReceiveResult(withMessages).countAtLeast(1);
+    expectSqsResult(withMessages).countAtLeast(1);
   });
 
   await t.step("countAtLeast() throws when count is insufficient", () => {
     assertThrows(
-      () => expectSqsReceiveResult(withMessages).countAtLeast(5),
+      () => expectSqsResult(withMessages).countAtLeast(5),
       Error,
       "Expected at least 5 messages",
     );
   });
 
   await t.step("countAtMost() passes when count is within limit", () => {
-    expectSqsReceiveResult(withMessages).countAtMost(5);
+    expectSqsResult(withMessages).countAtMost(5);
   });
 
   await t.step("countAtMost() throws when count exceeds limit", () => {
     assertThrows(
-      () => expectSqsReceiveResult(withMessages).countAtMost(1),
+      () => expectSqsResult(withMessages).countAtMost(1),
       Error,
       "Expected at most 1 messages",
     );
   });
 
   await t.step("messageContains() passes when body matches", () => {
-    expectSqsReceiveResult(withMessages).messageContains({ body: "body1" });
+    expectSqsResult(withMessages).messageContains({ body: "body1" });
   });
 
   await t.step("messageContains() passes when attributes match", () => {
-    expectSqsReceiveResult(withMessages).messageContains({
+    expectSqsResult(withMessages).messageContains({
       attributes: { SenderId: "123" },
     });
   });
@@ -280,7 +271,7 @@ Deno.test("expectSqsReceiveResult", async (t) => {
   await t.step("messageContains() throws when no message matches", () => {
     assertThrows(
       () =>
-        expectSqsReceiveResult(withMessages).messageContains({
+        expectSqsResult(withMessages).messageContains({
           body: "notfound",
         }),
       Error,
@@ -290,7 +281,7 @@ Deno.test("expectSqsReceiveResult", async (t) => {
 
   await t.step("messagesMatch() calls matcher with messages", () => {
     let called = false;
-    expectSqsReceiveResult(withMessages).messagesMatch((msgs) => {
+    expectSqsResult(withMessages).messagesMatch((msgs) => {
       called = true;
       assertEquals(msgs.length, 2);
       assertEquals(msgs.first()?.body, "body1");
@@ -299,7 +290,7 @@ Deno.test("expectSqsReceiveResult", async (t) => {
   });
 
   await t.step("chaining works", () => {
-    expectSqsReceiveResult(withMessages)
+    expectSqsResult(withMessages)
       .ok()
       .hasContent()
       .count(2)
@@ -308,7 +299,7 @@ Deno.test("expectSqsReceiveResult", async (t) => {
   });
 });
 
-Deno.test("expectSqsDeleteResult", async (t) => {
+Deno.test("expectSqsResult with SqsDeleteResult", async (t) => {
   const successResult: SqsDeleteResult = {
     type: "sqs:delete",
     ok: true,
@@ -322,27 +313,27 @@ Deno.test("expectSqsDeleteResult", async (t) => {
   };
 
   await t.step("ok() passes for successful result", () => {
-    expectSqsDeleteResult(successResult).ok();
+    expectSqsResult(successResult).ok();
   });
 
   await t.step("notOk() passes for failed result", () => {
-    expectSqsDeleteResult(failedResult).notOk();
+    expectSqsResult(failedResult).notOk();
   });
 
   await t.step("durationLessThan() passes when duration is less", () => {
-    expectSqsDeleteResult(successResult).durationLessThan(50);
+    expectSqsResult(successResult).durationLessThan(50);
   });
 
   await t.step("durationLessThan() throws when duration is greater", () => {
     assertThrows(
-      () => expectSqsDeleteResult(successResult).durationLessThan(20),
+      () => expectSqsResult(successResult).durationLessThan(20),
       Error,
       "Expected duration",
     );
   });
 });
 
-Deno.test("expectSqsDeleteBatchResult", async (t) => {
+Deno.test("expectSqsResult with SqsDeleteBatchResult", async (t) => {
   const allSuccess: SqsDeleteBatchResult = {
     type: "sqs:delete-batch",
     ok: true,
@@ -360,39 +351,39 @@ Deno.test("expectSqsDeleteBatchResult", async (t) => {
   };
 
   await t.step("ok() passes for all successful", () => {
-    expectSqsDeleteBatchResult(allSuccess).ok();
+    expectSqsResult(allSuccess).ok();
   });
 
   await t.step("notOk() passes for partial failure", () => {
-    expectSqsDeleteBatchResult(partialFailure).notOk();
+    expectSqsResult(partialFailure).notOk();
   });
 
   await t.step("allSuccessful() passes when no failures", () => {
-    expectSqsDeleteBatchResult(allSuccess).allSuccessful();
+    expectSqsResult(allSuccess).allSuccessful();
   });
 
   await t.step("allSuccessful() throws when there are failures", () => {
     assertThrows(
-      () => expectSqsDeleteBatchResult(partialFailure).allSuccessful(),
+      () => expectSqsResult(partialFailure).allSuccessful(),
       Error,
       "Expected all deletions successful",
     );
   });
 
   await t.step("successfulCount() passes with correct count", () => {
-    expectSqsDeleteBatchResult(allSuccess).successfulCount(3);
+    expectSqsResult(allSuccess).successfulCount(3);
   });
 
   await t.step("failedCount() passes with correct count", () => {
-    expectSqsDeleteBatchResult(partialFailure).failedCount(1);
+    expectSqsResult(partialFailure).failedCount(1);
   });
 
   await t.step("noFailures() passes when no failures", () => {
-    expectSqsDeleteBatchResult(allSuccess).noFailures();
+    expectSqsResult(allSuccess).noFailures();
   });
 
   await t.step("chaining works", () => {
-    expectSqsDeleteBatchResult(allSuccess)
+    expectSqsResult(allSuccess)
       .ok()
       .allSuccessful()
       .successfulCount(3)
@@ -606,7 +597,7 @@ Deno.test("expectSqsMessage", async (t) => {
   });
 });
 
-Deno.test("expectSqsEnsureQueueResult", async (t) => {
+Deno.test("expectSqsResult with SqsEnsureQueueResult", async (t) => {
   const successResult: SqsEnsureQueueResult = {
     type: "sqs:ensure-queue",
     ok: true,
@@ -622,49 +613,49 @@ Deno.test("expectSqsEnsureQueueResult", async (t) => {
   };
 
   await t.step("ok() passes for successful result", () => {
-    expectSqsEnsureQueueResult(successResult).ok();
+    expectSqsResult(successResult).ok();
   });
 
   await t.step("ok() throws for failed result", () => {
     assertThrows(
-      () => expectSqsEnsureQueueResult(failedResult).ok(),
+      () => expectSqsResult(failedResult).ok(),
       Error,
       "Expected ok result",
     );
   });
 
   await t.step("notOk() passes for failed result", () => {
-    expectSqsEnsureQueueResult(failedResult).notOk();
+    expectSqsResult(failedResult).notOk();
   });
 
   await t.step("hasQueueUrl() passes when queueUrl exists", () => {
-    expectSqsEnsureQueueResult(successResult).hasQueueUrl();
+    expectSqsResult(successResult).hasQueueUrl();
   });
 
   await t.step("hasQueueUrl() throws when queueUrl is empty", () => {
     assertThrows(
-      () => expectSqsEnsureQueueResult(failedResult).hasQueueUrl(),
+      () => expectSqsResult(failedResult).hasQueueUrl(),
       Error,
       "Expected queueUrl",
     );
   });
 
   await t.step("queueUrl() passes with matching url", () => {
-    expectSqsEnsureQueueResult(successResult).queueUrl(
+    expectSqsResult(successResult).queueUrl(
       "https://sqs.us-east-1.amazonaws.com/123456789/test-queue",
     );
   });
 
   await t.step("queueUrl() throws with non-matching url", () => {
     assertThrows(
-      () => expectSqsEnsureQueueResult(successResult).queueUrl("other-url"),
+      () => expectSqsResult(successResult).queueUrl("other-url"),
       Error,
       "Expected queueUrl",
     );
   });
 
   await t.step("queueUrlContains() passes when url contains substring", () => {
-    expectSqsEnsureQueueResult(successResult).queueUrlContains("test-queue");
+    expectSqsResult(successResult).queueUrlContains("test-queue");
   });
 
   await t.step(
@@ -672,7 +663,7 @@ Deno.test("expectSqsEnsureQueueResult", async (t) => {
     () => {
       assertThrows(
         () =>
-          expectSqsEnsureQueueResult(successResult).queueUrlContains(
+          expectSqsResult(successResult).queueUrlContains(
             "other-queue",
           ),
         Error,
@@ -682,11 +673,11 @@ Deno.test("expectSqsEnsureQueueResult", async (t) => {
   );
 
   await t.step("durationLessThan() passes when duration is less", () => {
-    expectSqsEnsureQueueResult(successResult).durationLessThan(100);
+    expectSqsResult(successResult).durationLessThan(100);
   });
 
   await t.step("chaining works", () => {
-    expectSqsEnsureQueueResult(successResult)
+    expectSqsResult(successResult)
       .ok()
       .hasQueueUrl()
       .queueUrlContains("test-queue")
@@ -694,7 +685,7 @@ Deno.test("expectSqsEnsureQueueResult", async (t) => {
   });
 });
 
-Deno.test("expectSqsDeleteQueueResult", async (t) => {
+Deno.test("expectSqsResult with SqsDeleteQueueResult", async (t) => {
   const successResult: SqsDeleteQueueResult = {
     type: "sqs:delete-queue",
     ok: true,
@@ -708,22 +699,37 @@ Deno.test("expectSqsDeleteQueueResult", async (t) => {
   };
 
   await t.step("ok() passes for successful result", () => {
-    expectSqsDeleteQueueResult(successResult).ok();
+    expectSqsResult(successResult).ok();
   });
 
   await t.step("notOk() passes for failed result", () => {
-    expectSqsDeleteQueueResult(failedResult).notOk();
+    expectSqsResult(failedResult).notOk();
   });
 
   await t.step("durationLessThan() passes when duration is less", () => {
-    expectSqsDeleteQueueResult(successResult).durationLessThan(50);
+    expectSqsResult(successResult).durationLessThan(50);
   });
 
   await t.step("durationLessThan() throws when duration is greater", () => {
     assertThrows(
-      () => expectSqsDeleteQueueResult(successResult).durationLessThan(20),
+      () => expectSqsResult(successResult).durationLessThan(20),
       Error,
       "Expected duration",
     );
   });
+});
+
+Deno.test("expectSqsResult throws for unknown result type", () => {
+  const unknownResult = {
+    type: "sqs:unknown",
+    ok: true,
+    duration: 50,
+  };
+
+  assertThrows(
+    // deno-lint-ignore no-explicit-any
+    () => expectSqsResult(unknownResult as any),
+    Error,
+    "Unknown SQS result type: sqs:unknown",
+  );
 });

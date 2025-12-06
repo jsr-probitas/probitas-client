@@ -252,3 +252,14 @@ export interface RabbitMqClient extends AsyncDisposable {
 
   close(): Promise<void>;
 }
+
+/**
+ * Union of all RabbitMQ result types.
+ * Used by expectRabbitMqResult to determine the appropriate expectation type.
+ */
+export type RabbitMqResult =
+  | RabbitMqPublishResult
+  | RabbitMqConsumeResult
+  | RabbitMqAckResult
+  | RabbitMqQueueResult
+  | RabbitMqExchangeResult;

@@ -5,28 +5,29 @@
  * ```ts
  * import {
  *   createDenoKvClient,
- *   expectDenoKvGetResult,
- *   expectDenoKvListResult,
+ *   expectDenoKvResult,
  * } from "@probitas/client-deno-kv";
  *
  * const kv = await createDenoKvClient();
  *
  * // Set
- * await kv.set(["users", "1"], { name: "Alice", age: 30 });
+ * const setResult = await kv.set(["users", "1"], { name: "Alice", age: 30 });
+ * expectDenoKvResult(setResult).ok().hasVersionstamp();
  *
  * // Get
  * const getResult = await kv.get<{ name: string; age: number }>(["users", "1"]);
- * expectDenoKvGetResult(getResult).ok().hasContent().valueContains({ name: "Alice" });
+ * expectDenoKvResult(getResult).ok().hasContent().valueContains({ name: "Alice" });
  *
  * // List
  * const listResult = await kv.list<{ name: string }>({ prefix: ["users"] });
- * expectDenoKvListResult(listResult).ok().countAtLeast(1);
+ * expectDenoKvResult(listResult).ok().countAtLeast(1);
  *
  * // Atomic
  * const atomic = kv.atomic();
  * atomic.check({ key: ["counter"], versionstamp: null });
  * atomic.set(["counter"], 1n);
  * const atomicResult = await atomic.commit();
+ * expectDenoKvResult(atomicResult).ok();
  *
  * await kv.close();
  * ```

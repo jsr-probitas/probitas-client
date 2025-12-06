@@ -1,13 +1,5 @@
 import { assertEquals, assertExists } from "@std/assert";
-import {
-  createMongoClient,
-  expectMongoCountResult,
-  expectMongoDeleteResult,
-  expectMongoFindOneResult,
-  expectMongoFindResult,
-  expectMongoInsertResult,
-  expectMongoUpdateResult,
-} from "./mod.ts";
+import { createMongoClient, expectMongoResult } from "./mod.ts";
 import type { MongoClient } from "./types.ts";
 
 const MONGODB_URI = Deno.env.get("MONGODB_URI") ?? "mongodb://localhost:27017";
@@ -80,7 +72,7 @@ Deno.test({
     await t.step("insertOne: inserts a document", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.insertOne({ name: "Alice", age: 30 });
-      expectMongoInsertResult(result)
+      expectMongoResult(result)
         .ok()
         .hasInsertedId()
         .insertedCount(1);
@@ -93,7 +85,7 @@ Deno.test({
         { name: "Charlie", age: 35 },
         { name: "Diana", age: 28 },
       ]);
-      expectMongoInsertResult(result)
+      expectMongoResult(result)
         .ok()
         .hasInsertedId()
         .insertedCount(3);
@@ -102,7 +94,7 @@ Deno.test({
     await t.step("find: retrieves all documents", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.find();
-      expectMongoFindResult(result)
+      expectMongoResult(result)
         .ok()
         .hasContent()
         .docs(4);
@@ -111,7 +103,7 @@ Deno.test({
     await t.step("find: with filter", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.find({ age: { $gte: 30 } });
-      expectMongoFindResult(result)
+      expectMongoResult(result)
         .ok()
         .hasContent()
         .docs(2)
@@ -122,7 +114,7 @@ Deno.test({
     await t.step("find: with sort and limit", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.find({}, { sort: { age: 1 }, limit: 2 });
-      expectMongoFindResult(result)
+      expectMongoResult(result)
         .ok()
         .docs(2);
       assertEquals(result.docs.first()?.name, "Bob");
@@ -132,7 +124,7 @@ Deno.test({
     await t.step("findOne: retrieves single document", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.findOne({ name: "Alice" });
-      expectMongoFindOneResult(result).ok().found();
+      expectMongoResult(result).ok().found();
       assertExists(result.doc);
       assertEquals(result.doc.name, "Alice");
       assertEquals(result.doc.age, 30);
@@ -141,7 +133,7 @@ Deno.test({
     await t.step("findOne: returns undefined when not found", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.findOne({ name: "NonExistent" });
-      expectMongoFindOneResult(result).ok().notFound();
+      expectMongoResult(result).ok().notFound();
     });
 
     await t.step("updateOne: updates a document", async () => {
@@ -150,7 +142,7 @@ Deno.test({
         { name: "Alice" },
         { $set: { age: 31 } },
       );
-      expectMongoUpdateResult(result)
+      expectMongoResult(result)
         .ok()
         .matchedCount(1)
         .modifiedCount(1);
@@ -163,7 +155,7 @@ Deno.test({
         { $set: { name: "Eve", age: 22 } },
         { upsert: true },
       );
-      expectMongoUpdateResult(result)
+      expectMongoResult(result)
         .ok()
         .wasUpserted();
     });
@@ -174,7 +166,7 @@ Deno.test({
         { age: { $lt: 30 } },
         { $inc: { age: 1 } },
       );
-      expectMongoUpdateResult(result)
+      expectMongoResult(result)
         .ok()
         .matchedCount(3)
         .modifiedCount(3);
@@ -183,13 +175,13 @@ Deno.test({
     await t.step("countDocuments: counts documents", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.countDocuments();
-      expectMongoCountResult(result).ok().count(5);
+      expectMongoResult(result).ok().count(5);
     });
 
     await t.step("countDocuments: with filter", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.countDocuments({ age: { $gte: 30 } });
-      expectMongoCountResult(result).ok().count(2);
+      expectMongoResult(result).ok().count(2);
     });
 
     await t.step("aggregate: runs aggregation pipeline", async () => {
@@ -197,7 +189,7 @@ Deno.test({
       const result = await users.aggregate<{ _id: null; avgAge: number }>([
         { $group: { _id: null, avgAge: { $avg: "$age" } } },
       ]);
-      expectMongoFindResult(result)
+      expectMongoResult(result)
         .ok()
         .hasContent()
         .docs(1);
@@ -207,7 +199,7 @@ Deno.test({
     await t.step("deleteOne: deletes a document", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.deleteOne({ name: "Eve" });
-      expectMongoDeleteResult(result)
+      expectMongoResult(result)
         .ok()
         .deletedCount(1);
     });
@@ -215,7 +207,7 @@ Deno.test({
     await t.step("deleteMany: deletes multiple documents", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.deleteMany({ age: { $lt: 30 } });
-      expectMongoDeleteResult(result)
+      expectMongoResult(result)
         .ok()
         .deletedAtLeast(1);
     });
@@ -254,7 +246,7 @@ Deno.test({
 
       const users = client.collection<User>(testCollection);
       const result = await users.countDocuments();
-      expectMongoCountResult(result).ok().count(2);
+      expectMongoResult(result).ok().count(2);
     });
 
     await t.step("cleanup", async () => {

@@ -7,6 +7,7 @@ import type {
   MongoFindResult,
   MongoInsertManyResult,
   MongoInsertOneResult,
+  MongoResult,
   MongoUpdateResult,
 } from "./types.ts";
 
@@ -491,57 +492,83 @@ class MongoCountResultExpectationImpl implements MongoCountResultExpectation {
 }
 
 /**
- * Create a fluent expectation chain for MongoDB find result validation.
+ * Expectation type returned by expectMongoResult based on the result type.
+ */
+export type MongoExpectation<R extends MongoResult> = R extends
+  MongoFindResult<infer T> ? MongoFindResultExpectation<T>
+  : R extends MongoInsertOneResult ? MongoInsertResultExpectation
+  : R extends MongoInsertManyResult ? MongoInsertResultExpectation
+  : R extends MongoUpdateResult ? MongoUpdateResultExpectation
+  : R extends MongoDeleteResult ? MongoDeleteResultExpectation
+  : R extends MongoFindOneResult<infer T> ? MongoFindOneResultExpectation<T>
+  : R extends MongoCountResult ? MongoCountResultExpectation
+  : never;
+
+/**
+ * Create a fluent expectation chain for any MongoDB result validation.
+ *
+ * This unified function accepts any MongoDB result type and returns
+ * the appropriate expectation interface based on the result's type discriminator.
+ *
+ * @example
+ * ```ts
+ * // For find result - returns MongoFindResultExpectation
+ * const findResult = await users.find({ age: { $gte: 30 } });
+ * expectMongoResult(findResult).ok().hasContent().docs(2);
+ *
+ * // For insert result - returns MongoInsertResultExpectation
+ * const insertResult = await users.insertOne({ name: "Alice", age: 30 });
+ * expectMongoResult(insertResult).ok().hasInsertedId();
+ *
+ * // For update result - returns MongoUpdateResultExpectation
+ * const updateResult = await users.updateOne({ name: "Alice" }, { $set: { age: 31 } });
+ * expectMongoResult(updateResult).ok().matchedCount(1).modifiedCount(1);
+ *
+ * // For delete result - returns MongoDeleteResultExpectation
+ * const deleteResult = await users.deleteOne({ name: "Alice" });
+ * expectMongoResult(deleteResult).ok().deletedCount(1);
+ *
+ * // For findOne result - returns MongoFindOneResultExpectation
+ * const findOneResult = await users.findOne({ name: "Alice" });
+ * expectMongoResult(findOneResult).ok().found().docContains({ name: "Alice" });
+ *
+ * // For count result - returns MongoCountResultExpectation
+ * const countResult = await users.countDocuments();
+ * expectMongoResult(countResult).ok().count(10);
+ * ```
  */
 // deno-lint-ignore no-explicit-any
-export function expectMongoFindResult<T = any>(
-  result: MongoFindResult<T>,
-): MongoFindResultExpectation<T> {
-  return new MongoFindResultExpectationImpl(result);
-}
-
-/**
- * Create a fluent expectation chain for MongoDB insert result validation.
- */
-export function expectMongoInsertResult(
-  result: MongoInsertOneResult | MongoInsertManyResult,
-): MongoInsertResultExpectation {
-  return new MongoInsertResultExpectationImpl(result);
-}
-
-/**
- * Create a fluent expectation chain for MongoDB update result validation.
- */
-export function expectMongoUpdateResult(
-  result: MongoUpdateResult,
-): MongoUpdateResultExpectation {
-  return new MongoUpdateResultExpectationImpl(result);
-}
-
-/**
- * Create a fluent expectation chain for MongoDB delete result validation.
- */
-export function expectMongoDeleteResult(
-  result: MongoDeleteResult,
-): MongoDeleteResultExpectation {
-  return new MongoDeleteResultExpectationImpl(result);
-}
-
-/**
- * Create a fluent expectation chain for MongoDB findOne result validation.
- */
-// deno-lint-ignore no-explicit-any
-export function expectMongoFindOneResult<T = any>(
-  result: MongoFindOneResult<T>,
-): MongoFindOneResultExpectation<T> {
-  return new MongoFindOneResultExpectationImpl(result);
-}
-
-/**
- * Create a fluent expectation chain for MongoDB count result validation.
- */
-export function expectMongoCountResult(
-  result: MongoCountResult,
-): MongoCountResultExpectation {
-  return new MongoCountResultExpectationImpl(result);
+export function expectMongoResult<R extends MongoResult<any>>(
+  result: R,
+): MongoExpectation<R> {
+  switch (result.type) {
+    case "mongo:find":
+      return new MongoFindResultExpectationImpl(
+        result as MongoFindResult,
+      ) as unknown as MongoExpectation<R>;
+    case "mongo:insert":
+      return new MongoInsertResultExpectationImpl(
+        result as MongoInsertOneResult | MongoInsertManyResult,
+      ) as unknown as MongoExpectation<R>;
+    case "mongo:update":
+      return new MongoUpdateResultExpectationImpl(
+        result as MongoUpdateResult,
+      ) as unknown as MongoExpectation<R>;
+    case "mongo:delete":
+      return new MongoDeleteResultExpectationImpl(
+        result as MongoDeleteResult,
+      ) as unknown as MongoExpectation<R>;
+    case "mongo:find-one":
+      return new MongoFindOneResultExpectationImpl(
+        result as MongoFindOneResult,
+      ) as unknown as MongoExpectation<R>;
+    case "mongo:count":
+      return new MongoCountResultExpectationImpl(
+        result as MongoCountResult,
+      ) as unknown as MongoExpectation<R>;
+    default:
+      throw new Error(
+        `Unknown MongoDB result type: ${(result as { type: string }).type}`,
+      );
+  }
 }

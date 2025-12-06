@@ -55,6 +55,18 @@ export interface RedisHashResult
 }
 
 /**
+ * Union of all Redis result types.
+ * Used by expectRedisResult to determine the appropriate expectation type.
+ */
+export type RedisResult<T = unknown> =
+  | RedisCommonResult<T>
+  | RedisGetResult
+  | RedisSetResult
+  | RedisCountResult
+  | RedisArrayResult<T>
+  | RedisHashResult;
+
+/**
  * Redis SET options
  */
 export interface RedisSetOptions extends CommonOptions {

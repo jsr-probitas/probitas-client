@@ -6,13 +6,7 @@ import {
 } from "@aws-sdk/client-sqs";
 import { AbortError } from "@probitas/client";
 import { createSqsClient } from "./client.ts";
-import {
-  expectSqsDeleteResult,
-  expectSqsMessage,
-  expectSqsReceiveResult,
-  expectSqsSendBatchResult,
-  expectSqsSendResult,
-} from "./expect.ts";
+import { expectSqsMessage, expectSqsResult } from "./expect.ts";
 import { SqsCommandError } from "./errors.ts";
 
 const SQS_ENDPOINT = Deno.env.get("SQS_ENDPOINT") ?? "http://localhost:4566";
@@ -91,7 +85,7 @@ Deno.test({
           const result = await client.send(
             JSON.stringify({ type: "TEST", value: 42 }),
           );
-          expectSqsSendResult(result).ok().hasMessageId();
+          expectSqsResult(result).ok().hasMessageId();
         });
 
         await t.step("receive retrieves messages", async () => {
@@ -99,7 +93,7 @@ Deno.test({
             maxMessages: 10,
             waitTimeSeconds: 1,
           });
-          expectSqsReceiveResult(result).ok().hasContent();
+          expectSqsResult(result).ok().hasContent();
 
           const msg = result.messages.first()!;
           expectSqsMessage(msg)
@@ -120,7 +114,7 @@ Deno.test({
           if (receiveResult.messages.length > 0) {
             const msg = receiveResult.messages.firstOrThrow();
             const deleteResult = await client.delete(msg.receiptHandle);
-            expectSqsDeleteResult(deleteResult).ok();
+            expectSqsResult(deleteResult).ok();
           }
         });
 
@@ -134,7 +128,7 @@ Deno.test({
               maxMessages: 1,
               waitTimeSeconds: 0,
             });
-            expectSqsReceiveResult(result).ok().noContent();
+            expectSqsResult(result).ok().noContent();
           },
         );
       });
@@ -146,7 +140,7 @@ Deno.test({
             { id: "1", body: "batch-msg-2" },
             { id: "2", body: "batch-msg-3" },
           ]);
-          expectSqsSendBatchResult(result).ok().allSuccessful().successfulCount(
+          expectSqsResult(result).ok().allSuccessful().successfulCount(
             3,
           );
         });
@@ -180,7 +174,7 @@ Deno.test({
               },
             },
           );
-          expectSqsSendResult(result).ok();
+          expectSqsResult(result).ok();
         });
 
         await t.step("receive retrieves message attributes", async () => {
@@ -189,7 +183,7 @@ Deno.test({
             waitTimeSeconds: 1,
             messageAttributeNames: ["All"],
           });
-          expectSqsReceiveResult(result).ok().hasContent();
+          expectSqsResult(result).ok().hasContent();
 
           const msg = result.messages.firstOrThrow();
           assertEquals(msg.messageAttributes?.priority?.stringValue, "high");
@@ -207,13 +201,13 @@ Deno.test({
           const result = await client.send("delayed message", {
             delaySeconds: 1,
           });
-          expectSqsSendResult(result).ok();
+          expectSqsResult(result).ok();
 
           const immediateResult = await client.receive({
             maxMessages: 1,
             waitTimeSeconds: 0,
           });
-          expectSqsReceiveResult(immediateResult).ok().noContent();
+          expectSqsResult(immediateResult).ok().noContent();
 
           await new Promise((r) => setTimeout(r, 1500));
 
@@ -221,7 +215,7 @@ Deno.test({
             maxMessages: 1,
             waitTimeSeconds: 1,
           });
-          expectSqsReceiveResult(delayedResult).ok().hasContent();
+          expectSqsResult(delayedResult).ok().hasContent();
           expectSqsMessage(delayedResult.messages.firstOrThrow()).bodyContains(
             "delayed",
           );
@@ -284,7 +278,7 @@ Deno.test({
             signal: controller.signal,
             waitTimeSeconds: 0,
           });
-          expectSqsReceiveResult(result).ok();
+          expectSqsResult(result).ok();
         });
 
         await t.step(

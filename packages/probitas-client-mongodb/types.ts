@@ -104,6 +104,20 @@ export interface MongoCountResult {
 }
 
 /**
+ * Union of all MongoDB result types.
+ * Used by expectMongoResult to determine the appropriate expectation type.
+ */
+// deno-lint-ignore no-explicit-any
+export type MongoResult<T = any> =
+  | MongoFindResult<T>
+  | MongoInsertOneResult
+  | MongoInsertManyResult
+  | MongoUpdateResult
+  | MongoDeleteResult
+  | MongoFindOneResult<T>
+  | MongoCountResult;
+
+/**
  * MongoDB find options
  */
 export interface MongoFindOptions extends CommonOptions {

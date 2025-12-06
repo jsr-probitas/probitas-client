@@ -306,6 +306,91 @@ Deno.test("expectHttpResponse.jsonContains", async (t) => {
       "JSON does not contain expected properties",
     );
   });
+
+  await t.step("passes when JSON contains nested object subset", () => {
+    const body = new TextEncoder().encode(
+      JSON.stringify({
+        args: { name: "probitas", version: "1.0" },
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const response = createMockResponse({ body });
+    expectHttpResponse(response).jsonContains({ args: { name: "probitas" } });
+  });
+
+  await t.step("passes when JSON contains deeply nested subset", () => {
+    const body = new TextEncoder().encode(
+      JSON.stringify({
+        data: {
+          user: {
+            profile: { name: "John", age: 30 },
+            settings: { theme: "dark" },
+          },
+        },
+      }),
+    );
+    const response = createMockResponse({ body });
+    expectHttpResponse(response).jsonContains({
+      data: { user: { profile: { name: "John" } } },
+    });
+  });
+
+  await t.step("passes when JSON contains nested array elements", () => {
+    const body = new TextEncoder().encode(
+      JSON.stringify({
+        items: [1, 2, 3],
+        nested: { values: [10, 20, 30] },
+      }),
+    );
+    const response = createMockResponse({ body });
+    expectHttpResponse(response).jsonContains({ items: [1, 2, 3] });
+  });
+
+  await t.step("throws when nested object does not match", () => {
+    const body = new TextEncoder().encode(
+      JSON.stringify({
+        args: { name: "probitas", version: "1.0" },
+      }),
+    );
+    const response = createMockResponse({ body });
+    assertThrows(
+      () =>
+        expectHttpResponse(response).jsonContains({
+          args: { name: "different" },
+        }),
+      Error,
+      "JSON does not contain expected properties",
+    );
+  });
+
+  await t.step("throws when nested property is missing", () => {
+    const body = new TextEncoder().encode(
+      JSON.stringify({
+        args: { version: "1.0" },
+      }),
+    );
+    const response = createMockResponse({ body });
+    assertThrows(
+      () =>
+        expectHttpResponse(response).jsonContains({ args: { name: "test" } }),
+      Error,
+      "JSON does not contain expected properties",
+    );
+  });
+
+  await t.step("passes with mixed nested and top-level properties", () => {
+    const body = new TextEncoder().encode(
+      JSON.stringify({
+        status: "ok",
+        data: { message: "Hello", count: 42 },
+      }),
+    );
+    const response = createMockResponse({ body });
+    expectHttpResponse(response).jsonContains({
+      status: "ok",
+      data: { message: "Hello" },
+    });
+  });
 });
 
 Deno.test("expectHttpResponse.jsonMatch", async (t) => {

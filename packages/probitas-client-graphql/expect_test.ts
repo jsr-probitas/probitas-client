@@ -170,6 +170,32 @@ Deno.test("expectGraphqlResponse.dataContains()", async (t) => {
     });
   });
 
+  await t.step("passes with deeply nested objects", () => {
+    const response = createMockResponse({
+      data: {
+        query: {
+          user: {
+            profile: { name: "John", age: 30 },
+            settings: { theme: "dark" },
+          },
+        },
+      },
+    });
+    expectGraphqlResponse(response).dataContains({
+      query: { user: { profile: { name: "John" } } },
+    });
+  });
+
+  await t.step("passes with nested array elements", () => {
+    const response = createMockResponse({
+      data: {
+        items: [1, 2, 3],
+        nested: { values: [10, 20, 30] },
+      },
+    });
+    expectGraphqlResponse(response).dataContains({ items: [1, 2, 3] });
+  });
+
   await t.step("throws when data does not contain subset", () => {
     const response = createMockResponse({
       data: { user: { id: 1 } },
@@ -179,6 +205,47 @@ Deno.test("expectGraphqlResponse.dataContains()", async (t) => {
       Error,
       "Expected data to contain",
     );
+  });
+
+  await t.step("throws when nested object does not match", () => {
+    const response = createMockResponse({
+      data: { args: { name: "probitas", version: "1.0" } },
+    });
+    assertThrows(
+      () =>
+        expectGraphqlResponse(response).dataContains({
+          args: { name: "different" },
+        }),
+      Error,
+      "Expected data to contain",
+    );
+  });
+
+  await t.step("throws when nested property is missing", () => {
+    const response = createMockResponse({
+      data: { args: { version: "1.0" } },
+    });
+    assertThrows(
+      () =>
+        expectGraphqlResponse(response).dataContains({
+          args: { name: "test" },
+        }),
+      Error,
+      "Expected data to contain",
+    );
+  });
+
+  await t.step("passes with mixed nested and top-level properties", () => {
+    const response = createMockResponse({
+      data: {
+        status: "ok",
+        result: { message: "Hello", count: 42 },
+      },
+    });
+    expectGraphqlResponse(response).dataContains({
+      status: "ok",
+      result: { message: "Hello" },
+    });
   });
 
   await t.step("throws when data is null", () => {

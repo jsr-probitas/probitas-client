@@ -1,40 +1,10 @@
+import { containsSubset } from "@probitas/client";
 import type {
   RabbitMqConsumeResult,
   RabbitMqMessageProperties,
   RabbitMqPublishResult,
   RabbitMqQueueResult,
 } from "./types.ts";
-
-/**
- * Check if subset properties exist in target object.
- */
-function containsSubset(
-  target: Record<string, unknown>,
-  subset: Record<string, unknown>,
-): boolean {
-  for (const key of Object.keys(subset)) {
-    if (!(key in target)) return false;
-    const targetValue = target[key];
-    const subsetValue = subset[key];
-
-    if (
-      typeof subsetValue === "object" && subsetValue !== null &&
-      typeof targetValue === "object" && targetValue !== null
-    ) {
-      if (
-        !containsSubset(
-          targetValue as Record<string, unknown>,
-          subsetValue as Record<string, unknown>,
-        )
-      ) {
-        return false;
-      }
-    } else if (targetValue !== subsetValue) {
-      return false;
-    }
-  }
-  return true;
-}
 
 /**
  * Fluent API for RabbitMQ publish result validation.
@@ -213,12 +183,7 @@ class RabbitMqConsumeResultExpectationImpl
     }
 
     const props = this.#result.message.properties;
-    if (
-      !containsSubset(
-        props as unknown as Record<string, unknown>,
-        subset as Record<string, unknown>,
-      )
-    ) {
+    if (!containsSubset(props, subset)) {
       throw new Error(
         `Expected properties to contain ${JSON.stringify(subset)}, got ${
           JSON.stringify(props)

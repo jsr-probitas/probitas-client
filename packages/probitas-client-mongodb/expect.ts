@@ -1,3 +1,4 @@
+import { containsSubset } from "@probitas/client";
 import type {
   MongoDeleteResult,
   MongoDocs,
@@ -6,41 +7,6 @@ import type {
   MongoInsertOneResult,
   MongoUpdateResult,
 } from "./types.ts";
-
-/**
- * Check if subset is contained in object.
- */
-function containsSubset(obj: unknown, subset: unknown): boolean {
-  if (subset === null || subset === undefined) {
-    return obj === subset;
-  }
-
-  if (typeof subset !== "object") {
-    return obj === subset;
-  }
-
-  if (Array.isArray(subset)) {
-    if (!Array.isArray(obj)) return false;
-    return subset.every((item, index) => containsSubset(obj[index], item));
-  }
-
-  if (typeof obj !== "object" || obj === null) {
-    return false;
-  }
-
-  for (const key of Object.keys(subset as Record<string, unknown>)) {
-    if (
-      !containsSubset(
-        (obj as Record<string, unknown>)[key],
-        (subset as Record<string, unknown>)[key],
-      )
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
 
 /**
  * Fluent API for MongoDB find result validation.

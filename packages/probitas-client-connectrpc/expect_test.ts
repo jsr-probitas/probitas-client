@@ -115,6 +115,107 @@ Deno.test("expect - dataContains() matches nested objects", () => {
   });
 });
 
+Deno.test("expect - dataContains() matches deeply nested objects", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {
+      data: {
+        user: {
+          profile: { name: "John", age: 30 },
+          settings: { theme: "dark" },
+        },
+      },
+    },
+  });
+
+  expectConnectRpcResponse(response).dataContains({
+    data: { user: { profile: { name: "John" } } },
+  });
+});
+
+Deno.test("expect - dataContains() matches nested array elements", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {
+      items: [1, 2, 3],
+      nested: { values: [10, 20, 30] },
+    },
+  });
+
+  expectConnectRpcResponse(response).dataContains({ items: [1, 2, 3] });
+});
+
+Deno.test("expect - dataContains() throws when nested object does not match", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {
+      args: { name: "probitas", version: "1.0" },
+    },
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).dataContains({
+        args: { name: "different" },
+      }),
+    Error,
+    "Expected data to contain",
+  );
+});
+
+Deno.test("expect - dataContains() throws when nested property is missing", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {
+      args: { version: "1.0" },
+    },
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).dataContains({
+        args: { name: "test" },
+      }),
+    Error,
+    "Expected data to contain",
+  );
+});
+
+Deno.test("expect - dataContains() matches mixed nested and top-level properties", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {
+      status: "ok",
+      data: { message: "Hello", count: 42 },
+    },
+  });
+
+  expectConnectRpcResponse(response).dataContains({
+    status: "ok",
+    data: { message: "Hello" },
+  });
+});
+
 Deno.test("expect - headers() matches value", () => {
   const response = new ConnectRpcResponseImpl({
     code: 0,

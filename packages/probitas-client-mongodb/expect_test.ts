@@ -163,6 +163,84 @@ Deno.test("expectMongoFindResult", async (t) => {
     expectMongoFindResult(result).docContains({ name: "Alice" });
   });
 
+  await t.step("docContains() passes with nested object subset", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createFindResult<any>([
+      { id: 1, user: { name: "Alice", profile: { city: "NYC" } } },
+    ]);
+    expectMongoFindResult(result).docContains({
+      user: { name: "Alice" },
+    });
+  });
+
+  await t.step("docContains() passes with deeply nested subset", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createFindResult<any>([
+      {
+        id: 1,
+        data: {
+          user: {
+            profile: { name: "John", age: 30 },
+            settings: { theme: "dark" },
+          },
+        },
+      },
+    ]);
+    expectMongoFindResult(result).docContains({
+      data: { user: { profile: { name: "John" } } },
+    });
+  });
+
+  await t.step("docContains() passes with nested array elements", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createFindResult<any>([
+      { id: 1, items: [1, 2, 3], nested: { values: [10, 20, 30] } },
+    ]);
+    expectMongoFindResult(result).docContains({ items: [1, 2, 3] });
+  });
+
+  await t.step("docContains() throws when nested object does not match", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createFindResult<any>([
+      { id: 1, args: { name: "probitas", version: "1.0" } },
+    ]);
+    assertThrows(
+      () =>
+        expectMongoFindResult(result).docContains({
+          args: { name: "different" },
+        }),
+      Error,
+      "Expected at least one document to contain",
+    );
+  });
+
+  await t.step("docContains() throws when nested property is missing", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createFindResult<any>([
+      { id: 1, args: { version: "1.0" } },
+    ]);
+    assertThrows(
+      () =>
+        expectMongoFindResult(result).docContains({ args: { name: "test" } }),
+      Error,
+      "Expected at least one document to contain",
+    );
+  });
+
+  await t.step(
+    "docContains() passes with mixed nested and top-level properties",
+    () => {
+      // deno-lint-ignore no-explicit-any
+      const result = createFindResult<any>([
+        { id: 1, status: "ok", data: { message: "Hello", count: 42 } },
+      ]);
+      expectMongoFindResult(result).docContains({
+        status: "ok",
+        data: { message: "Hello" },
+      });
+    },
+  );
+
   await t.step("docContains() throws when no document matches", () => {
     const result = createFindResult([
       { id: 1, name: "Alice" },

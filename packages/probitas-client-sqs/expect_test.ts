@@ -438,6 +438,97 @@ Deno.test("expectSqsMessage", async (t) => {
     expectSqsMessage(message).bodyJsonContains({ type: "ORDER" });
   });
 
+  await t.step("bodyJsonContains() passes with nested object subset", () => {
+    const nestedMessage: SqsMessage = {
+      messageId: "msg-nested",
+      receiptHandle: "receipt-nested",
+      body: JSON.stringify({
+        data: { user: { name: "John", profile: { city: "NYC" } } },
+      }),
+      attributes: {},
+      md5OfBody: "def456",
+    };
+    expectSqsMessage(nestedMessage).bodyJsonContains({
+      data: { user: { name: "John" } },
+    });
+  });
+
+  await t.step("bodyJsonContains() passes with deeply nested subset", () => {
+    const deeplyNestedMessage: SqsMessage = {
+      messageId: "msg-deep",
+      receiptHandle: "receipt-deep",
+      body: JSON.stringify({
+        event: {
+          payload: {
+            user: { profile: { name: "Alice", age: 30 } },
+          },
+        },
+      }),
+      attributes: {},
+      md5OfBody: "ghi789",
+    };
+    expectSqsMessage(deeplyNestedMessage).bodyJsonContains({
+      event: { payload: { user: { profile: { name: "Alice" } } } },
+    });
+  });
+
+  await t.step("bodyJsonContains() passes with nested array elements", () => {
+    const arrayMessage: SqsMessage = {
+      messageId: "msg-array",
+      receiptHandle: "receipt-array",
+      body: JSON.stringify({
+        items: [1, 2, 3],
+        nested: { values: [10, 20, 30] },
+      }),
+      attributes: {},
+      md5OfBody: "jkl012",
+    };
+    expectSqsMessage(arrayMessage).bodyJsonContains({ items: [1, 2, 3] });
+  });
+
+  await t.step(
+    "bodyJsonContains() throws when nested object does not match",
+    () => {
+      const nestedMessage: SqsMessage = {
+        messageId: "msg-fail",
+        receiptHandle: "receipt-fail",
+        body: JSON.stringify({
+          args: { name: "probitas", version: "1.0" },
+        }),
+        attributes: {},
+        md5OfBody: "mno345",
+      };
+      assertThrows(
+        () =>
+          expectSqsMessage(nestedMessage).bodyJsonContains({
+            args: { name: "different" },
+          }),
+        Error,
+        "Expected body JSON to contain",
+      );
+    },
+  );
+
+  await t.step(
+    "bodyJsonContains() passes with mixed nested and top-level properties",
+    () => {
+      const mixedMessage: SqsMessage = {
+        messageId: "msg-mixed",
+        receiptHandle: "receipt-mixed",
+        body: JSON.stringify({
+          status: "ok",
+          data: { message: "Hello", count: 42 },
+        }),
+        attributes: {},
+        md5OfBody: "pqr678",
+      };
+      expectSqsMessage(mixedMessage).bodyJsonContains({
+        status: "ok",
+        data: { message: "Hello" },
+      });
+    },
+  );
+
   await t.step(
     "bodyJsonContains() throws when body does not contain subset",
     () => {

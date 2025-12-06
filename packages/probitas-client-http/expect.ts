@@ -1,3 +1,4 @@
+import { containsSubarray, containsSubset } from "@probitas/client";
 import type { HttpResponse } from "./types.ts";
 
 /**
@@ -53,39 +54,6 @@ export interface HttpResponseExpectation {
 
   /** Assert that response duration is less than threshold (ms) */
   durationLessThan(ms: number): this;
-}
-
-/**
- * Check if an array contains a subarray.
- */
-function containsSubarray(arr: Uint8Array, sub: Uint8Array): boolean {
-  if (sub.length === 0) return true;
-  if (sub.length > arr.length) return false;
-
-  outer: for (let i = 0; i <= arr.length - sub.length; i++) {
-    for (let j = 0; j < sub.length; j++) {
-      if (arr[i + j] !== sub[j]) continue outer;
-    }
-    return true;
-  }
-  return false;
-}
-
-/**
- * Check if an object contains all properties from subset.
- */
-function containsProperties<T>(
-  obj: unknown,
-  subset: Partial<T>,
-): boolean {
-  if (typeof obj !== "object" || obj === null) return false;
-  if (typeof subset !== "object" || subset === null) return false;
-
-  for (const [key, value] of Object.entries(subset)) {
-    if (!(key in obj)) return false;
-    if ((obj as Record<string, unknown>)[key] !== value) return false;
-  }
-  return true;
 }
 
 /**
@@ -226,7 +194,7 @@ class HttpResponseExpectationImpl implements HttpResponseExpectation {
     if (json === null) {
       throw new Error("Expected JSON to contain properties, but body is null");
     }
-    if (!containsProperties(json, subset)) {
+    if (!containsSubset(json, subset)) {
       throw new Error("JSON does not contain expected properties");
     }
     return this;

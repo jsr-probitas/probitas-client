@@ -1,3 +1,4 @@
+import { containsSubset } from "@probitas/client";
 import type {
   DenoKvAtomicResult,
   DenoKvDeleteResult,
@@ -92,30 +93,6 @@ export interface DenoKvWriteResultExpectation {
 }
 
 /**
- * Check if an object contains all properties from subset (deep comparison).
- */
-function containsProperties<T>(
-  obj: unknown,
-  subset: Partial<T>,
-): boolean {
-  if (typeof obj !== "object" || obj === null) return false;
-  if (typeof subset !== "object" || subset === null) return false;
-
-  for (const [key, expectedValue] of Object.entries(subset)) {
-    if (!(key in obj)) return false;
-    const actualValue = (obj as Record<string, unknown>)[key];
-    if (typeof expectedValue === "object" && expectedValue !== null) {
-      if (!containsProperties(actualValue, expectedValue as Partial<unknown>)) {
-        return false;
-      }
-    } else if (actualValue !== expectedValue) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/**
  * Check if two KvKey arrays are equal.
  */
 function keysEqual(a: Deno.KvKey, b: Deno.KvKey): boolean {
@@ -185,7 +162,7 @@ class DenoKvGetResultExpectationImpl<T>
         "Expected value to contain properties, but value is null",
       );
     }
-    if (!containsProperties(this.#result.value, subset)) {
+    if (!containsSubset(this.#result.value, subset)) {
       throw new Error("Value does not contain expected properties");
     }
     return this;
@@ -291,7 +268,7 @@ class DenoKvListResultExpectationImpl<T>
       }
       if (
         subset.value !== undefined &&
-        !containsProperties(entry.value, subset.value)
+        !containsSubset(entry.value, subset.value)
       ) {
         return false;
       }

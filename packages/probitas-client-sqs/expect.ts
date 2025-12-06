@@ -1,3 +1,4 @@
+import { containsSubset } from "@probitas/client";
 import type {
   SqsDeleteBatchResult,
   SqsDeleteResult,
@@ -8,37 +9,6 @@ import type {
   SqsSendBatchResult,
   SqsSendResult,
 } from "./types.ts";
-
-/**
- * Check if subset properties exist in target object.
- */
-function containsSubset(
-  target: Record<string, unknown>,
-  subset: Record<string, unknown>,
-): boolean {
-  for (const key of Object.keys(subset)) {
-    if (!(key in target)) return false;
-    const targetValue = target[key];
-    const subsetValue = subset[key];
-
-    if (
-      typeof subsetValue === "object" && subsetValue !== null &&
-      typeof targetValue === "object" && targetValue !== null
-    ) {
-      if (
-        !containsSubset(
-          targetValue as Record<string, unknown>,
-          subsetValue as Record<string, unknown>,
-        )
-      ) {
-        return false;
-      }
-    } else if (targetValue !== subsetValue) {
-      return false;
-    }
-  }
-  return true;
-}
 
 /**
  * Fluent API for SQS send result validation.
@@ -527,12 +497,7 @@ class SqsMessageExpectationImpl implements SqsMessageExpectation {
   // deno-lint-ignore no-explicit-any
   bodyJsonContains<T = any>(subset: Partial<T>): this {
     const actual = JSON.parse(this.#message.body);
-    if (
-      !containsSubset(
-        actual as Record<string, unknown>,
-        subset as Record<string, unknown>,
-      )
-    ) {
+    if (!containsSubset(actual, subset)) {
       throw new Error(
         `Expected body JSON to contain ${JSON.stringify(subset)}, got ${
           JSON.stringify(actual)
@@ -558,12 +523,7 @@ class SqsMessageExpectationImpl implements SqsMessageExpectation {
       if (!actual) {
         throw new Error(`Expected attribute "${key}" to exist`);
       }
-      if (
-        !containsSubset(
-          actual as unknown as Record<string, unknown>,
-          expected as unknown as Record<string, unknown>,
-        )
-      ) {
+      if (!containsSubset(actual, expected)) {
         throw new Error(
           `Expected attribute "${key}" to contain ${
             JSON.stringify(expected)

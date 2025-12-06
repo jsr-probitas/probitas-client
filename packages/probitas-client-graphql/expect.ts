@@ -1,3 +1,4 @@
+import { containsSubset } from "@probitas/client";
 import type { GraphqlErrorItem, GraphqlResponse } from "./types.ts";
 
 /**
@@ -56,29 +57,6 @@ export interface GraphqlResponseExpectation {
 
   /** Assert that response duration is less than threshold (ms) */
   durationLessThan(ms: number): this;
-}
-
-/**
- * Deep partial match check.
- */
-function containsSubset(obj: unknown, subset: unknown): boolean {
-  if (subset === null || typeof subset !== "object") {
-    return obj === subset;
-  }
-  if (obj === null || typeof obj !== "object") {
-    return false;
-  }
-  for (const key of Object.keys(subset)) {
-    if (
-      !containsSubset(
-        (obj as Record<string, unknown>)[key],
-        (subset as Record<string, unknown>)[key],
-      )
-    ) {
-      return false;
-    }
-  }
-  return true;
 }
 
 /**

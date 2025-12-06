@@ -165,6 +165,78 @@ Deno.test("expectDenoKvGetResult.valueContains", async (t) => {
     expectDenoKvGetResult(result).valueContains({ name: "Alice" });
   });
 
+  await t.step("passes with nested object subset", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createGetResult<any>({
+      value: { user: { name: "Alice", profile: { city: "NYC" } } },
+    });
+    expectDenoKvGetResult(result).valueContains({ user: { name: "Alice" } });
+  });
+
+  await t.step("passes with deeply nested subset", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createGetResult<any>({
+      value: {
+        data: {
+          user: {
+            profile: { name: "John", age: 30 },
+            settings: { theme: "dark" },
+          },
+        },
+      },
+    });
+    expectDenoKvGetResult(result).valueContains({
+      data: { user: { profile: { name: "John" } } },
+    });
+  });
+
+  await t.step("passes with nested array elements", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createGetResult<any>({
+      value: { items: [1, 2, 3], nested: { values: [10, 20, 30] } },
+    });
+    expectDenoKvGetResult(result).valueContains({ items: [1, 2, 3] });
+  });
+
+  await t.step("throws when nested object does not match", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createGetResult<any>({
+      value: { args: { name: "probitas", version: "1.0" } },
+    });
+    assertThrows(
+      () =>
+        expectDenoKvGetResult(result).valueContains({
+          args: { name: "different" },
+        }),
+      Error,
+      "Value does not contain expected properties",
+    );
+  });
+
+  await t.step("throws when nested property is missing", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createGetResult<any>({
+      value: { args: { version: "1.0" } },
+    });
+    assertThrows(
+      () =>
+        expectDenoKvGetResult(result).valueContains({ args: { name: "test" } }),
+      Error,
+      "Value does not contain expected properties",
+    );
+  });
+
+  await t.step("passes with mixed nested and top-level properties", () => {
+    // deno-lint-ignore no-explicit-any
+    const result = createGetResult<any>({
+      value: { status: "ok", data: { message: "Hello", count: 42 } },
+    });
+    expectDenoKvGetResult(result).valueContains({
+      status: "ok",
+      data: { message: "Hello" },
+    });
+  });
+
   await t.step("throws when value does not contain subset", () => {
     const result = createGetResult({ value: { name: "Alice" } });
     assertThrows(

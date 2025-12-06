@@ -4,6 +4,7 @@
  * @module
  */
 
+import { containsSubset } from "@probitas/client";
 import type { ConnectRpcResponse } from "./response.ts";
 import type { ConnectRpcStatusCode } from "./status.ts";
 
@@ -60,26 +61,6 @@ export interface ConnectRpcResponseExpectation {
 
   /** Verify that response duration is less than the threshold. */
   durationLessThan(ms: number): this;
-}
-
-function containsSubset(obj: unknown, subset: unknown): boolean {
-  if (subset === null || typeof subset !== "object") {
-    return obj === subset;
-  }
-  if (obj === null || typeof obj !== "object") {
-    return false;
-  }
-  for (const key of Object.keys(subset)) {
-    if (
-      !containsSubset(
-        (obj as Record<string, unknown>)[key],
-        (subset as Record<string, unknown>)[key],
-      )
-    ) {
-      return false;
-    }
-  }
-  return true;
 }
 
 class ConnectRpcResponseExpectationImpl

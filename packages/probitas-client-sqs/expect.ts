@@ -1,7 +1,9 @@
 import { containsSubset } from "@probitas/client";
 import type {
   SqsDeleteBatchResult,
+  SqsDeleteQueueResult,
   SqsDeleteResult,
+  SqsEnsureQueueResult,
   SqsMessage,
   SqsMessageAttribute,
   SqsMessages,
@@ -596,4 +598,154 @@ export function expectSqsMessage(
   message: SqsMessage,
 ): SqsMessageExpectation {
   return new SqsMessageExpectationImpl(message);
+}
+
+/**
+ * Fluent API for SQS ensure queue result validation.
+ */
+export interface SqsEnsureQueueResultExpectation {
+  /** Assert that result ok is true */
+  ok(): this;
+
+  /** Assert that result ok is false */
+  notOk(): this;
+
+  /** Assert that queueUrl exists */
+  hasQueueUrl(): this;
+
+  /** Assert that queueUrl matches expected */
+  queueUrl(expected: string): this;
+
+  /** Assert that queueUrl contains substring */
+  queueUrlContains(substring: string): this;
+
+  /** Assert that duration is less than threshold (ms) */
+  durationLessThan(ms: number): this;
+}
+
+/**
+ * Fluent API for SQS delete queue result validation.
+ */
+export interface SqsDeleteQueueResultExpectation {
+  /** Assert that result ok is true */
+  ok(): this;
+
+  /** Assert that result ok is false */
+  notOk(): this;
+
+  /** Assert that duration is less than threshold (ms) */
+  durationLessThan(ms: number): this;
+}
+
+/**
+ * Implementation for SQS ensure queue result expectations.
+ */
+class SqsEnsureQueueResultExpectationImpl
+  implements SqsEnsureQueueResultExpectation {
+  readonly #result: SqsEnsureQueueResult;
+
+  constructor(result: SqsEnsureQueueResult) {
+    this.#result = result;
+  }
+
+  ok(): this {
+    if (!this.#result.ok) {
+      throw new Error("Expected ok result, but ok is false");
+    }
+    return this;
+  }
+
+  notOk(): this {
+    if (this.#result.ok) {
+      throw new Error("Expected not ok result, but ok is true");
+    }
+    return this;
+  }
+
+  hasQueueUrl(): this {
+    if (!this.#result.queueUrl) {
+      throw new Error("Expected queueUrl, but queueUrl is empty");
+    }
+    return this;
+  }
+
+  queueUrl(expected: string): this {
+    if (this.#result.queueUrl !== expected) {
+      throw new Error(
+        `Expected queueUrl "${expected}", got "${this.#result.queueUrl}"`,
+      );
+    }
+    return this;
+  }
+
+  queueUrlContains(substring: string): this {
+    if (!this.#result.queueUrl.includes(substring)) {
+      throw new Error(
+        `Expected queueUrl to contain "${substring}", got "${this.#result.queueUrl}"`,
+      );
+    }
+    return this;
+  }
+
+  durationLessThan(ms: number): this {
+    if (this.#result.duration >= ms) {
+      throw new Error(
+        `Expected duration < ${ms}ms, got ${this.#result.duration}ms`,
+      );
+    }
+    return this;
+  }
+}
+
+/**
+ * Implementation for SQS delete queue result expectations.
+ */
+class SqsDeleteQueueResultExpectationImpl
+  implements SqsDeleteQueueResultExpectation {
+  readonly #result: SqsDeleteQueueResult;
+
+  constructor(result: SqsDeleteQueueResult) {
+    this.#result = result;
+  }
+
+  ok(): this {
+    if (!this.#result.ok) {
+      throw new Error("Expected ok result, but ok is false");
+    }
+    return this;
+  }
+
+  notOk(): this {
+    if (this.#result.ok) {
+      throw new Error("Expected not ok result, but ok is true");
+    }
+    return this;
+  }
+
+  durationLessThan(ms: number): this {
+    if (this.#result.duration >= ms) {
+      throw new Error(
+        `Expected duration < ${ms}ms, got ${this.#result.duration}ms`,
+      );
+    }
+    return this;
+  }
+}
+
+/**
+ * Create a fluent expectation chain for SQS ensure queue result validation.
+ */
+export function expectSqsEnsureQueueResult(
+  result: SqsEnsureQueueResult,
+): SqsEnsureQueueResultExpectation {
+  return new SqsEnsureQueueResultExpectationImpl(result);
+}
+
+/**
+ * Create a fluent expectation chain for SQS delete queue result validation.
+ */
+export function expectSqsDeleteQueueResult(
+  result: SqsDeleteQueueResult,
+): SqsDeleteQueueResultExpectation {
+  return new SqsDeleteQueueResultExpectationImpl(result);
 }

@@ -1,7 +1,9 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import type {
   SqsDeleteBatchResult,
+  SqsDeleteQueueResult,
   SqsDeleteResult,
+  SqsEnsureQueueResult,
   SqsMessage,
   SqsReceiveResult,
   SqsSendBatchResult,
@@ -10,7 +12,9 @@ import type {
 import { createSqsMessages } from "./messages.ts";
 import {
   expectSqsDeleteBatchResult,
+  expectSqsDeleteQueueResult,
   expectSqsDeleteResult,
+  expectSqsEnsureQueueResult,
   expectSqsMessage,
   expectSqsReceiveResult,
   expectSqsSendBatchResult,
@@ -589,5 +593,123 @@ Deno.test("expectSqsMessage", async (t) => {
       .bodyContains("ORDER")
       .bodyJsonContains({ id: 42 })
       .hasAttribute("priority");
+  });
+});
+
+Deno.test("expectSqsEnsureQueueResult", async (t) => {
+  const successResult: SqsEnsureQueueResult = {
+    ok: true,
+    queueUrl: "https://sqs.us-east-1.amazonaws.com/123456789/test-queue",
+    duration: 50,
+  };
+
+  const failedResult: SqsEnsureQueueResult = {
+    ok: false,
+    queueUrl: "",
+    duration: 100,
+  };
+
+  await t.step("ok() passes for successful result", () => {
+    expectSqsEnsureQueueResult(successResult).ok();
+  });
+
+  await t.step("ok() throws for failed result", () => {
+    assertThrows(
+      () => expectSqsEnsureQueueResult(failedResult).ok(),
+      Error,
+      "Expected ok result",
+    );
+  });
+
+  await t.step("notOk() passes for failed result", () => {
+    expectSqsEnsureQueueResult(failedResult).notOk();
+  });
+
+  await t.step("hasQueueUrl() passes when queueUrl exists", () => {
+    expectSqsEnsureQueueResult(successResult).hasQueueUrl();
+  });
+
+  await t.step("hasQueueUrl() throws when queueUrl is empty", () => {
+    assertThrows(
+      () => expectSqsEnsureQueueResult(failedResult).hasQueueUrl(),
+      Error,
+      "Expected queueUrl",
+    );
+  });
+
+  await t.step("queueUrl() passes with matching url", () => {
+    expectSqsEnsureQueueResult(successResult).queueUrl(
+      "https://sqs.us-east-1.amazonaws.com/123456789/test-queue",
+    );
+  });
+
+  await t.step("queueUrl() throws with non-matching url", () => {
+    assertThrows(
+      () => expectSqsEnsureQueueResult(successResult).queueUrl("other-url"),
+      Error,
+      "Expected queueUrl",
+    );
+  });
+
+  await t.step("queueUrlContains() passes when url contains substring", () => {
+    expectSqsEnsureQueueResult(successResult).queueUrlContains("test-queue");
+  });
+
+  await t.step(
+    "queueUrlContains() throws when url does not contain substring",
+    () => {
+      assertThrows(
+        () =>
+          expectSqsEnsureQueueResult(successResult).queueUrlContains(
+            "other-queue",
+          ),
+        Error,
+        "Expected queueUrl to contain",
+      );
+    },
+  );
+
+  await t.step("durationLessThan() passes when duration is less", () => {
+    expectSqsEnsureQueueResult(successResult).durationLessThan(100);
+  });
+
+  await t.step("chaining works", () => {
+    expectSqsEnsureQueueResult(successResult)
+      .ok()
+      .hasQueueUrl()
+      .queueUrlContains("test-queue")
+      .durationLessThan(100);
+  });
+});
+
+Deno.test("expectSqsDeleteQueueResult", async (t) => {
+  const successResult: SqsDeleteQueueResult = {
+    ok: true,
+    duration: 30,
+  };
+
+  const failedResult: SqsDeleteQueueResult = {
+    ok: false,
+    duration: 50,
+  };
+
+  await t.step("ok() passes for successful result", () => {
+    expectSqsDeleteQueueResult(successResult).ok();
+  });
+
+  await t.step("notOk() passes for failed result", () => {
+    expectSqsDeleteQueueResult(failedResult).notOk();
+  });
+
+  await t.step("durationLessThan() passes when duration is less", () => {
+    expectSqsDeleteQueueResult(successResult).durationLessThan(50);
+  });
+
+  await t.step("durationLessThan() throws when duration is greater", () => {
+    assertThrows(
+      () => expectSqsDeleteQueueResult(successResult).durationLessThan(20),
+      Error,
+      "Expected duration",
+    );
   });
 });

@@ -97,7 +97,20 @@ interface DenoKvListResultExpectation<T> {
   durationLessThan(ms: number): this;
 }
 
-interface DenoKvWriteResultExpectation {
+interface DenoKvSetResultExpectation {
+  ok(): this;
+  notOk(): this;
+  hasVersionstamp(): this;
+  durationLessThan(ms: number): this;
+}
+
+interface DenoKvDeleteResultExpectation {
+  ok(): this;
+  notOk(): this;
+  durationLessThan(ms: number): this;
+}
+
+interface DenoKvAtomicResultExpectation {
   ok(): this;
   notOk(): this;
   hasVersionstamp(): this;
@@ -112,13 +125,14 @@ function expectDenoKvListResult<T>(
 ): DenoKvListResultExpectation<T>;
 function expectDenoKvSetResult(
   result: DenoKvSetResult,
-): DenoKvWriteResultExpectation;
+): DenoKvSetResultExpectation;
 function expectDenoKvDeleteResult(
   result: DenoKvDeleteResult,
-): DenoKvWriteResultExpectation;
+): DenoKvDeleteResultExpectation;
 function expectDenoKvAtomicResult(
   result: DenoKvAtomicResult,
-): DenoKvWriteResultExpectation;
+): DenoKvAtomicResultExpectation;
+function expectDenoKvResult(result: DenoKvResult); // returns the expectation matching result.type
 ```
 
 ## DenoKvClient

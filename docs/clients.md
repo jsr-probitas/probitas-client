@@ -65,6 +65,7 @@ scenarios.
 | Service                | Image                                      | Port            |
 | ---------------------- | ------------------------------------------ | --------------- |
 | HTTP echo              | `ghcr.io/jsr-probitas/echo-http:latest`    | `18080`         |
+| ConnectRPC echo        | `ghcr.io/jsr-probitas/echo-connectrpc`     | `18082`         |
 | gRPC echo              | `ghcr.io/jsr-probitas/echo-grpc:latest`    | `50051`         |
 | GraphQL echo           | `ghcr.io/jsr-probitas/echo-graphql:latest` | `14000`         |
 | Postgres               | `postgres:16`                              | `15432`         |

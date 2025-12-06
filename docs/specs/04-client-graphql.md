@@ -55,19 +55,29 @@ class GraphqlClientError extends ClientError {
 
 ```typescript
 interface GraphqlResponseExpectation {
-  // --- Status checks ---
-  ok(): this;
-
   // --- Error checks ---
+  ok(): this;
   noErrors(): this;
+  hasErrors(): this;
+  errorCount(n: number): this;
+  errorContains(message: string): this;
   error(messageMatcher: string | RegExp): this;
   errorMatch(matcher: (errors: readonly GraphqlError[]) => void): this;
 
   // --- Data checks ---
-  noContent(): this;
-  hasContent(): this;
+  hasData(): this;
+  hasContent(): this; // alias for hasData
+  noData(): this;
+  noContent(): this; // alias for noData
   dataContains<T = any>(subset: Partial<T>): this;
   dataMatch<T = any>(matcher: (data: T) => void): this;
+
+  // --- Extensions ---
+  extensionExists(key: string): this;
+  extensionMatch(key: string, matcher: (value: unknown) => void): this;
+
+  // --- HTTP metadata ---
+  status(code: number): this;
 
   // --- Performance ---
   durationLessThan(ms: number): this;

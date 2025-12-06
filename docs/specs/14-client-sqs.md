@@ -133,6 +133,31 @@ interface SqsDeleteResultExpectation {
   durationLessThan(ms: number): this;
 }
 
+interface SqsEnsureQueueResultExpectation {
+  ok(): this;
+  notOk(): this;
+  hasQueueUrl(): this;
+  queueUrl(expected: string): this;
+  queueUrlContains(substring: string): this;
+  durationLessThan(ms: number): this;
+}
+
+interface SqsDeleteQueueResultExpectation {
+  ok(): this;
+  notOk(): this;
+  durationLessThan(ms: number): this;
+}
+
+interface SqsMessageExpectation {
+  bodyContains(substring: string): this;
+  bodyMatch(matcher: (body: string) => void): this;
+  bodyJsonEquals<T = any>(expected: T): this;
+  bodyJsonContains<T = any>(subset: Partial<T>): this;
+  hasAttribute(name: string): this;
+  attributesContain(subset: Record<string, Partial<SqsMessageAttribute>>): this;
+  messageId(expected: string): this;
+}
+
 function expectSqsSendResult(result: SqsSendResult): SqsSendResultExpectation;
 function expectSqsSendBatchResult(
   result: SqsSendBatchResult,
@@ -146,6 +171,14 @@ function expectSqsDeleteResult(
 function expectSqsDeleteBatchResult(
   result: SqsDeleteBatchResult,
 ): SqsSendBatchResultExpectation;
+function expectSqsEnsureQueueResult(
+  result: SqsEnsureQueueResult,
+): SqsEnsureQueueResultExpectation;
+function expectSqsDeleteQueueResult(
+  result: SqsDeleteQueueResult,
+): SqsDeleteQueueResultExpectation;
+function expectSqsMessage(message: SqsMessage): SqsMessageExpectation;
+function expectSqsResult(result: SqsResult); // returns the expectation matching result.type
 ```
 
 ## SqsClient

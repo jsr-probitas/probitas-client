@@ -1,4 +1,4 @@
-# Examples & Implementation Roadmap
+# Examples
 
 ## Probitas Scenario Examples
 
@@ -161,61 +161,23 @@ export default scenario("Event Processing", { tags: ["messaging"] })
 
 ---
 
-## Implementation Roadmap
-
-### Phase 1 (MVP)
-
-| Package                         | Content                                                        |
-| ------------------------------- | -------------------------------------------------------------- |
-| `@probitas/client`              | Core (CommonOptions, ClientError)                              |
-| `@probitas/client-http`         | HttpResponse, HttpError, expectHttpResponse, HttpClient        |
-| `@probitas/client-sql`          | SqlQueryResult, SqlTransaction, SqlError, expectSqlQueryResult |
-| `@probitas/client-sql-postgres` | PostgresClient                                                 |
-| `@probitas/client-sql-sqlite`   | SqliteClient                                                   |
-
-### Phase 2
-
-| Package                       | Content      |
-| ----------------------------- | ------------ |
-| `@probitas/client-sql-mysql`  | MySqlClient  |
-| `@probitas/client-sql-duckdb` | DuckDbClient |
-| `@probitas/client-mongodb`    | MongoClient  |
-| `@probitas/client-redis`      | RedisClient  |
-
-### Phase 3
-
-| Package                    | Content                                                             |
-| -------------------------- | ------------------------------------------------------------------- |
-| `@probitas/client-grpc`    | GrpcResponse, GrpcError, expectGrpcResponse, GrpcClient             |
-| `@probitas/client-graphql` | GraphqlResponse, GraphqlError, expectGraphqlResponse, GraphqlClient |
-
-### Phase 4
-
-| Package                     | Content        |
-| --------------------------- | -------------- |
-| `@probitas/client-dynamodb` | DynamoClient   |
-| `@probitas/client-deno-kv`  | DenoKvClient   |
-| `@probitas/client-sqs`      | SqsClient      |
-| `@probitas/client-rabbitmq` | RabbitMqClient |
-
----
-
 ## Package Index
 
 | #  | Package                         | Spec                                                     |
 | -- | ------------------------------- | -------------------------------------------------------- |
 | 1  | `@probitas/client`              | [01-client.md](./01-client.md)                           |
 | 2  | `@probitas/client-http`         | [02-client-http.md](./02-client-http.md)                 |
-| 3  | `@probitas/client-grpc`         | [03-client-grpc.md](./03-client-grpc.md)                 |
-| 4  | `@probitas/client-graphql`      | [04-client-graphql.md](./04-client-graphql.md)           |
-| 5  | `@probitas/client-sql`          | [05-client-sql.md](./05-client-sql.md)                   |
-| 6  | `@probitas/client-sql-postgres` | [06-client-sql-postgres.md](./06-client-sql-postgres.md) |
-| 7  | `@probitas/client-sql-mysql`    | [07-client-sql-mysql.md](./07-client-sql-mysql.md)       |
-| 8  | `@probitas/client-sql-sqlite`   | [08-client-sql-sqlite.md](./08-client-sql-sqlite.md)     |
-| 9  | `@probitas/client-sql-duckdb`   | [09-client-sql-duckdb.md](./09-client-sql-duckdb.md)     |
-| 10 | `@probitas/client-mongodb`      | [10-client-mongodb.md](./10-client-mongodb.md)           |
-| 11 | `@probitas/client-redis`        | [11-client-redis.md](./11-client-redis.md)               |
-| 12 | `@probitas/client-dynamodb`     | [12-client-dynamodb.md](./12-client-dynamodb.md)         |
-| 13 | `@probitas/client-deno-kv`      | [13-client-deno-kv.md](./13-client-deno-kv.md)           |
-| 14 | `@probitas/client-sqs`          | [14-client-sqs.md](./14-client-sqs.md)                   |
-| 15 | `@probitas/client-rabbitmq`     | [15-client-rabbitmq.md](./15-client-rabbitmq.md)         |
+| 3  | `@probitas/client-connectrpc`   | [03-client-connectrpc.md](./03-client-connectrpc.md)     |
+| 4  | `@probitas/client-grpc`         | [03-client-grpc.md](./03-client-grpc.md)                 |
+| 5  | `@probitas/client-graphql`      | [04-client-graphql.md](./04-client-graphql.md)           |
+| 6  | `@probitas/client-sql`          | [05-client-sql.md](./05-client-sql.md)                   |
+| 7  | `@probitas/client-sql-postgres` | [06-client-sql-postgres.md](./06-client-sql-postgres.md) |
+| 8  | `@probitas/client-sql-mysql`    | [07-client-sql-mysql.md](./07-client-sql-mysql.md)       |
+| 9  | `@probitas/client-sql-sqlite`   | [08-client-sql-sqlite.md](./08-client-sql-sqlite.md)     |
+| 10 | `@probitas/client-sql-duckdb`   | [09-client-sql-duckdb.md](./09-client-sql-duckdb.md)     |
+| 11 | `@probitas/client-mongodb`      | [10-client-mongodb.md](./10-client-mongodb.md)           |
+| 12 | `@probitas/client-redis`        | [11-client-redis.md](./11-client-redis.md)               |
+| 13 | `@probitas/client-dynamodb`     | [12-client-dynamodb.md](./12-client-dynamodb.md)         |
+| 14 | `@probitas/client-deno-kv`      | [13-client-deno-kv.md](./13-client-deno-kv.md)           |
+| 15 | `@probitas/client-sqs`          | [14-client-sqs.md](./14-client-sqs.md)                   |
+| 16 | `@probitas/client-rabbitmq`     | [15-client-rabbitmq.md](./15-client-rabbitmq.md)         |

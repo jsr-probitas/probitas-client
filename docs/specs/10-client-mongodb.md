@@ -151,6 +151,37 @@ interface MongoDeleteResultExpectation {
 function expectMongoDeleteResult(
   result: MongoDeleteResult,
 ): MongoDeleteResultExpectation;
+
+interface MongoFindOneResultExpectation<T> {
+  ok(): this;
+  notOk(): this;
+  found(): this;
+  notFound(): this;
+  docContains(subset: Partial<T>): this;
+  docMatch(matcher: (doc: T) => void): this;
+  durationLessThan(ms: number): this;
+}
+
+function expectMongoFindOneResult<T = Document>(
+  result: MongoFindOneResult<T>,
+): MongoFindOneResultExpectation<T>;
+
+interface MongoCountResultExpectation {
+  ok(): this;
+  notOk(): this;
+  count(expected: number): this;
+  countAtLeast(min: number): this;
+  countAtMost(max: number): this;
+  countBetween(min: number, max: number): this;
+  isEmpty(): this;
+  isNotEmpty(): this;
+  durationLessThan(ms: number): this;
+}
+
+function expectMongoCountResult(
+  result: MongoCountResult,
+): MongoCountResultExpectation;
+function expectMongoResult(result: MongoResult); // returns the expectation matching result.type
 ```
 
 ## MongoClient

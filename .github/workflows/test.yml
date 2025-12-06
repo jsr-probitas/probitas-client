@@ -14,7 +14,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: denoland/setup-deno@v2
         with:
           deno-version: ${{ env.DENO_VERSION }}
@@ -112,7 +112,7 @@ jobs:
     env:
       DENO_KV_ACCESS_TOKEN: testtoken1234
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: denoland/setup-deno@v2
         with:
           deno-version: ${{ env.DENO_VERSION }}
@@ -120,8 +120,7 @@ jobs:
       # - GitHub Actions services don't support custom command options
       # - Transactions require replica set mode (--replSet flag)
       # - supercharge/mongodb-github-action handles replica set initialization
-      - name: Start MongoDB with Replica Set
-        uses: supercharge/mongodb-github-action@1.12.0
+      - uses: supercharge/mongodb-github-action@1.12.0
         with:
           mongodb-version: "7.0"
           mongodb-replica-set: rs0
@@ -133,8 +132,7 @@ jobs:
       - run: |
           deno task coverage --lcov > coverage.lcov
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v5
         with:
           files: ./coverage.lcov
           token: ${{ secrets.CODECOV_TOKEN }}

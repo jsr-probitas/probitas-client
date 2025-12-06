@@ -1,0 +1,29 @@
+name: Bump
+
+env:
+  DENO_VERSION: 2.x
+
+permissions:
+  contents: write
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    name: version bump
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: ${{ env.DENO_VERSION }}
+          cache: true
+
+      - run: |
+          git fetch --unshallow origin
+          deno run -A jsr:@deno/bump-workspaces@^0.1/cli --import-map import_map.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

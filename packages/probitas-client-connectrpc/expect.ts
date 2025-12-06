@@ -1,10 +1,16 @@
-import type { GrpcResponse } from "./response.ts";
-import type { GrpcStatusCode } from "./status.ts";
+/**
+ * Fluent expectation API for ConnectRPC responses.
+ *
+ * @module
+ */
+
+import type { ConnectRpcResponse } from "./response.ts";
+import type { ConnectRpcStatusCode } from "./status.ts";
 
 /**
- * Fluent assertion interface for GrpcResponse.
+ * Fluent assertion interface for ConnectRpcResponse.
  */
-export interface GrpcResponseExpectation {
+export interface ConnectRpcResponseExpectation {
   /** Verify that status is OK (code === 0). */
   ok(): this;
 
@@ -12,10 +18,10 @@ export interface GrpcResponseExpectation {
   notOk(): this;
 
   /** Verify the exact status code. */
-  code(code: GrpcStatusCode): this;
+  code(code: ConnectRpcStatusCode): this;
 
   /** Verify the status code is one of the specified values. */
-  codeIn(...codes: GrpcStatusCode[]): this;
+  codeIn(...codes: ConnectRpcStatusCode[]): this;
 
   /** Verify the status message matches exactly or by regex. */
   message(expected: string | RegExp): this;
@@ -26,25 +32,25 @@ export interface GrpcResponseExpectation {
   /** Verify the status message using a custom matcher. */
   messageMatch(matcher: (message: string) => void): this;
 
+  /** Verify a header value matches exactly or by regex. */
+  headers(key: string, expected: string | RegExp): this;
+
+  /** Verify that a header key exists. */
+  headersExist(key: string): this;
+
   /** Verify a trailer value matches exactly or by regex. */
   trailers(key: string, expected: string | RegExp): this;
 
   /** Verify that a trailer key exists. */
   trailersExist(key: string): this;
 
-  /** Verify that body is null. */
+  /** Verify that data() is null. */
   noContent(): this;
 
-  /** Verify that body is not null. */
+  /** Verify that data() is not null. */
   hasContent(): this;
 
-  /** Verify that body contains the specified bytes. */
-  bodyContains(subbody: Uint8Array): this;
-
-  /** Verify body using a custom matcher. */
-  bodyMatch(matcher: (body: Uint8Array) => void): this;
-
-  /** Verify that data() contains the specified properties. */
+  /** Verify that data() contains the specified properties (deep partial match). */
   // deno-lint-ignore no-explicit-any
   dataContains<T = any>(subset: Partial<T>): this;
 
@@ -52,31 +58,8 @@ export interface GrpcResponseExpectation {
   // deno-lint-ignore no-explicit-any
   dataMatch<T = any>(matcher: (data: T) => void): this;
 
-  /** Verify that json() contains the specified properties. */
-  // deno-lint-ignore no-explicit-any
-  jsonContains<T = any>(subset: Partial<T>): this;
-
-  /** Verify json() using a custom matcher. */
-  // deno-lint-ignore no-explicit-any
-  jsonMatch<T = any>(matcher: (body: T) => void): this;
-
-  /** Verify the response duration is less than the threshold. */
+  /** Verify that response duration is less than the threshold. */
   durationLessThan(ms: number): this;
-}
-
-function containsSubarray(arr: Uint8Array, sub: Uint8Array): boolean {
-  if (sub.length === 0) return true;
-  if (sub.length > arr.length) return false;
-
-  outer: for (let i = 0; i <= arr.length - sub.length; i++) {
-    for (let j = 0; j < sub.length; j++) {
-      if (arr[i + j] !== sub[j]) {
-        continue outer;
-      }
-    }
-    return true;
-  }
-  return false;
 }
 
 function containsSubset(obj: unknown, subset: unknown): boolean {
@@ -99,10 +82,11 @@ function containsSubset(obj: unknown, subset: unknown): boolean {
   return true;
 }
 
-class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
-  readonly #response: GrpcResponse;
+class ConnectRpcResponseExpectationImpl
+  implements ConnectRpcResponseExpectation {
+  readonly #response: ConnectRpcResponse;
 
-  constructor(response: GrpcResponse) {
+  constructor(response: ConnectRpcResponse) {
     this.#response = response;
   }
 
@@ -124,7 +108,7 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
     return this;
   }
 
-  code(code: GrpcStatusCode): this {
+  code(code: ConnectRpcStatusCode): this {
     if (this.#response.code !== code) {
       throw new Error(
         `Expected code ${code}, got ${this.#response.code}`,
@@ -133,7 +117,7 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
     return this;
   }
 
-  codeIn(...codes: GrpcStatusCode[]): this {
+  codeIn(...codes: ConnectRpcStatusCode[]): this {
     if (!codes.includes(this.#response.code)) {
       throw new Error(
         `Expected code to be one of [${
@@ -172,6 +156,31 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
     return this;
   }
 
+  headers(key: string, expected: string | RegExp): this {
+    const value = this.#response.headers[key];
+    if (typeof expected === "string") {
+      if (value !== expected) {
+        throw new Error(
+          `Expected header "${key}" to be "${expected}", got "${value}"`,
+        );
+      }
+    } else {
+      if (value === undefined || !expected.test(value)) {
+        throw new Error(
+          `Expected header "${key}" to match ${expected}, got "${value}"`,
+        );
+      }
+    }
+    return this;
+  }
+
+  headersExist(key: string): this {
+    if (!(key in this.#response.headers)) {
+      throw new Error(`Expected header "${key}" to exist`);
+    }
+    return this;
+  }
+
   trailers(key: string, expected: string | RegExp): this {
     const value = this.#response.trailers[key];
     if (typeof expected === "string") {
@@ -198,38 +207,16 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
   }
 
   noContent(): this {
-    if (this.#response.body !== null) {
-      throw new Error(
-        `Expected no content, but body has ${this.#response.body.length} bytes`,
-      );
+    if (this.#response.data() !== null) {
+      throw new Error("Expected no data, but data is not null");
     }
     return this;
   }
 
   hasContent(): this {
-    if (this.#response.body === null) {
-      throw new Error("Expected content, but body is null");
+    if (this.#response.data() === null) {
+      throw new Error("Expected data, but data is null");
     }
-    return this;
-  }
-
-  bodyContains(subbody: Uint8Array): this {
-    if (this.#response.body === null) {
-      throw new Error(
-        "Expected body to contain specified bytes, but body is null",
-      );
-    }
-    if (!containsSubarray(this.#response.body, subbody)) {
-      throw new Error("Expected body to contain specified bytes");
-    }
-    return this;
-  }
-
-  bodyMatch(matcher: (body: Uint8Array) => void): this {
-    if (this.#response.body === null) {
-      throw new Error("Cannot match body: body is null");
-    }
-    matcher(this.#response.body);
     return this;
   }
 
@@ -256,29 +243,6 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
     return this;
   }
 
-  // deno-lint-ignore no-explicit-any
-  jsonContains<T = any>(subset: Partial<T>): this {
-    const json = this.#response.json<T>();
-    if (!containsSubset(json, subset)) {
-      throw new Error(
-        `Expected JSON to contain ${JSON.stringify(subset)}, got ${
-          JSON.stringify(json)
-        }`,
-      );
-    }
-    return this;
-  }
-
-  // deno-lint-ignore no-explicit-any
-  jsonMatch<T = any>(matcher: (body: T) => void): this {
-    const json = this.#response.json<T>();
-    if (json === null) {
-      throw new Error("Cannot match JSON: body is null");
-    }
-    matcher(json);
-    return this;
-  }
-
   durationLessThan(ms: number): this {
     if (this.#response.duration >= ms) {
       throw new Error(
@@ -290,10 +254,10 @@ class GrpcResponseExpectationImpl implements GrpcResponseExpectation {
 }
 
 /**
- * Create a fluent assertion for a GrpcResponse.
+ * Create a fluent assertion for a ConnectRpcResponse.
  */
-export function expectGrpcResponse(
-  response: GrpcResponse,
-): GrpcResponseExpectation {
-  return new GrpcResponseExpectationImpl(response);
+export function expectConnectRpcResponse(
+  response: ConnectRpcResponse,
+): ConnectRpcResponseExpectation {
+  return new ConnectRpcResponseExpectationImpl(response);
 }

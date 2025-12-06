@@ -107,53 +107,59 @@ export class SqliteTransactionImpl implements SqlTransaction {
       if (isSelect) {
         // For SELECT queries, use query method
         const stmt = this.#db.prepare(sql);
-        const rows = (
-          params
-            // deno-lint-ignore no-explicit-any
-            ? stmt.all<Record<string, any>>(...(params as BindParams))
-            // deno-lint-ignore no-explicit-any
-            : stmt.all<Record<string, any>>()
-        ) as T[];
-        stmt.finalize();
-        const duration = performance.now() - startTime;
+        try {
+          const rows = (
+            params
+              // deno-lint-ignore no-explicit-any
+              ? stmt.all<Record<string, any>>(...(params as BindParams))
+              // deno-lint-ignore no-explicit-any
+              : stmt.all<Record<string, any>>()
+          ) as T[];
+          const duration = performance.now() - startTime;
 
-        return Promise.resolve(
-          new SqlQueryResult<T>({
-            ok: true,
-            rows: rows,
-            rowCount: rows.length,
-            duration,
-            metadata: {},
-          }),
-        );
+          return Promise.resolve(
+            new SqlQueryResult<T>({
+              ok: true,
+              rows: rows,
+              rowCount: rows.length,
+              duration,
+              metadata: {},
+            }),
+          );
+        } finally {
+          stmt.finalize();
+        }
       } else {
         // For INSERT/UPDATE/DELETE queries
         const stmt = this.#db.prepare(sql);
-        if (params) {
-          stmt.run(...(params as BindParams));
-        } else {
-          stmt.run();
+        try {
+          if (params) {
+            stmt.run(...(params as BindParams));
+          } else {
+            stmt.run();
+          }
+          const duration = performance.now() - startTime;
+
+          // Get affected rows and last insert id
+          const changes = this.#db.changes;
+          const lastInsertRowId = this.#db.lastInsertRowId;
+
+          return Promise.resolve(
+            new SqlQueryResult<T>({
+              ok: true,
+              rows: [],
+              rowCount: changes,
+              duration,
+              metadata: {
+                lastInsertId: lastInsertRowId > 0
+                  ? BigInt(lastInsertRowId)
+                  : undefined,
+              },
+            }),
+          );
+        } finally {
+          stmt.finalize();
         }
-        stmt.finalize();
-        const duration = performance.now() - startTime;
-
-        // Get affected rows and last insert id
-        const changes = this.#db.changes;
-        const lastInsertRowId = this.#db.lastInsertRowId;
-
-        return Promise.resolve(
-          new SqlQueryResult<T>({
-            ok: true,
-            rows: [],
-            rowCount: changes,
-            duration,
-            metadata: {
-              lastInsertId: lastInsertRowId > 0
-                ? BigInt(lastInsertRowId)
-                : undefined,
-            },
-          }),
-        );
       }
     } catch (error) {
       return Promise.reject(convertSqliteError(error));

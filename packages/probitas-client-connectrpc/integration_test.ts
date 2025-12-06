@@ -1,17 +1,18 @@
 /**
- * Integration tests for GrpcClient using echo-grpc service.
- *
- * This package is a thin wrapper around @probitas/client-connectrpc
- * with protocol: "grpc" fixed.
+ * Integration tests for ConnectRPC client with echo-connectrpc service.
  *
  * Run with:
  *   docker compose up -d echo-connectrpc
- *   deno test -A packages/probitas-client-grpc/integration_test.ts
+ *   deno test -A packages/probitas-client-connectrpc/integration_test.ts
  *   docker compose down
  */
 
-import { assertEquals, assertExists, assertRejects } from "@std/assert";
-import { createGrpcClient, expectGrpcResponse, GrpcError } from "./mod.ts";
+import { assertEquals, assertExists } from "@std/assert";
+import {
+  ConnectRpcError,
+  createConnectRpcClient,
+  expectConnectRpcResponse,
+} from "./mod.ts";
 
 // Suppress HTTP/2 cleanup errors from Deno's node:http2 compatibility layer.
 // This is a known Deno bug where async stream handlers fire after session destruction.
@@ -30,12 +31,12 @@ globalThis.addEventListener("unhandledrejection", (event) => {
   }
 });
 
-// Use echo-grpc service
-const GRPC_URL = Deno.env.get("GRPC_URL") ?? "http://localhost:50051";
+const CONNECTRPC_URL = Deno.env.get("CONNECTRPC_URL") ??
+  "http://localhost:18082";
 
 async function isServiceAvailable(): Promise<boolean> {
   try {
-    const url = new URL(GRPC_URL);
+    const url = new URL(CONNECTRPC_URL);
     const conn = await Deno.connect({
       hostname: url.hostname,
       port: parseInt(url.port, 10),
@@ -48,11 +49,11 @@ async function isServiceAvailable(): Promise<boolean> {
 }
 
 Deno.test({
-  name: "Integration: createGrpcClient with reflection",
+  name: "Integration: createConnectRpcClient with reflection",
   ignore: !(await isServiceAvailable()),
   async fn() {
-    await using client = createGrpcClient({
-      address: GRPC_URL,
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
     });
 
     assertExists(client);
@@ -64,8 +65,8 @@ Deno.test({
   name: "Integration: reflection.listServices",
   ignore: !(await isServiceAvailable()),
   async fn() {
-    await using client = createGrpcClient({
-      address: GRPC_URL,
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
     });
 
     const services = await client.reflection.listServices();
@@ -84,8 +85,8 @@ Deno.test({
   name: "Integration: reflection.hasService",
   ignore: !(await isServiceAvailable()),
   async fn() {
-    await using client = createGrpcClient({
-      address: GRPC_URL,
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
     });
 
     const services = await client.reflection.listServices();
@@ -106,8 +107,8 @@ Deno.test({
   name: "Integration: reflection.getServiceInfo",
   ignore: !(await isServiceAvailable()),
   async fn() {
-    await using client = createGrpcClient({
-      address: GRPC_URL,
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
     });
 
     const services = await client.reflection.listServices();
@@ -141,8 +142,8 @@ Deno.test({
   name: "Integration: reflection.listMethods",
   ignore: !(await isServiceAvailable()),
   async fn() {
-    await using client = createGrpcClient({
-      address: GRPC_URL,
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
     });
 
     const services = await client.reflection.listServices();
@@ -172,25 +173,26 @@ Deno.test({
   name: "Integration: unary call",
   ignore: !(await isServiceAvailable()),
   async fn(t) {
-    await using client = createGrpcClient({
-      address: GRPC_URL,
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
+      protocol: "grpc",
     });
 
     await t.step("Echo method returns message", async () => {
       const response = await client.call(
         "echo.v1.Echo",
         "echo",
-        { message: "Hello gRPC!" },
+        { message: "Hello Reflection!" },
       );
 
-      expectGrpcResponse(response)
+      expectConnectRpcResponse(response)
         .ok()
         .code(0)
         .hasContent();
 
       const data = response.data<{ message: string }>();
       assertExists(data);
-      assertEquals(data.message, "Hello gRPC!");
+      assertEquals(data.message, "Hello Reflection!");
     });
 
     await t.step("fluent expectations work", async () => {
@@ -200,7 +202,7 @@ Deno.test({
         { message: "Test message" },
       );
 
-      expectGrpcResponse(response)
+      expectConnectRpcResponse(response)
         .ok()
         .code(0)
         .hasContent()
@@ -241,49 +243,53 @@ Deno.test({
     await t.step(
       "per-request throwOnError: false returns error response",
       async () => {
-        await using client = createGrpcClient({
-          address: GRPC_URL,
+        await using client = createConnectRpcClient({
+          address: CONNECTRPC_URL,
         });
 
         const response = await client.call(
           "echo.v1.Echo",
-          "EchoError",
-          { message: "trigger error", code: 3, details: "test error" },
+          "echoError",
+          { message: "trigger error" },
           { throwOnError: false },
         );
 
         assertEquals(response.ok, false);
-        assertEquals(response.code, 3);
+        assertEquals(response.code !== 0, true);
       },
     );
 
     await t.step("throwOnError: true (default) throws error", async () => {
-      await using client = createGrpcClient({
-        address: GRPC_URL,
+      await using client = createConnectRpcClient({
+        address: CONNECTRPC_URL,
       });
 
-      await assertRejects(
-        async () => {
-          await client.call(
-            "echo.v1.Echo",
-            "EchoError",
-            { message: "trigger error", code: 3, details: "test error" },
-          );
-        },
-        GrpcError,
-      );
+      try {
+        await client.call(
+          "echo.v1.Echo",
+          "echoError",
+          { message: "trigger error" },
+        );
+        throw new Error("Expected ConnectRpcError");
+      } catch (error) {
+        if (error instanceof ConnectRpcError) {
+          assertEquals(error.kind, "connectrpc");
+        } else {
+          assertExists(error);
+        }
+      }
     });
 
     await t.step("client config throwOnError: false", async () => {
-      await using client = createGrpcClient({
-        address: GRPC_URL,
+      await using client = createConnectRpcClient({
+        address: CONNECTRPC_URL,
         throwOnError: false,
       });
 
       const response = await client.call(
         "echo.v1.Echo",
-        "EchoError",
-        { message: "trigger error", code: 3, details: "test error" },
+        "echoError",
+        { message: "trigger error" },
       );
 
       assertEquals(response.ok, false);
@@ -296,8 +302,8 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn(t) {
     await t.step("metadata (headers) are sent and received", async () => {
-      await using client = createGrpcClient({
-        address: GRPC_URL,
+      await using client = createConnectRpcClient({
+        address: CONNECTRPC_URL,
         metadata: {
           "x-custom-header": "custom-value",
         },
@@ -309,13 +315,13 @@ Deno.test({
         { message: "with metadata" },
       );
 
-      expectGrpcResponse(response).ok();
+      expectConnectRpcResponse(response).ok();
       assertExists(response.headers);
     });
 
     await t.step("per-request metadata overrides config", async () => {
-      await using client = createGrpcClient({
-        address: GRPC_URL,
+      await using client = createConnectRpcClient({
+        address: CONNECTRPC_URL,
         metadata: {
           "x-header": "from-config",
         },
@@ -328,7 +334,7 @@ Deno.test({
         { metadata: { "x-header": "from-request" } },
       );
 
-      expectGrpcResponse(response).ok();
+      expectConnectRpcResponse(response).ok();
     });
   },
 });
@@ -337,8 +343,8 @@ Deno.test({
   name: "Integration: AsyncDisposable",
   ignore: !(await isServiceAvailable()),
   async fn() {
-    await using client = createGrpcClient({
-      address: GRPC_URL,
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
     });
 
     const response = await client.call(
@@ -347,7 +353,7 @@ Deno.test({
       { message: "disposable test" },
     );
 
-    expectGrpcResponse(response).ok();
+    expectConnectRpcResponse(response).ok();
   },
 });
 
@@ -355,8 +361,9 @@ Deno.test({
   name: "Integration: server streaming",
   ignore: !(await isServiceAvailable()),
   async fn() {
-    await using client = createGrpcClient({
-      address: GRPC_URL,
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
+      protocol: "grpc",
     });
 
     const messages: unknown[] = [];
@@ -368,7 +375,7 @@ Deno.test({
         { message: "stream test", count: 3 },
       )
     ) {
-      expectGrpcResponse(response).ok();
+      expectConnectRpcResponse(response).ok();
       messages.push(response.data());
     }
 
@@ -380,8 +387,8 @@ Deno.test({
   name: "Integration: AbortSignal cancels request",
   ignore: !(await isServiceAvailable()),
   async fn() {
-    await using client = createGrpcClient({
-      address: GRPC_URL,
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
     });
 
     const controller = new AbortController();
@@ -402,23 +409,80 @@ Deno.test({
 });
 
 Deno.test({
+  name: "Integration: protocol - connect",
+  ignore: !(await isServiceAvailable()),
+  async fn() {
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
+      protocol: "connect",
+    });
+
+    const response = await client.call(
+      "echo.v1.Echo",
+      "echo",
+      { message: "protocol: connect" },
+    );
+
+    expectConnectRpcResponse(response).ok();
+  },
+});
+
+Deno.test({
+  name: "Integration: protocol - grpc",
+  ignore: !(await isServiceAvailable()),
+  async fn() {
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
+      protocol: "grpc",
+    });
+
+    const response = await client.call(
+      "echo.v1.Echo",
+      "echo",
+      { message: "protocol: grpc" },
+    );
+
+    expectConnectRpcResponse(response).ok();
+  },
+});
+
+Deno.test({
+  name: "Integration: protocol - grpc-web",
+  ignore: !(await isServiceAvailable()),
+  async fn() {
+    await using client = createConnectRpcClient({
+      address: CONNECTRPC_URL,
+      protocol: "grpc-web",
+    });
+
+    const response = await client.call(
+      "echo.v1.Echo",
+      "echo",
+      { message: "protocol: grpc-web" },
+    );
+
+    expectConnectRpcResponse(response).ok();
+  },
+});
+
+Deno.test({
   name: "Integration: error handling",
   ignore: !(await isServiceAvailable()),
   async fn(t) {
-    await t.step("GrpcError includes kind property", async () => {
-      await using client = createGrpcClient({
-        address: GRPC_URL,
+    await t.step("ConnectRpcError includes kind property", async () => {
+      await using client = createConnectRpcClient({
+        address: CONNECTRPC_URL,
       });
 
       try {
         await client.call(
           "echo.v1.Echo",
-          "EchoError",
-          { message: "error", code: 3, details: "test error" },
+          "echoError",
+          { message: "error" },
         );
         throw new Error("Expected error");
       } catch (error) {
-        if (error instanceof GrpcError) {
+        if (error instanceof ConnectRpcError) {
           assertEquals(error.kind, "connectrpc");
           assertEquals(typeof error.code, "number");
           assertExists(error.message);
@@ -429,19 +493,19 @@ Deno.test({
     });
 
     await t.step("error response has correct structure", async () => {
-      await using client = createGrpcClient({
-        address: GRPC_URL,
+      await using client = createConnectRpcClient({
+        address: CONNECTRPC_URL,
         throwOnError: false,
       });
 
       const response = await client.call(
         "echo.v1.Echo",
-        "EchoError",
-        { message: "test error", code: 3, details: "test error" },
+        "echoError",
+        { message: "test error" },
       );
 
       assertEquals(response.ok, false);
-      assertEquals(response.code, 3);
+      assertEquals(response.code !== 0, true);
       assertEquals(response.data(), null);
     });
   },

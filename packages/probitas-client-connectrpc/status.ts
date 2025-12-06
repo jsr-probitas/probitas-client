@@ -1,8 +1,16 @@
 /**
- * gRPC status codes as defined in the gRPC specification.
+ * ConnectRPC/gRPC status codes as defined in the gRPC specification.
  * @see https://grpc.io/docs/guides/status-codes/
+ * @see https://connectrpc.com/docs/protocol#error-codes
+ *
+ * @module
  */
-export type GrpcStatusCode =
+
+/**
+ * ConnectRPC/gRPC status codes.
+ * These codes are used by both gRPC and ConnectRPC protocols.
+ */
+export type ConnectRpcStatusCode =
   | 0 // OK
   | 1 // CANCELLED
   | 2 // UNKNOWN
@@ -22,9 +30,9 @@ export type GrpcStatusCode =
   | 16; // UNAUTHENTICATED
 
 /**
- * Human-readable names for gRPC status codes.
+ * Human-readable names for ConnectRPC/gRPC status codes.
  */
-export const GrpcStatus = {
+export const ConnectRpcStatus = {
   OK: 0,
   CANCELLED: 1,
   UNKNOWN: 2,
@@ -45,10 +53,17 @@ export const GrpcStatus = {
 } as const;
 
 /**
- * Get the name of a gRPC status code.
+ * Get the name of a ConnectRPC/gRPC status code.
+ *
+ * @example
+ * ```typescript
+ * getStatusName(0);  // "OK"
+ * getStatusName(5);  // "NOT_FOUND"
+ * getStatusName(16); // "UNAUTHENTICATED"
+ * ```
  */
-export function getStatusName(code: GrpcStatusCode): string {
-  const names: Record<GrpcStatusCode, string> = {
+export function getStatusName(code: ConnectRpcStatusCode): string {
+  const names: Record<ConnectRpcStatusCode, string> = {
     0: "OK",
     1: "CANCELLED",
     2: "UNKNOWN",
@@ -68,4 +83,20 @@ export function getStatusName(code: GrpcStatusCode): string {
     16: "UNAUTHENTICATED",
   };
   return names[code];
+}
+
+/**
+ * Check if a number is a valid ConnectRPC/gRPC status code.
+ *
+ * @example
+ * ```typescript
+ * isConnectRpcStatusCode(0);   // true
+ * isConnectRpcStatusCode(16);  // true
+ * isConnectRpcStatusCode(99);  // false
+ * ```
+ */
+export function isConnectRpcStatusCode(
+  code: number,
+): code is ConnectRpcStatusCode {
+  return Number.isInteger(code) && code >= 0 && code <= 16;
 }

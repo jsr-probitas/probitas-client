@@ -3,21 +3,9 @@
   "version": "0.0.0",
   "exports": "./mod.ts",
   "publish": {
-    "include": [
-      "**/*.ts",
-      "proto/**/*.proto",
-      "deno.json",
-      "README.md",
-      "LICENSE"
-    ],
-    "exclude": ["**/*_test.ts", "**/*_bench.ts", "testdata/**"]
+    "exclude": ["**/*_test.ts", "**/*_bench.ts", "testdata/**", "proto/**"]
   },
   "imports": {
-    "@probitas/client": "jsr:@probitas/client@^0",
-    "@probitas/logger": "jsr:@probitas/logger@^0",
-    "@grpc/grpc-js": "npm:@grpc/grpc-js@~1.12.0",
-    "@grpc/proto-loader": "npm:@grpc/proto-loader@^0.7.0",
-    "protobufjs": "npm:protobufjs@^7",
-    "protobufjs-descriptor": "npm:protobufjs@^7/ext/descriptor/index.js"
+    "@probitas/client-connectrpc": "jsr:@probitas/client-connectrpc@^0"
   }
 }

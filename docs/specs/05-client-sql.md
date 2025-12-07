@@ -116,9 +116,9 @@ interface SqlQueryResultExpectation<T> {
   // --- Row count ---
   noContent(): this;
   hasContent(): this;
-  rows(count: number): this;
-  rowsAtLeast(count: number): this;
-  rowsAtMost(count: number): this;
+  count(expected: number): this;
+  countAtLeast(min: number): this;
+  countAtMost(max: number): this;
 
   // --- Affected rows ---
   rowCount(count: number): this;
@@ -126,8 +126,8 @@ interface SqlQueryResultExpectation<T> {
   rowCountAtMost(count: number): this;
 
   // --- Row data ---
-  rowContains(subset: Partial<T>): this;
-  rowMatch(matcher: (rows: SqlRows<T>) => void): this;
+  dataContains(subset: Partial<T>): this;
+  dataMatch(matcher: (rows: SqlRows<T>) => void): this;
 
   // --- Transformed data ---
   mapContains<U>(mapper: (row: T) => U, subset: Partial<U>): this;

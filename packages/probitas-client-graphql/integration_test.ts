@@ -47,7 +47,7 @@ Deno.test({
       expectGraphqlResponse(res)
         .ok()
         .status(200)
-        .hasData();
+        .hasContent();
 
       assertEquals(res.data()?.__typename, "Query");
     });
@@ -57,7 +57,7 @@ Deno.test({
         __schema: { queryType: { name: string } };
       }>("{ __schema { queryType { name } } }");
 
-      expectGraphqlResponse(res).ok().hasData();
+      expectGraphqlResponse(res).ok().hasContent();
 
       assertEquals(res.data()?.__schema.queryType.name, "Query");
     });
@@ -72,7 +72,7 @@ Deno.test({
         { message: "Hello, Probitas!" },
       );
 
-      expectGraphqlResponse(res).ok().hasData();
+      expectGraphqlResponse(res).ok().hasContent();
       assertEquals(res.data()?.echo, "Hello, Probitas!");
     });
 
@@ -88,7 +88,7 @@ Deno.test({
       );
       const elapsed = Date.now() - start;
 
-      expectGraphqlResponse(res).ok().hasData();
+      expectGraphqlResponse(res).ok().hasContent();
       assertEquals(res.data()?.echoWithDelay, "Delayed message");
 
       // Should have taken at least 500ms
@@ -114,7 +114,7 @@ Deno.test({
         { message: "This should fail" },
       );
 
-      expectGraphqlResponse(res).hasErrors();
+      expectGraphqlResponse(res).notOk();
 
       await clientNoThrow.close();
     });
@@ -145,7 +145,7 @@ Deno.test({
           { messages: ["success", "error", "also success"] },
         );
 
-        expectGraphqlResponse(res).ok().hasData();
+        expectGraphqlResponse(res).ok().hasContent();
         const results = res.data()?.echoPartialError;
         // First and third should succeed, second should have error
         assertEquals(results?.[0]?.message, "success");
@@ -261,7 +261,7 @@ Deno.test({
           { message: "This triggers an error" },
         );
 
-        expectGraphqlResponse(res).hasErrors();
+        expectGraphqlResponse(res).notOk();
 
         await clientNoThrow.close();
       },
@@ -289,7 +289,7 @@ Deno.test({
         { text: "Hello from integration test" },
       );
 
-      expectGraphqlResponse(res).ok().hasData();
+      expectGraphqlResponse(res).ok().hasContent();
 
       const message = res.data()?.createMessage;
       assertEquals(message?.text, "Hello from integration test");
@@ -303,7 +303,7 @@ Deno.test({
       expectGraphqlResponse(res)
         .ok()
         .status(200)
-        .hasData()
+        .hasContent()
         .dataContains({ __typename: "Query" })
         .durationLessThan(5000);
     });
@@ -322,7 +322,7 @@ Deno.test({
           { message: "Hello" },
         );
 
-        expectGraphqlResponse(res).ok().hasData();
+        expectGraphqlResponse(res).ok().hasContent();
         assertEquals(res.data()?.echoWithExtensions, "Hello");
         // Server includes timing and tracing extensions
         assertEquals(typeof res.extensions?.timing, "object");
@@ -363,7 +363,7 @@ Deno.test({
         { id: messageId, text: "Updated text" },
       );
 
-      expectGraphqlResponse(updateRes).ok().hasData();
+      expectGraphqlResponse(updateRes).ok().hasContent();
       assertEquals(updateRes.data()?.updateMessage.id, messageId);
       assertEquals(updateRes.data()?.updateMessage.text, "Updated text");
     });
@@ -397,7 +397,7 @@ Deno.test({
         { id: messageId },
       );
 
-      expectGraphqlResponse(deleteRes).ok().hasData();
+      expectGraphqlResponse(deleteRes).ok().hasContent();
       assertEquals(deleteRes.data()?.deleteMessage, true);
     });
 
@@ -419,7 +419,7 @@ Deno.test({
             { from: 3 },
           )
         ) {
-          expectGraphqlResponse(res).ok().hasData();
+          expectGraphqlResponse(res).ok().hasContent();
           numbers.push(res.data()?.countdown ?? -1);
         }
 
@@ -459,7 +459,7 @@ Deno.test({
           { headers: { "X-Request-Id": "req-789" } },
         );
 
-        expectGraphqlResponse(res).ok().hasData();
+        expectGraphqlResponse(res).ok().hasContent();
 
         const headers = res.data()?.echoHeaders;
         // Verify config-level headers were sent

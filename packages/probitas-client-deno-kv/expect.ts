@@ -28,11 +28,11 @@ export interface DenoKvGetResultExpectation<T> {
   /** Assert that value equals expected */
   value(expected: T): this;
 
-  /** Assert that value contains expected properties */
-  valueContains(subset: Partial<T>): this;
+  /** Assert that data contains expected properties */
+  dataContains(subset: Partial<T>): this;
 
-  /** Assert value using custom matcher function */
-  valueMatch(matcher: (value: T) => void): this;
+  /** Assert data using custom matcher function */
+  dataMatch(matcher: (value: T) => void): this;
 
   /** Assert that versionstamp exists */
   hasVersionstamp(): this;
@@ -188,21 +188,21 @@ class DenoKvGetResultExpectationImpl<T>
     return this;
   }
 
-  valueContains(subset: Partial<T>): this {
+  dataContains(subset: Partial<T>): this {
     if (this.#result.value === null) {
       throw new Error(
-        "Expected value to contain properties, but value is null",
+        "Expected data to contain properties, but value is null",
       );
     }
     if (!containsSubset(this.#result.value, subset)) {
-      throw new Error("Value does not contain expected properties");
+      throw new Error("Data does not contain expected properties");
     }
     return this;
   }
 
-  valueMatch(matcher: (value: T) => void): this {
+  dataMatch(matcher: (value: T) => void): this {
     if (this.#result.value === null) {
-      throw new Error("Expected value for matching, but value is null");
+      throw new Error("Expected data for matching, but value is null");
     }
     matcher(this.#result.value);
     return this;
@@ -467,7 +467,7 @@ export type DenoKvExpectation<R extends DenoKvResult> = R extends
  * ```ts
  * // For GET result - returns DenoKvGetResultExpectation<T>
  * const getResult = await kv.get(["users", "1"]);
- * expectDenoKvResult(getResult).ok().hasContent().valueContains({ name: "Alice" });
+ * expectDenoKvResult(getResult).ok().hasContent().dataContains({ name: "Alice" });
  *
  * // For SET result - returns DenoKvSetResultExpectation
  * const setResult = await kv.set(["users", "1"], { name: "Alice" });

@@ -19,13 +19,13 @@ export interface SqlQueryResultExpectation<T> {
   hasContent(): this;
 
   /** Verify exact row count */
-  rows(count: number): this;
+  count(expected: number): this;
 
   /** Verify minimum row count */
-  rowsAtLeast(count: number): this;
+  countAtLeast(expected: number): this;
 
   /** Verify maximum row count */
-  rowsAtMost(count: number): this;
+  countAtMost(expected: number): this;
 
   /** Verify exact affected row count */
   rowCount(count: number): this;
@@ -37,10 +37,10 @@ export interface SqlQueryResultExpectation<T> {
   rowCountAtMost(count: number): this;
 
   /** Verify a row contains the given subset */
-  rowContains(subset: Partial<T>): this;
+  dataContains(subset: Partial<T>): this;
 
   /** Custom row validation */
-  rowMatch(matcher: (rows: SqlRows<T>) => void): this;
+  dataMatch(matcher: (rows: SqlRows<T>) => void): this;
 
   /** Verify mapped data contains the given subset */
   mapContains<U>(mapper: (row: T) => U, subset: Partial<U>): this;
@@ -98,28 +98,28 @@ class SqlQueryResultExpectationImpl<T> implements SqlQueryResultExpectation<T> {
     return this;
   }
 
-  rows(count: number): this {
-    if (this.result.rows.length !== count) {
+  count(expected: number): this {
+    if (this.result.rows.length !== expected) {
       throw new Error(
-        `Expected ${count} rows, got ${this.result.rows.length}`,
+        `Expected ${expected} rows, got ${this.result.rows.length}`,
       );
     }
     return this;
   }
 
-  rowsAtLeast(count: number): this {
-    if (this.result.rows.length < count) {
+  countAtLeast(expected: number): this {
+    if (this.result.rows.length < expected) {
       throw new Error(
-        `Expected at least ${count} rows, got ${this.result.rows.length}`,
+        `Expected at least ${expected} rows, got ${this.result.rows.length}`,
       );
     }
     return this;
   }
 
-  rowsAtMost(count: number): this {
-    if (this.result.rows.length > count) {
+  countAtMost(expected: number): this {
+    if (this.result.rows.length > expected) {
       throw new Error(
-        `Expected at most ${count} rows, got ${this.result.rows.length}`,
+        `Expected at most ${expected} rows, got ${this.result.rows.length}`,
       );
     }
     return this;
@@ -152,7 +152,7 @@ class SqlQueryResultExpectationImpl<T> implements SqlQueryResultExpectation<T> {
     return this;
   }
 
-  rowContains(subset: Partial<T>): this {
+  dataContains(subset: Partial<T>): this {
     const found = this.result.rows.find((row) =>
       this.containsSubset(row, subset)
     );
@@ -162,7 +162,7 @@ class SqlQueryResultExpectationImpl<T> implements SqlQueryResultExpectation<T> {
     return this;
   }
 
-  rowMatch(matcher: (rows: SqlRows<T>) => void): this {
+  dataMatch(matcher: (rows: SqlRows<T>) => void): this {
     matcher(this.result.rows);
     return this;
   }
@@ -246,8 +246,8 @@ class SqlQueryResultExpectationImpl<T> implements SqlQueryResultExpectation<T> {
  *
  * expectSqlQueryResult(result)
  *   .ok()
- *   .rowsAtLeast(1)
- *   .rowContains({ name: "Alice" });
+ *   .countAtLeast(1)
+ *   .dataContains({ name: "Alice" });
  * ```
  *
  * @example Insert/Update assertions

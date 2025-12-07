@@ -28,11 +28,11 @@ export interface RedisResultExpectation<T> {
   /** Assert that result ok is false */
   notOk(): this;
 
-  /** Assert that value matches expected */
-  value(expected: T): this;
+  /** Assert that data matches expected */
+  data(expected: T): this;
 
-  /** Assert value using custom matcher function */
-  valueMatch(matcher: (value: T) => void): this;
+  /** Assert data using custom matcher function */
+  dataMatch(matcher: (value: T) => void): this;
 
   /** Assert that duration is less than threshold (ms) */
   durationLessThan(ms: number): this;
@@ -64,11 +64,14 @@ export interface RedisArrayResultExpectation<T>
   /** Assert that array is not empty */
   hasContent(): this;
 
-  /** Assert that array length equals expected */
-  length(count: number): this;
+  /** Assert that array count equals expected */
+  count(expected: number): this;
 
-  /** Assert that array length is at least min */
-  lengthAtLeast(min: number): this;
+  /** Assert that array count is at least min */
+  countAtLeast(min: number): this;
+
+  /** Assert that array count is at most max */
+  countAtMost(max: number): this;
 
   /** Assert that array contains item */
   contains(item: T): this;
@@ -98,10 +101,10 @@ class RedisResultExpectationImpl<T> implements RedisResultExpectation<T> {
     return this;
   }
 
-  value(expected: T): this {
+  data(expected: T): this {
     if (this.result.value !== expected) {
       throw new Error(
-        `Expected value ${JSON.stringify(expected)}, got ${
+        `Expected data ${JSON.stringify(expected)}, got ${
           JSON.stringify(this.result.value)
         }`,
       );
@@ -109,7 +112,7 @@ class RedisResultExpectationImpl<T> implements RedisResultExpectation<T> {
     return this;
   }
 
-  valueMatch(matcher: (value: T) => void): this {
+  dataMatch(matcher: (value: T) => void): this {
     matcher(this.result.value);
     return this;
   }
@@ -187,19 +190,28 @@ class RedisArrayResultExpectationImpl<T>
     return this;
   }
 
-  length(count: number): this {
-    if (this.result.value.length !== count) {
+  count(expected: number): this {
+    if (this.result.value.length !== expected) {
       throw new Error(
-        `Expected array length ${count}, got ${this.result.value.length}`,
+        `Expected array count ${expected}, got ${this.result.value.length}`,
       );
     }
     return this;
   }
 
-  lengthAtLeast(min: number): this {
+  countAtLeast(min: number): this {
     if (this.result.value.length < min) {
       throw new Error(
-        `Expected array length >= ${min}, got ${this.result.value.length}`,
+        `Expected array count >= ${min}, got ${this.result.value.length}`,
+      );
+    }
+    return this;
+  }
+
+  countAtMost(max: number): this {
+    if (this.result.value.length > max) {
+      throw new Error(
+        `Expected array count <= ${max}, got ${this.result.value.length}`,
       );
     }
     return this;
@@ -237,7 +249,7 @@ export type RedisExpectation<R extends RedisResult> = R extends RedisCountResult
  * ```ts
  * // For GET result - returns RedisResultExpectation<string | null>
  * const getResult = await client.get("key");
- * expectRedisResult(getResult).ok().value("expected");
+ * expectRedisResult(getResult).ok().data("expected");
  *
  * // For COUNT result - returns RedisCountResultExpectation
  * const countResult = await client.del("key");
@@ -245,7 +257,7 @@ export type RedisExpectation<R extends RedisResult> = R extends RedisCountResult
  *
  * // For ARRAY result - returns RedisArrayResultExpectation
  * const arrayResult = await client.lrange("list", 0, -1);
- * expectRedisResult(arrayResult).ok().length(3).contains("item");
+ * expectRedisResult(arrayResult).ok().count(3).contains("item");
  * ```
  */
 // deno-lint-ignore no-explicit-any

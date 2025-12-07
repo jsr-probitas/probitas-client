@@ -216,7 +216,7 @@ Deno.test("expect - dataContains() matches mixed nested and top-level properties
   });
 });
 
-Deno.test("expect - headers() matches value", () => {
+Deno.test("expect - header() matches value", () => {
   const response = new ConnectRpcResponseImpl({
     code: 0,
     message: "",
@@ -226,13 +226,13 @@ Deno.test("expect - headers() matches value", () => {
     responseMessage: {},
   });
 
-  expectConnectRpcResponse(response).headers(
+  expectConnectRpcResponse(response).header(
     "content-type",
     "application/grpc",
   );
 });
 
-Deno.test("expect - headers() matches regex", () => {
+Deno.test("expect - header() matches regex", () => {
   const response = new ConnectRpcResponseImpl({
     code: 0,
     message: "",
@@ -242,10 +242,10 @@ Deno.test("expect - headers() matches regex", () => {
     responseMessage: {},
   });
 
-  expectConnectRpcResponse(response).headers("content-type", /^application\//);
+  expectConnectRpcResponse(response).header("content-type", /^application\//);
 });
 
-Deno.test("expect - headers() throws on mismatch", () => {
+Deno.test("expect - header() throws on mismatch", () => {
   const response = new ConnectRpcResponseImpl({
     code: 0,
     message: "",
@@ -257,7 +257,7 @@ Deno.test("expect - headers() throws on mismatch", () => {
 
   assertThrows(
     () =>
-      expectConnectRpcResponse(response).headers(
+      expectConnectRpcResponse(response).header(
         "content-type",
         "application/grpc",
       ),
@@ -266,7 +266,7 @@ Deno.test("expect - headers() throws on mismatch", () => {
   );
 });
 
-Deno.test("expect - headersExist() passes", () => {
+Deno.test("expect - headerExists() passes", () => {
   const response = new ConnectRpcResponseImpl({
     code: 0,
     message: "",
@@ -276,10 +276,10 @@ Deno.test("expect - headersExist() passes", () => {
     responseMessage: {},
   });
 
-  expectConnectRpcResponse(response).headersExist("x-custom");
+  expectConnectRpcResponse(response).headerExists("x-custom");
 });
 
-Deno.test("expect - headersExist() throws when missing", () => {
+Deno.test("expect - headerExists() throws when missing", () => {
   const response = new ConnectRpcResponseImpl({
     code: 0,
     message: "",
@@ -290,7 +290,7 @@ Deno.test("expect - headersExist() throws when missing", () => {
   });
 
   assertThrows(
-    () => expectConnectRpcResponse(response).headersExist("x-custom"),
+    () => expectConnectRpcResponse(response).headerExists("x-custom"),
     Error,
     'Expected header "x-custom" to exist',
   );
@@ -338,8 +338,8 @@ Deno.test("expect - method chaining", () => {
 
   expectConnectRpcResponse(response)
     .ok()
-    .code(0)
-    .headersExist("content-type")
+    .status(0)
+    .headerExists("content-type")
     .dataContains({ status: "success" })
     .durationLessThan(1000);
 });
@@ -356,7 +356,445 @@ Deno.test("expect - error response validation", () => {
 
   expectConnectRpcResponse(response)
     .notOk()
-    .code(16)
-    .messageContains("invalid")
+    .status(16)
+    .errorContains("invalid")
     .noContent();
+});
+
+Deno.test("expect - statusNotIn() passes when code is not in list", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 5, // NOT_FOUND
+    message: "Not found",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: null,
+  });
+
+  expectConnectRpcResponse(response).statusNotIn(0, 3, 16);
+});
+
+Deno.test("expect - statusNotIn() throws when code is in list", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 5, // NOT_FOUND
+    message: "Not found",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: null,
+  });
+
+  assertThrows(
+    () => expectConnectRpcResponse(response).statusNotIn(3, 5, 16),
+    Error,
+    "Expected status to not be one of",
+  );
+});
+
+Deno.test("expect - statusIn() passes when code is in list", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 5, // NOT_FOUND
+    message: "Not found",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: null,
+  });
+
+  expectConnectRpcResponse(response).statusIn(3, 5, 16);
+});
+
+Deno.test("expect - statusIn() throws when code is not in list", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 5, // NOT_FOUND
+    message: "Not found",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: null,
+  });
+
+  assertThrows(
+    () => expectConnectRpcResponse(response).statusIn(0, 3, 16),
+    Error,
+    "Expected status to be one of",
+  );
+});
+
+Deno.test("expect - headerContains() passes when header contains substring", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: { "content-type": "application/grpc+proto" },
+    trailers: {},
+    duration: 100,
+    responseMessage: {},
+  });
+
+  expectConnectRpcResponse(response).headerContains("content-type", "grpc");
+});
+
+Deno.test("expect - headerContains() throws when header does not contain substring", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: { "content-type": "application/json" },
+    trailers: {},
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).headerContains("content-type", "grpc"),
+    Error,
+    'Expected header "content-type" to contain "grpc"',
+  );
+});
+
+Deno.test("expect - headerContains() throws when header does not exist", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).headerContains("x-missing", "value"),
+    Error,
+    'Expected header "x-missing" to exist',
+  );
+});
+
+Deno.test("expect - headerMatch() passes with custom matcher", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: { "content-length": "42" },
+    trailers: {},
+    duration: 100,
+    responseMessage: {},
+  });
+
+  expectConnectRpcResponse(response).headerMatch("content-length", (value) => {
+    if (parseInt(value) <= 0) {
+      throw new Error("Expected positive content-length");
+    }
+  });
+});
+
+Deno.test("expect - headerMatch() throws when matcher fails", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: { "content-length": "0" },
+    trailers: {},
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).headerMatch(
+        "content-length",
+        (value) => {
+          if (parseInt(value) <= 0) {
+            throw new Error("Expected positive content-length");
+          }
+        },
+      ),
+    Error,
+    "Expected positive content-length",
+  );
+});
+
+Deno.test("expect - headerMatch() throws when header does not exist", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () => expectConnectRpcResponse(response).headerMatch("x-missing", () => {}),
+    Error,
+    'Expected header "x-missing" to exist',
+  );
+});
+
+Deno.test("expect - trailer() matches value", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: { "grpc-status": "0" },
+    duration: 100,
+    responseMessage: {},
+  });
+
+  expectConnectRpcResponse(response).trailer("grpc-status", "0");
+});
+
+Deno.test("expect - trailer() matches regex", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: { "grpc-message": "success-12345" },
+    duration: 100,
+    responseMessage: {},
+  });
+
+  expectConnectRpcResponse(response).trailer("grpc-message", /^success-\d+$/);
+});
+
+Deno.test("expect - trailer() throws on mismatch", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: { "grpc-status": "1" },
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () => expectConnectRpcResponse(response).trailer("grpc-status", "0"),
+    Error,
+    'Expected trailer "grpc-status"',
+  );
+});
+
+Deno.test("expect - trailerExists() passes", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: { "grpc-status": "0" },
+    duration: 100,
+    responseMessage: {},
+  });
+
+  expectConnectRpcResponse(response).trailerExists("grpc-status");
+});
+
+Deno.test("expect - trailerExists() throws when missing", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () => expectConnectRpcResponse(response).trailerExists("grpc-status"),
+    Error,
+    'Expected trailer "grpc-status" to exist',
+  );
+});
+
+Deno.test("expect - trailerContains() passes when trailer contains substring", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: { "grpc-message": "operation successful" },
+    duration: 100,
+    responseMessage: {},
+  });
+
+  expectConnectRpcResponse(response).trailerContains(
+    "grpc-message",
+    "successful",
+  );
+});
+
+Deno.test("expect - trailerContains() throws when trailer does not contain substring", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: { "grpc-message": "operation failed" },
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).trailerContains(
+        "grpc-message",
+        "successful",
+      ),
+    Error,
+    'Expected trailer "grpc-message" to contain "successful"',
+  );
+});
+
+Deno.test("expect - trailerContains() throws when trailer does not exist", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).trailerContains("x-missing", "value"),
+    Error,
+    'Expected trailer "x-missing" to exist',
+  );
+});
+
+Deno.test("expect - trailerMatch() passes with custom matcher", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: { "grpc-status": "0" },
+    duration: 100,
+    responseMessage: {},
+  });
+
+  expectConnectRpcResponse(response).trailerMatch("grpc-status", (value) => {
+    if (value !== "0") {
+      throw new Error("Expected grpc-status to be 0");
+    }
+  });
+});
+
+Deno.test("expect - trailerMatch() throws when matcher fails", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: { "grpc-status": "5" },
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).trailerMatch(
+        "grpc-status",
+        (value) => {
+          if (value !== "0") {
+            throw new Error("Expected grpc-status to be 0");
+          }
+        },
+      ),
+    Error,
+    "Expected grpc-status to be 0",
+  );
+});
+
+Deno.test("expect - trailerMatch() throws when trailer does not exist", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 0,
+    message: "",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: {},
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).trailerMatch("x-missing", () => {}),
+    Error,
+    'Expected trailer "x-missing" to exist',
+  );
+});
+
+Deno.test("expect - error() matches exact string", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 5,
+    message: "Not found",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: null,
+  });
+
+  expectConnectRpcResponse(response).error("Not found");
+});
+
+Deno.test("expect - error() matches regex", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 5,
+    message: "User with id 123 not found",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: null,
+  });
+
+  expectConnectRpcResponse(response).error(/not found$/i);
+});
+
+Deno.test("expect - error() throws on mismatch", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 5,
+    message: "Not found",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: null,
+  });
+
+  assertThrows(
+    () => expectConnectRpcResponse(response).error("Invalid request"),
+    Error,
+    'Expected error "Invalid request"',
+  );
+});
+
+Deno.test("expect - errorMatch() passes with custom matcher", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 5,
+    message: "Resource not found",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: null,
+  });
+
+  expectConnectRpcResponse(response).errorMatch((msg) => {
+    if (!msg.includes("not found")) {
+      throw new Error("Expected error to contain 'not found'");
+    }
+  });
+});
+
+Deno.test("expect - errorMatch() throws when matcher fails", () => {
+  const response = new ConnectRpcResponseImpl({
+    code: 5,
+    message: "Invalid request",
+    headers: {},
+    trailers: {},
+    duration: 100,
+    responseMessage: null,
+  });
+
+  assertThrows(
+    () =>
+      expectConnectRpcResponse(response).errorMatch((msg) => {
+        if (!msg.includes("not found")) {
+          throw new Error("Expected error to contain 'not found'");
+        }
+      }),
+    Error,
+    "Expected error to contain 'not found'",
+  );
 });

@@ -39,11 +39,11 @@ export interface RabbitMqConsumeResultExpectation {
   /** Assert that message is not null */
   hasContent(): this;
 
-  /** Assert that content contains the given subbody */
-  contentContains(subbody: Uint8Array): this;
+  /** Assert that data contains the given subbody */
+  dataContains(subbody: Uint8Array): this;
 
-  /** Assert content using custom matcher function */
-  contentMatch(matcher: (content: Uint8Array) => void): this;
+  /** Assert data using custom matcher function */
+  dataMatch(matcher: (content: Uint8Array) => void): this;
 
   /** Assert that properties contain the given subset */
   propertyContains(subset: Partial<RabbitMqMessageProperties>): this;
@@ -176,7 +176,7 @@ class RabbitMqConsumeResultExpectationImpl
     return this;
   }
 
-  contentContains(subbody: Uint8Array): this {
+  dataContains(subbody: Uint8Array): this {
     if (this.#result.message === null) {
       throw new Error("Expected message, but message is null");
     }
@@ -187,13 +187,13 @@ class RabbitMqConsumeResultExpectationImpl
 
     if (!contentStr.includes(subbodyStr)) {
       throw new Error(
-        `Expected content to contain ${subbodyStr}, but got ${contentStr}`,
+        `Expected data to contain ${subbodyStr}, but got ${contentStr}`,
       );
     }
     return this;
   }
 
-  contentMatch(matcher: (content: Uint8Array) => void): this {
+  dataMatch(matcher: (content: Uint8Array) => void): this {
     if (this.#result.message === null) {
       throw new Error("Expected message, but message is null");
     }

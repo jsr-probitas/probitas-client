@@ -99,13 +99,13 @@ interface MongoFindResultExpectation<T> {
   // --- Count ---
   noContent(): this;
   hasContent(): this;
-  docs(count: number): this;
-  docsAtLeast(count: number): this;
-  docsAtMost(count: number): this;
+  count(expected: number): this;
+  countAtLeast(min: number): this;
+  countAtMost(max: number): this;
 
   // --- Document assertions ---
-  docContains(subset: Partial<T>): this;
-  docMatch(matcher: (docs: MongoDocs<T>) => void): this;
+  dataContains(subset: Partial<T>): this;
+  dataMatch(matcher: (docs: MongoDocs<T>) => void): this;
 
   // --- Performance ---
   durationLessThan(ms: number): this;
@@ -132,7 +132,7 @@ interface MongoUpdateResultExpectation {
   notOk(): this;
   matchedCount(count: number): this;
   modifiedCount(count: number): this;
-  wasUpserted(): this;
+  hasUpsertedId(): this;
   durationLessThan(ms: number): this;
 }
 
@@ -155,10 +155,10 @@ function expectMongoDeleteResult(
 interface MongoFindOneResultExpectation<T> {
   ok(): this;
   notOk(): this;
-  found(): this;
-  notFound(): this;
-  docContains(subset: Partial<T>): this;
-  docMatch(matcher: (doc: T) => void): this;
+  hasContent(): this;
+  noContent(): this;
+  dataContains(subset: Partial<T>): this;
+  dataMatch(matcher: (doc: T) => void): this;
   durationLessThan(ms: number): this;
 }
 

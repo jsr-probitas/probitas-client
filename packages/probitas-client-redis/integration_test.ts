@@ -36,17 +36,17 @@ Deno.test({
 
         await t.step("SET and GET", async () => {
           const setResult = await client.set(testKey, "hello");
-          expectRedisResult(setResult).ok().value("OK");
+          expectRedisResult(setResult).ok().data("OK");
 
           const getResult = await client.get(testKey);
-          expectRedisResult(getResult).ok().value("hello");
+          expectRedisResult(getResult).ok().data("hello");
         });
 
         await t.step("SET with expiration", async () => {
           const key = `${testKey}:ex`;
           await client.set(key, "expires", { ex: 60 });
           const result = await client.get(key);
-          expectRedisResult(result).ok().value("expires");
+          expectRedisResult(result).ok().data("expires");
         });
 
         await t.step("INCR and DECR", async () => {
@@ -78,7 +78,7 @@ Deno.test({
           expectRedisResult(hsetResult).ok();
 
           const hgetResult = await client.hget(testKey, "field1");
-          expectRedisResult(hgetResult).ok().value("value1");
+          expectRedisResult(hgetResult).ok().data("value1");
         });
 
         await t.step("HGETALL", async () => {
@@ -110,7 +110,7 @@ Deno.test({
 
         await t.step("LRANGE", async () => {
           const result = await client.lrange(testKey, 0, -1);
-          expectRedisResult(result).ok().length(3);
+          expectRedisResult(result).ok().count(3);
         });
 
         await t.step("LPOP and RPOP", async () => {
@@ -118,7 +118,7 @@ Deno.test({
           expectRedisResult(lpopResult).ok();
 
           const rpopResult = await client.rpop(testKey);
-          expectRedisResult(rpopResult).ok().value("c");
+          expectRedisResult(rpopResult).ok().data("c");
         });
 
         await t.step("LLEN", async () => {
@@ -139,15 +139,15 @@ Deno.test({
 
         await t.step("SMEMBERS", async () => {
           const result = await client.smembers(testKey);
-          expectRedisResult(result).ok().length(3);
+          expectRedisResult(result).ok().count(3);
         });
 
         await t.step("SISMEMBER", async () => {
           const existsResult = await client.sismember(testKey, "a");
-          expectRedisResult(existsResult).ok().value(true);
+          expectRedisResult(existsResult).ok().data(true);
 
           const notExistsResult = await client.sismember(testKey, "x");
-          expectRedisResult(notExistsResult).ok().value(false);
+          expectRedisResult(notExistsResult).ok().data(false);
         });
 
         await t.step("SREM", async () => {
@@ -173,15 +173,15 @@ Deno.test({
 
         await t.step("ZRANGE", async () => {
           const result = await client.zrange(testKey, 0, -1);
-          expectRedisResult(result).ok().length(3);
+          expectRedisResult(result).ok().count(3);
         });
 
         await t.step("ZSCORE", async () => {
           const result = await client.zscore(testKey, "b");
-          expectRedisResult(result).ok().value(2);
+          expectRedisResult(result).ok().data(2);
 
           const notExistsResult = await client.zscore(testKey, "x");
-          expectRedisResult(notExistsResult).ok().value(null);
+          expectRedisResult(notExistsResult).ok().data(null);
         });
 
         await client.del(testKey);
@@ -197,7 +197,7 @@ Deno.test({
           tx.get(testKey);
 
           const result = await tx.exec();
-          expectRedisResult(result).ok().length(3);
+          expectRedisResult(result).ok().count(3);
           assertEquals(result.value[0], "OK");
           assertEquals(result.value[1], 2);
           assertEquals(result.value[2], "2");
@@ -208,7 +208,7 @@ Deno.test({
 
       await t.step("Raw command", async () => {
         const result = await client.command("PING");
-        expectRedisResult(result).ok().value("PONG");
+        expectRedisResult(result).ok().data("PONG");
       });
 
       await t.step("CommonOptions support", async (t) => {
@@ -217,7 +217,7 @@ Deno.test({
         await t.step("GET with timeout option succeeds", async () => {
           await client.set(testKey, "value");
           const result = await client.get(testKey, { timeout: 5000 });
-          expectRedisResult(result).ok().value("value");
+          expectRedisResult(result).ok().data("value");
         });
 
         await t.step("GET with signal option succeeds", async () => {
@@ -225,7 +225,7 @@ Deno.test({
           const result = await client.get(testKey, {
             signal: controller.signal,
           });
-          expectRedisResult(result).ok().value("value");
+          expectRedisResult(result).ok().data("value");
         });
 
         await t.step(
@@ -255,7 +255,7 @@ Deno.test({
           const listKey = `${testKey}:list`;
           await client.lpush(listKey, "a", "b");
           const result = await client.lrange(listKey, 0, -1, { timeout: 5000 });
-          expectRedisResult(result).ok().length(2);
+          expectRedisResult(result).ok().count(2);
           await client.del(listKey);
         });
 
@@ -263,7 +263,7 @@ Deno.test({
           const setKey = `${testKey}:set`;
           await client.sadd(setKey, "a", "b");
           const result = await client.smembers(setKey, { timeout: 5000 });
-          expectRedisResult(result).ok().length(2);
+          expectRedisResult(result).ok().count(2);
           await client.del(setKey);
         });
 
@@ -271,7 +271,7 @@ Deno.test({
           const zsetKey = `${testKey}:zset`;
           await client.zadd(zsetKey, { score: 1, member: "a" });
           const result = await client.zrange(zsetKey, 0, -1, { timeout: 5000 });
-          expectRedisResult(result).ok().length(1);
+          expectRedisResult(result).ok().count(1);
           await client.del(zsetKey);
         });
 

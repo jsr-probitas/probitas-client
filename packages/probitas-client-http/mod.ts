@@ -6,7 +6,7 @@
  *
  * ## Features
  *
- * - **Fluent Assertions**: Chain assertions like `.ok()`, `.contentType()`, `.jsonContains()`
+ * - **Fluent Assertions**: Chain assertions like `.ok()`, `.contentType()`, `.dataContains()`
  * - **All HTTP Methods**: Support for GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
  * - **Request Building**: Headers, query parameters, body (JSON, form, multipart)
  * - **Response Inspection**: Status codes, headers, cookies, body parsing
@@ -31,7 +31,7 @@
  * expectHttpResponse(res)
  *   .ok()
  *   .contentType("application/json")
- *   .jsonContains({ name: "John" });
+ *   .dataContains({ name: "John" });
  *
  * // Extract typed data
  * const user = res.json<User>();

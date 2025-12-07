@@ -20,7 +20,7 @@ independent package but follows shared ergonomics.
 - **Use `any` (with `// deno-lint-ignore no-explicit-any`)** for user-facing
   response helpers to maximize test ergonomics:
   - Response data: `json<T = any>()`, `data<T = any>()`
-  - Expectations: `jsonContains<T = any>()`, `jsonMatch<T = any>()`
+  - Expectations: `dataContains<T = any>()`, `dataMatch<T = any>()`
   - SQL results: `SqlQueryResult<T = Record<string, any>>`
 - **Use `unknown`** for internal helpers, inputs, and caches:
   - Helpers: `containsSubset(obj: unknown, ...)`

@@ -57,7 +57,7 @@ Deno.test({
 
         expectSqlQueryResult(result)
           .ok()
-          .rows(1);
+          .count(1);
 
         assertEquals(result.rows.first()?.result, 1);
       } finally {
@@ -81,7 +81,7 @@ Deno.test({
 
       expectSqlQueryResult(result)
         .ok()
-        .rows(1);
+        .count(1);
     });
 
     await t.step("using with statement (AsyncDisposable)", async () => {
@@ -91,7 +91,7 @@ Deno.test({
 
       expectSqlQueryResult(result)
         .ok()
-        .rows(1);
+        .count(1);
     });
 
     await t.step("parameterized query", async () => {
@@ -104,7 +104,7 @@ Deno.test({
 
       expectSqlQueryResult(result)
         .ok()
-        .rows(1);
+        .count(1);
 
       assertEquals(result.rows.first()?.sum, 30);
     });
@@ -165,7 +165,7 @@ Deno.test({
 
         expectSqlQueryResult(selectResult)
           .ok()
-          .rows(1);
+          .count(1);
 
         assertEquals(selectResult.rows.first()?.name, "Alice");
         assertEquals(selectResult.rows.first()?.email, "alice@example.com");
@@ -203,7 +203,7 @@ Deno.test({
 
         expectSqlQueryResult(result)
           .ok()
-          .rows(1);
+          .count(1);
 
         assertEquals(result.rows.first()?.value, "auto-committed");
       } finally {
@@ -242,7 +242,7 @@ Deno.test({
 
         expectSqlQueryResult(result)
           .ok()
-          .rows(0);
+          .count(0);
       } finally {
         await client.query("DROP TABLE IF EXISTS test_tx_error");
       }

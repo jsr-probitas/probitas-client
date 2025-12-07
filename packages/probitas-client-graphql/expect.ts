@@ -8,11 +8,8 @@ export interface GraphqlResponseExpectation {
   /** Assert that response has no errors */
   ok(): this;
 
-  /** Assert that response has no errors (alias for ok) */
-  noErrors(): this;
-
   /** Assert that response has errors */
-  hasErrors(): this;
+  notOk(): this;
 
   /** Assert exact number of errors */
   errorCount(n: number): this;
@@ -27,15 +24,9 @@ export interface GraphqlResponseExpectation {
   errorMatch(matcher: (errors: readonly GraphqlErrorItem[]) => void): this;
 
   /** Assert that data is not null */
-  hasData(): this;
-
-  /** Assert that data is not null (alias for hasData) */
   hasContent(): this;
 
   /** Assert that data is null */
-  noData(): this;
-
-  /** Assert that data is null (alias for noData) */
   noContent(): this;
 
   /** Assert that data contains expected subset (deep partial match) */
@@ -54,6 +45,12 @@ export interface GraphqlResponseExpectation {
 
   /** Assert HTTP status code */
   status(code: number): this;
+
+  /** Assert that HTTP status code is one of the given codes */
+  statusIn(...statuses: number[]): this;
+
+  /** Assert that HTTP status code is not one of the given codes */
+  statusNotIn(...statuses: number[]): this;
 
   /** Assert that response duration is less than threshold (ms) */
   durationLessThan(ms: number): this;
@@ -79,11 +76,7 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
     return this;
   }
 
-  noErrors(): this {
-    return this.ok();
-  }
-
-  hasErrors(): this {
+  notOk(): this {
     if (this.#response.ok) {
       throw new Error("Expected response with errors, but got ok response");
     }
@@ -143,26 +136,18 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
     return this;
   }
 
-  hasData(): this {
-    if (this.#response.data() === null) {
-      throw new Error("Expected data, but data is null");
-    }
-    return this;
-  }
-
   hasContent(): this {
-    return this.hasData();
-  }
-
-  noData(): this {
-    if (this.#response.data() !== null) {
-      throw new Error("Expected no data, but data exists");
+    if (this.#response.data() === null) {
+      throw new Error("Expected content, but data is null");
     }
     return this;
   }
 
   noContent(): this {
-    return this.noData();
+    if (this.#response.data() !== null) {
+      throw new Error("Expected no content, but data exists");
+    }
+    return this;
   }
 
   // deno-lint-ignore no-explicit-any
@@ -215,6 +200,28 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
     return this;
   }
 
+  statusIn(...statuses: number[]): this {
+    if (!statuses.includes(this.#response.status)) {
+      throw new Error(
+        `Expected status in [${
+          statuses.join(", ")
+        }], got ${this.#response.status}`,
+      );
+    }
+    return this;
+  }
+
+  statusNotIn(...statuses: number[]): this {
+    if (statuses.includes(this.#response.status)) {
+      throw new Error(
+        `Expected status not in [${
+          statuses.join(", ")
+        }], got ${this.#response.status}`,
+      );
+    }
+    return this;
+  }
+
   durationLessThan(ms: number): this {
     if (this.#response.duration >= ms) {
       throw new Error(
@@ -244,7 +251,7 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
  *
  * expectGraphqlResponse(response)
  *   .ok()
- *   .hasData()
+ *   .hasContent()
  *   .dataContains({ user: { name: "Alice" } });
  * ```
  *
@@ -255,7 +262,7 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
  * `, undefined, { throwOnError: false });
  *
  * expectGraphqlResponse(response)
- *   .hasErrors()
+ *   .notOk()
  *   .errorContains("Cannot query field");
  * ```
  *

@@ -85,24 +85,24 @@ Deno.test("expectRedisResult with CommonResult", async (t) => {
     );
   });
 
-  await t.step("value() passes when values match", () => {
+  await t.step("data() passes when values match", () => {
     const result = createCommonResult("expected");
-    expectRedisResult(result).value("expected");
+    expectRedisResult(result).data("expected");
   });
 
-  await t.step("value() throws when values don't match", () => {
+  await t.step("data() throws when values don't match", () => {
     const result = createCommonResult("actual");
     assertThrows(
-      () => expectRedisResult(result).value("expected"),
+      () => expectRedisResult(result).data("expected"),
       Error,
-      "Expected value",
+      "Expected data",
     );
   });
 
-  await t.step("valueMatch() calls matcher with value", () => {
+  await t.step("dataMatch() calls matcher with value", () => {
     const result = createCommonResult("test");
     let called = false;
-    expectRedisResult(result).valueMatch((v) => {
+    expectRedisResult(result).dataMatch((v) => {
       assertEquals(v, "test");
       called = true;
     });
@@ -127,7 +127,7 @@ Deno.test("expectRedisResult with CommonResult", async (t) => {
     const result = createCommonResult("test", true, 50);
     expectRedisResult(result)
       .ok()
-      .value("test")
+      .data("test")
       .durationLessThan(100);
   });
 });
@@ -135,26 +135,26 @@ Deno.test("expectRedisResult with CommonResult", async (t) => {
 Deno.test("expectRedisResult with GetResult", async (t) => {
   await t.step("returns correct expectation for get result", () => {
     const result = createGetResult("value");
-    expectRedisResult(result).ok().value("value");
+    expectRedisResult(result).ok().data("value");
   });
 
   await t.step("handles null value", () => {
     const result = createGetResult(null);
-    expectRedisResult(result).ok().value(null);
+    expectRedisResult(result).ok().data(null);
   });
 });
 
 Deno.test("expectRedisResult with SetResult", async (t) => {
   await t.step("returns correct expectation for set result", () => {
     const result = createSetResult();
-    expectRedisResult(result).ok().value("OK");
+    expectRedisResult(result).ok().data("OK");
   });
 });
 
 Deno.test("expectRedisResult with HashResult", async (t) => {
   await t.step("returns correct expectation for hash result", () => {
     const result = createHashResult({ foo: "bar", baz: "qux" });
-    expectRedisResult(result).ok().valueMatch((v) => {
+    expectRedisResult(result).ok().dataMatch((v) => {
       assertEquals(v.foo, "bar");
       assertEquals(v.baz, "qux");
     });
@@ -244,31 +244,45 @@ Deno.test("expectRedisResult with ArrayResult", async (t) => {
     );
   });
 
-  await t.step("length() passes when lengths match", () => {
+  await t.step("count() passes when counts match", () => {
     const result = createArrayResult(["a", "b", "c"]);
-    expectRedisResult(result).length(3);
+    expectRedisResult(result).count(3);
   });
 
-  await t.step("length() throws when lengths don't match", () => {
+  await t.step("count() throws when counts don't match", () => {
     const result = createArrayResult(["a", "b"]);
     assertThrows(
-      () => expectRedisResult(result).length(3),
+      () => expectRedisResult(result).count(3),
       Error,
-      "Expected array length 3",
+      "Expected array count 3",
     );
   });
 
-  await t.step("lengthAtLeast() passes when length is sufficient", () => {
+  await t.step("countAtLeast() passes when count is sufficient", () => {
     const result = createArrayResult(["a", "b", "c"]);
-    expectRedisResult(result).lengthAtLeast(2);
+    expectRedisResult(result).countAtLeast(2);
   });
 
-  await t.step("lengthAtLeast() throws when length is insufficient", () => {
+  await t.step("countAtLeast() throws when count is insufficient", () => {
     const result = createArrayResult(["a"]);
     assertThrows(
-      () => expectRedisResult(result).lengthAtLeast(2),
+      () => expectRedisResult(result).countAtLeast(2),
       Error,
-      "Expected array length >= 2",
+      "Expected array count >= 2",
+    );
+  });
+
+  await t.step("countAtMost() passes when count is within limit", () => {
+    const result = createArrayResult(["a", "b"]);
+    expectRedisResult(result).countAtMost(3);
+  });
+
+  await t.step("countAtMost() throws when count exceeds limit", () => {
+    const result = createArrayResult(["a", "b", "c", "d"]);
+    assertThrows(
+      () => expectRedisResult(result).countAtMost(3),
+      Error,
+      "Expected array count <= 3",
     );
   });
 
@@ -291,8 +305,9 @@ Deno.test("expectRedisResult with ArrayResult", async (t) => {
     expectRedisResult(result)
       .ok()
       .hasContent()
-      .length(3)
-      .lengthAtLeast(2)
+      .count(3)
+      .countAtLeast(2)
+      .countAtMost(5)
       .contains("b")
       .durationLessThan(100);
   });
@@ -310,30 +325,32 @@ Deno.test("expectRedisResult type inference", async (t) => {
   await t.step("infers ArrayResultExpectation for array result", () => {
     const result = createArrayResult(["a", "b"]);
     // TypeScript should infer RedisArrayResultExpectation
-    // which has noContent(), hasContent(), length(), etc.
+    // which has noContent(), hasContent(), count(), countAtLeast(), countAtMost(), etc.
     const expectation = expectRedisResult(result);
-    expectation.hasContent().length(2).contains("a");
+    expectation.hasContent().count(2).countAtLeast(1).countAtMost(3).contains(
+      "a",
+    );
   });
 
   await t.step("infers base expectation for get result", () => {
     const result = createGetResult("value");
     // TypeScript should infer RedisResultExpectation<string | null>
     const expectation = expectRedisResult(result);
-    expectation.ok().value("value");
+    expectation.ok().data("value");
   });
 
   await t.step("infers base expectation for set result", () => {
     const result = createSetResult();
     // TypeScript should infer RedisResultExpectation<"OK">
     const expectation = expectRedisResult(result);
-    expectation.ok().value("OK");
+    expectation.ok().data("OK");
   });
 
   await t.step("infers base expectation for hash result", () => {
     const result = createHashResult({ key: "value" });
     // TypeScript should infer RedisResultExpectation<Record<string, string>>
     const expectation = expectRedisResult(result);
-    expectation.ok().valueMatch((v) => assertEquals(v.key, "value"));
+    expectation.ok().dataMatch((v) => assertEquals(v.key, "value"));
   });
 
   await t.step("infers generic expectation for common result", () => {
@@ -341,8 +358,8 @@ Deno.test("expectRedisResult type inference", async (t) => {
     const result = createCommonResult(data);
     // TypeScript should infer RedisResultExpectation<{ custom: string }>
     const expectation = expectRedisResult(result);
-    // Use same reference for object comparison since value() uses ===
-    expectation.ok().value(data);
+    // Use same reference for object comparison since data() uses ===
+    expectation.ok().data(data);
   });
 });
 

@@ -258,20 +258,20 @@ Deno.test("expectSqsResult with SqsReceiveResult", async (t) => {
     );
   });
 
-  await t.step("messageContains() passes when body matches", () => {
-    expectSqsResult(withMessages).messageContains({ body: "body1" });
+  await t.step("dataContains() passes when body matches", () => {
+    expectSqsResult(withMessages).dataContains({ body: "body1" });
   });
 
-  await t.step("messageContains() passes when attributes match", () => {
-    expectSqsResult(withMessages).messageContains({
+  await t.step("dataContains() passes when attributes match", () => {
+    expectSqsResult(withMessages).dataContains({
       attributes: { SenderId: "123" },
     });
   });
 
-  await t.step("messageContains() throws when no message matches", () => {
+  await t.step("dataContains() throws when no message matches", () => {
     assertThrows(
       () =>
-        expectSqsResult(withMessages).messageContains({
+        expectSqsResult(withMessages).dataContains({
           body: "notfound",
         }),
       Error,
@@ -279,9 +279,9 @@ Deno.test("expectSqsResult with SqsReceiveResult", async (t) => {
     );
   });
 
-  await t.step("messagesMatch() calls matcher with messages", () => {
+  await t.step("dataMatch() calls matcher with messages", () => {
     let called = false;
-    expectSqsResult(withMessages).messagesMatch((msgs) => {
+    expectSqsResult(withMessages).dataMatch((msgs) => {
       called = true;
       assertEquals(msgs.length, 2);
       assertEquals(msgs.first()?.body, "body1");

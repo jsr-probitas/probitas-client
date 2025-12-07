@@ -131,8 +131,8 @@ interface GrpcResponseExpectation {
   // --- Status checks ---
   ok(): this;
   notOk(): this;
-  code(code: GrpcStatusCode): this;
-  codeIn(...codes: GrpcStatusCode[]): this;
+  status(code: GrpcStatusCode): this;
+  statusIn(...codes: GrpcStatusCode[]): this;
 
   // --- Message checks ---
   message(expected: string | RegExp): this;
@@ -307,7 +307,7 @@ const errorRes = await grpc.call(
 );
 expectGrpcResponse(errorRes)
   .notOk()
-  .code(GrpcStatus.INVALID_ARGUMENT);
+  .status(GrpcStatus.INVALID_ARGUMENT);
 
 // Server streaming
 for await (

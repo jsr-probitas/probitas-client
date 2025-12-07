@@ -17,11 +17,20 @@ export interface HttpResponseExpectation {
   /** Assert that response status is within range (inclusive) */
   statusInRange(min: number, max: number): this;
 
+  /** Assert that response status is NOT one of the given values */
+  statusNotIn(...statuses: number[]): this;
+
   /** Assert that header value matches expected string or regex */
   header(name: string, expected: string | RegExp): this;
 
   /** Assert that header exists */
   headerExists(name: string): this;
+
+  /** Assert that header value contains substring */
+  headerContains(name: string, substring: string): this;
+
+  /** Assert header value using custom matcher function */
+  headerMatch(name: string, matcher: (value: string) => void): this;
 
   /** Assert that Content-Type header matches expected string or regex */
   contentType(expected: string | RegExp): this;
@@ -46,11 +55,11 @@ export interface HttpResponseExpectation {
 
   /** Assert that JSON body contains expected properties */
   // deno-lint-ignore no-explicit-any
-  jsonContains<T = any>(subset: Partial<T>): this;
+  dataContains<T = any>(subset: Partial<T>): this;
 
   /** Assert JSON body using custom matcher function */
   // deno-lint-ignore no-explicit-any
-  jsonMatch<T = any>(matcher: (body: T) => void): this;
+  dataMatch<T = any>(matcher: (body: T) => void): this;
 
   /** Assert that response duration is less than threshold (ms) */
   durationLessThan(ms: number): this;
@@ -103,6 +112,16 @@ class HttpResponseExpectationImpl implements HttpResponseExpectation {
     return this;
   }
 
+  statusNotIn(...statuses: number[]): this {
+    const { status } = this.#response;
+    if (statuses.includes(status)) {
+      throw new Error(
+        `Expected status not in [${statuses.join(", ")}], got ${status}`,
+      );
+    }
+    return this;
+  }
+
   header(name: string, expected: string | RegExp): this {
     const value = this.#response.headers.get(name);
     if (value === null) {
@@ -129,6 +148,28 @@ class HttpResponseExpectationImpl implements HttpResponseExpectation {
     if (!this.#response.headers.has(name)) {
       throw new Error(`Header ${name} not found`);
     }
+    return this;
+  }
+
+  headerContains(name: string, substring: string): this {
+    const value = this.#response.headers.get(name);
+    if (value === null) {
+      throw new Error(`Header ${name} not found`);
+    }
+    if (!value.includes(substring)) {
+      throw new Error(
+        `Expected header ${name} to contain "${substring}", got "${value}"`,
+      );
+    }
+    return this;
+  }
+
+  headerMatch(name: string, matcher: (value: string) => void): this {
+    const value = this.#response.headers.get(name);
+    if (value === null) {
+      throw new Error(`Header ${name} not found`);
+    }
+    matcher(value);
     return this;
   }
 
@@ -189,22 +230,22 @@ class HttpResponseExpectationImpl implements HttpResponseExpectation {
   }
 
   // deno-lint-ignore no-explicit-any
-  jsonContains<T = any>(subset: Partial<T>): this {
+  dataContains<T = any>(subset: Partial<T>): this {
     const json = this.#response.json();
     if (json === null) {
-      throw new Error("Expected JSON to contain properties, but body is null");
+      throw new Error("Expected data to contain properties, but body is null");
     }
     if (!containsSubset(json, subset)) {
-      throw new Error("JSON does not contain expected properties");
+      throw new Error("Data does not contain expected properties");
     }
     return this;
   }
 
   // deno-lint-ignore no-explicit-any
-  jsonMatch<T = any>(matcher: (body: T) => void): this {
+  dataMatch<T = any>(matcher: (body: T) => void): this {
     const json = this.#response.json<T>();
     if (json === null) {
-      throw new Error("Expected JSON for matching, but body is null");
+      throw new Error("Expected data for matching, but body is null");
     }
     matcher(json);
     return this;
@@ -236,7 +277,7 @@ class HttpResponseExpectationImpl implements HttpResponseExpectation {
  * expectHttpResponse(response)
  *   .ok()
  *   .contentType("application/json")
- *   .jsonContains({ id: 123, name: "Alice" });
+ *   .dataContains({ id: 123, name: "Alice" });
  * ```
  *
  * @example Error response assertions

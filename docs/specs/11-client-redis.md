@@ -69,8 +69,8 @@ interface RedisArrayResultExpectation<T>
   extends RedisResultExpectation<readonly T[]> {
   noContent(): this;
   hasContent(): this;
-  length(count: number): this;
-  lengthAtLeast(min: number): this;
+  count(expected: number): this;
+  countAtLeast(min: number): this;
   contains(item: T): this;
 }
 
@@ -232,7 +232,7 @@ expectRedisResult(getResult).ok().value("value");
 // Lists
 await redis.lpush("list", "a", "b", "c");
 const listResult = await redis.lrange("list", 0, -1);
-expectRedisArrayResult(listResult).ok().length(3).contains("a");
+expectRedisArrayResult(listResult).ok().count(3).contains("a");
 
 // Transaction
 const tx = redis.multi();

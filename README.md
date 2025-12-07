@@ -68,7 +68,7 @@ export default scenario("example http request")
   .step("assert response", (ctx) => {
     expectHttpResponse(ctx.previous)
       .ok()
-      .jsonContains({ args: { hello: "world" } });
+      .dataContains({ args: { hello: "world" } });
   })
   .build();
 ```

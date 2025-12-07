@@ -187,7 +187,7 @@ Deno.test({
 
       expectConnectRpcResponse(response)
         .ok()
-        .code(0)
+        .status(0)
         .hasContent();
 
       const data = response.data<{ message: string }>();
@@ -204,7 +204,7 @@ Deno.test({
 
       expectConnectRpcResponse(response)
         .ok()
-        .code(0)
+        .status(0)
         .hasContent()
         .dataContains({ message: "Test message" })
         .durationLessThan(5000);

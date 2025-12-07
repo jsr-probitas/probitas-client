@@ -412,7 +412,7 @@ Deno.test({
         expectDenoKvResult(result)
           .ok()
           .hasContent()
-          .valueContains({ name: "Bob" })
+          .dataContains({ name: "Bob" })
           .hasVersionstamp()
           .durationLessThan(5000);
 

@@ -45,18 +45,18 @@ Deno.test("expectGraphqlResponse.ok()", async (t) => {
   });
 });
 
-Deno.test("expectGraphqlResponse.hasErrors()", async (t) => {
+Deno.test("expectGraphqlResponse.notOk()", async (t) => {
   await t.step("passes when errors present", () => {
     const response = createMockResponse({
       errors: [{ message: "Error" }],
     });
-    expectGraphqlResponse(response).hasErrors();
+    expectGraphqlResponse(response).notOk();
   });
 
   await t.step("throws when no errors", () => {
     const response = createMockResponse({ data: { test: true }, errors: null });
     assertThrows(
-      () => expectGraphqlResponse(response).hasErrors(),
+      () => expectGraphqlResponse(response).notOk(),
       Error,
       "Expected response with errors",
     );
@@ -64,7 +64,7 @@ Deno.test("expectGraphqlResponse.hasErrors()", async (t) => {
 
   await t.step("throws when errors is empty array", () => {
     const response = createMockResponse({ data: { test: true }, errors: [] });
-    assertThrows(() => expectGraphqlResponse(response).hasErrors());
+    assertThrows(() => expectGraphqlResponse(response).notOk());
   });
 });
 
@@ -391,57 +391,34 @@ Deno.test("expectGraphqlResponse.status()", async (t) => {
   });
 });
 
-Deno.test("expectGraphqlResponse.hasData()", async (t) => {
+Deno.test("expectGraphqlResponse.hasContent()", async (t) => {
   await t.step("passes when data is not null", () => {
     const response = createMockResponse({ data: { test: true } });
-    expectGraphqlResponse(response).hasData();
+    expectGraphqlResponse(response).hasContent();
   });
 
   await t.step("throws when data is null", () => {
     const response = createMockResponse({ data: null });
     assertThrows(
-      () => expectGraphqlResponse(response).hasData(),
+      () => expectGraphqlResponse(response).hasContent(),
       Error,
-      "Expected data, but data is null",
+      "Expected content, but data is null",
     );
   });
 });
 
-Deno.test("expectGraphqlResponse.noData()", async (t) => {
+Deno.test("expectGraphqlResponse.noContent()", async (t) => {
   await t.step("passes when data is null", () => {
     const response = createMockResponse({ data: null });
-    expectGraphqlResponse(response).noData();
+    expectGraphqlResponse(response).noContent();
   });
 
   await t.step("throws when data is not null", () => {
     const response = createMockResponse({ data: { test: true } });
     assertThrows(
-      () => expectGraphqlResponse(response).noData(),
+      () => expectGraphqlResponse(response).noContent(),
       Error,
-      "Expected no data, but data exists",
-    );
-  });
-});
-
-Deno.test("expectGraphqlResponse.noErrors()", async (t) => {
-  await t.step("passes when no errors (alias for ok)", () => {
-    const response = createMockResponse({ data: { test: true }, errors: null });
-    expectGraphqlResponse(response).noErrors();
-  });
-
-  await t.step("passes when errors is empty array", () => {
-    const response = createMockResponse({ data: { test: true }, errors: [] });
-    expectGraphqlResponse(response).noErrors();
-  });
-
-  await t.step("throws when errors present", () => {
-    const response = createMockResponse({
-      errors: [{ message: "Error" }],
-    });
-    assertThrows(
-      () => expectGraphqlResponse(response).noErrors(),
-      Error,
-      "Expected ok response",
+      "Expected no content, but data exists",
     );
   });
 });
@@ -503,34 +480,39 @@ Deno.test("expectGraphqlResponse.error()", async (t) => {
   });
 });
 
-Deno.test("expectGraphqlResponse.noContent()", async (t) => {
-  await t.step("passes when data is null (alias for noData)", () => {
-    const response = createMockResponse({ data: null });
-    expectGraphqlResponse(response).noContent();
+Deno.test("expectGraphqlResponse.statusIn()", async (t) => {
+  await t.step("passes when status is in the list", () => {
+    const response = createMockResponse({ data: null, status: 200 });
+    expectGraphqlResponse(response).statusIn(200, 201, 202);
   });
 
-  await t.step("throws when data is not null", () => {
-    const response = createMockResponse({ data: { test: true } });
+  await t.step("passes with single status", () => {
+    const response = createMockResponse({ data: null, status: 200 });
+    expectGraphqlResponse(response).statusIn(200);
+  });
+
+  await t.step("throws when status is not in the list", () => {
+    const response = createMockResponse({ data: null, status: 404 });
     assertThrows(
-      () => expectGraphqlResponse(response).noContent(),
+      () => expectGraphqlResponse(response).statusIn(200, 201, 202),
       Error,
-      "Expected no data, but data exists",
+      "Expected status in [200, 201, 202], got 404",
     );
   });
 });
 
-Deno.test("expectGraphqlResponse.hasContent()", async (t) => {
-  await t.step("passes when data is not null (alias for hasData)", () => {
-    const response = createMockResponse({ data: { test: true } });
-    expectGraphqlResponse(response).hasContent();
+Deno.test("expectGraphqlResponse.statusNotIn()", async (t) => {
+  await t.step("passes when status is not in the list", () => {
+    const response = createMockResponse({ data: null, status: 200 });
+    expectGraphqlResponse(response).statusNotIn(400, 404, 500);
   });
 
-  await t.step("throws when data is null", () => {
-    const response = createMockResponse({ data: null });
+  await t.step("throws when status is in the list", () => {
+    const response = createMockResponse({ data: null, status: 404 });
     assertThrows(
-      () => expectGraphqlResponse(response).hasContent(),
+      () => expectGraphqlResponse(response).statusNotIn(400, 404, 500),
       Error,
-      "Expected data, but data is null",
+      "Expected status not in [400, 404, 500], got 404",
     );
   });
 });

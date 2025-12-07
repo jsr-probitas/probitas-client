@@ -81,43 +81,43 @@ Deno.test("expectSqlQueryResult", async (t) => {
     );
   });
 
-  await t.step("rows() passes for exact count", () => {
+  await t.step("count() passes for exact count", () => {
     const result = createResult([{ id: 1 }, { id: 2 }]);
-    expectSqlQueryResult(result).rows(2);
+    expectSqlQueryResult(result).count(2);
   });
 
-  await t.step("rows() fails for incorrect count", () => {
+  await t.step("count() fails for incorrect count", () => {
     const result = createResult([{ id: 1 }]);
     assertThrows(
-      () => expectSqlQueryResult(result).rows(2),
+      () => expectSqlQueryResult(result).count(2),
       Error,
       "Expected 2 rows, got 1",
     );
   });
 
-  await t.step("rowsAtLeast() passes for sufficient rows", () => {
+  await t.step("countAtLeast() passes for sufficient rows", () => {
     const result = createResult([{ id: 1 }, { id: 2 }, { id: 3 }]);
-    expectSqlQueryResult(result).rowsAtLeast(2);
+    expectSqlQueryResult(result).countAtLeast(2);
   });
 
-  await t.step("rowsAtLeast() fails for insufficient rows", () => {
+  await t.step("countAtLeast() fails for insufficient rows", () => {
     const result = createResult([{ id: 1 }]);
     assertThrows(
-      () => expectSqlQueryResult(result).rowsAtLeast(2),
+      () => expectSqlQueryResult(result).countAtLeast(2),
       Error,
       "Expected at least 2 rows, got 1",
     );
   });
 
-  await t.step("rowsAtMost() passes for acceptable rows", () => {
+  await t.step("countAtMost() passes for acceptable rows", () => {
     const result = createResult([{ id: 1 }]);
-    expectSqlQueryResult(result).rowsAtMost(2);
+    expectSqlQueryResult(result).countAtMost(2);
   });
 
-  await t.step("rowsAtMost() fails for too many rows", () => {
+  await t.step("countAtMost() fails for too many rows", () => {
     const result = createResult([{ id: 1 }, { id: 2 }, { id: 3 }]);
     assertThrows(
-      () => expectSqlQueryResult(result).rowsAtMost(2),
+      () => expectSqlQueryResult(result).countAtMost(2),
       Error,
       "Expected at most 2 rows, got 3",
     );
@@ -165,38 +165,38 @@ Deno.test("expectSqlQueryResult", async (t) => {
     );
   });
 
-  await t.step("rowContains() passes for matching row", () => {
+  await t.step("dataContains() passes for matching row", () => {
     const result = createResult([
       { id: 1, name: "Alice" },
       { id: 2, name: "Bob" },
     ]);
-    expectSqlQueryResult(result).rowContains({ name: "Alice" });
+    expectSqlQueryResult(result).dataContains({ name: "Alice" });
   });
 
-  await t.step("rowContains() fails for no matching row", () => {
+  await t.step("dataContains() fails for no matching row", () => {
     const result = createResult([
       { id: 1, name: "Alice" },
       { id: 2, name: "Bob" },
     ]);
     assertThrows(
-      () => expectSqlQueryResult(result).rowContains({ name: "Charlie" }),
+      () => expectSqlQueryResult(result).dataContains({ name: "Charlie" }),
       Error,
       "No row contains the expected subset",
     );
   });
 
-  await t.step("rowMatch() passes for valid matcher", () => {
+  await t.step("dataMatch() passes for valid matcher", () => {
     const result = createResult([{ id: 1 }, { id: 2 }]);
-    expectSqlQueryResult(result).rowMatch((rows) => {
+    expectSqlQueryResult(result).dataMatch((rows) => {
       assertEquals(rows.length, 2);
     });
   });
 
-  await t.step("rowMatch() fails for failing matcher", () => {
+  await t.step("dataMatch() fails for failing matcher", () => {
     const result = createResult([{ id: 1 }]);
     assertThrows(
       () =>
-        expectSqlQueryResult(result).rowMatch((rows) => {
+        expectSqlQueryResult(result).dataMatch((rows) => {
           assertEquals(rows.length, 2);
         }),
       Error,
@@ -298,9 +298,9 @@ Deno.test("expectSqlQueryResult", async (t) => {
     expectSqlQueryResult(result)
       .ok()
       .hasContent()
-      .rows(1)
+      .count(1)
       .rowCount(1)
-      .rowContains({ name: "Alice" })
+      .dataContains({ name: "Alice" })
       .hasLastInsertId()
       .durationLessThan(100);
   });

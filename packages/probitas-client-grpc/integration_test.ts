@@ -185,7 +185,7 @@ Deno.test({
 
       expectGrpcResponse(response)
         .ok()
-        .code(0)
+        .status(0)
         .hasContent();
 
       const data = response.data<{ message: string }>();
@@ -202,7 +202,7 @@ Deno.test({
 
       expectGrpcResponse(response)
         .ok()
-        .code(0)
+        .status(0)
         .hasContent()
         .dataContains({ message: "Test message" })
         .durationLessThan(5000);

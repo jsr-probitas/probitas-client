@@ -293,8 +293,8 @@ Deno.test({
           expectSqlQueryResult(result)
             .ok()
             .hasContent()
-            .rows(2)
-            .rowContains({ name: "Alice" });
+            .count(2)
+            .dataContains({ name: "Alice" });
         } finally {
           await client.close();
         }

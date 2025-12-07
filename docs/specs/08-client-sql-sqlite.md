@@ -58,7 +58,7 @@ await db.query("INSERT INTO users (name) VALUES (?)", ["Alice"]);
 const result = await db.query<{ id: number; name: string }>(
   "SELECT * FROM users",
 );
-expectSqlQueryResult(result).ok().rows(1);
+expectSqlQueryResult(result).ok().count(1);
 
 // Backup
 await db.backup("./backup.db");

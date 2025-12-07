@@ -42,7 +42,7 @@
  *
  * // Find one document
  * const user = await users.findOne({ name: "Alice" });
- * expectMongoResult(user).ok().docContains({ email: "alice@example.com" });
+ * expectMongoResult(user).ok().dataContains({ email: "alice@example.com" });
  *
  * await client.close();
  * ```

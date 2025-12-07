@@ -57,18 +57,15 @@ class GraphqlClientError extends ClientError {
 interface GraphqlResponseExpectation {
   // --- Error checks ---
   ok(): this;
-  noErrors(): this;
-  hasErrors(): this;
+  notOk(): this;
   errorCount(n: number): this;
   errorContains(message: string): this;
   error(messageMatcher: string | RegExp): this;
   errorMatch(matcher: (errors: readonly GraphqlError[]) => void): this;
 
   // --- Data checks ---
-  hasData(): this;
-  hasContent(): this; // alias for hasData
-  noData(): this;
-  noContent(): this; // alias for noData
+  hasContent(): this;
+  noContent(): this;
   dataContains<T = any>(subset: Partial<T>): this;
   dataMatch<T = any>(matcher: (data: T) => void): this;
 

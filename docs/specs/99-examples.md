@@ -41,7 +41,7 @@ export default scenario("User Registration E2E", { tags: ["e2e"] })
       [id],
     );
 
-    expectSqlQueryResult(result).rows(1);
+    expectSqlQueryResult(result).count(1);
     return result.rows.firstOrThrow();
   })
   .build();
@@ -96,7 +96,7 @@ export default scenario("Create Order", { tags: ["graphql", "mongodb"] })
     const orders = ctx.resources.mongo.collection("orders");
 
     const result = await orders.find({ _id: id });
-    expectMongoFindResult(result).ok().docs(1);
+    expectMongoFindResult(result).ok().count(1);
 
     return result.docs.firstOrThrow();
   })

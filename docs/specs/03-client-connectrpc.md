@@ -139,8 +139,8 @@ interface ConnectRpcResponseExpectation {
   // --- Status checks ---
   ok(): this;
   notOk(): this;
-  code(code: ConnectRpcStatusCode): this;
-  codeIn(...codes: ConnectRpcStatusCode[]): this;
+  status(code: ConnectRpcStatusCode): this;
+  statusIn(...codes: ConnectRpcStatusCode[]): this;
 
   // --- Message checks ---
   message(expected: string | RegExp): this;
@@ -387,7 +387,7 @@ const errorRes = await client.call(
 );
 expectConnectRpcResponse(errorRes)
   .notOk()
-  .code(ConnectRpcStatus.INVALID_ARGUMENT)
+  .status(ConnectRpcStatus.INVALID_ARGUMENT)
   .messageContains("invalid");
 
 // Server streaming

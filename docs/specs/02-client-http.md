@@ -127,8 +127,8 @@ interface HttpResponseExpectation {
   textMatch(matcher: (text: string) => void): this;
 
   // --- Body checks (JSON) ---
-  jsonContains<T = any>(subset: Partial<T>): this;
-  jsonMatch<T = any>(matcher: (body: T) => void): this;
+  dataContains<T = any>(subset: Partial<T>): this;
+  dataMatch<T = any>(matcher: (body: T) => void): this;
 
   // --- Performance ---
   durationLessThan(ms: number): this;
@@ -303,8 +303,8 @@ expectHttpResponse(res2)
   .ok()
   .status(201)
   .contentType("application/json")
-  .jsonContains({ name: "John" })
-  .jsonMatch<User>((user) => {
+  .dataContains({ name: "John" })
+  .dataMatch<User>((user) => {
     if (!user.id) throw new Error("Missing id");
   });
 const created = res2.json<User>();

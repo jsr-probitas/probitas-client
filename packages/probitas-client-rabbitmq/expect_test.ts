@@ -170,35 +170,35 @@ Deno.test("expectRabbitMqResult with consume result", async (t) => {
     );
   });
 
-  await t.step("contentContains() passes when content contains subbody", () => {
+  await t.step("dataContains() passes when data contains subbody", () => {
     const message = createMessage("hello world");
     const result = createConsumeResult(message);
-    expectRabbitMqResult(result).contentContains(
+    expectRabbitMqResult(result).dataContains(
       new TextEncoder().encode("world"),
     );
   });
 
   await t.step(
-    "contentContains() throws when content doesn't contain subbody",
+    "dataContains() throws when data doesn't contain subbody",
     () => {
       const message = createMessage("hello world");
       const result = createConsumeResult(message);
       assertThrows(
         () =>
-          expectRabbitMqResult(result).contentContains(
+          expectRabbitMqResult(result).dataContains(
             new TextEncoder().encode("foo"),
           ),
         Error,
-        "Expected content to contain",
+        "Expected data to contain",
       );
     },
   );
 
-  await t.step("contentMatch() calls matcher with content", () => {
+  await t.step("dataMatch() calls matcher with data", () => {
     const message = createMessage("test content");
     const result = createConsumeResult(message);
     let called = false;
-    expectRabbitMqResult(result).contentMatch((content) => {
+    expectRabbitMqResult(result).dataMatch((content) => {
       assertEquals(new TextDecoder().decode(content), "test content");
       called = true;
     });

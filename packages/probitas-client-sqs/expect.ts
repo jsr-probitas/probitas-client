@@ -82,12 +82,12 @@ export interface SqsReceiveResultExpectation {
   countAtMost(max: number): this;
 
   /** Assert that at least one message contains the given subset */
-  messageContains(
+  dataContains(
     subset: { body?: string; attributes?: Record<string, string> },
   ): this;
 
   /** Assert messages using custom matcher function */
-  messagesMatch(matcher: (messages: SqsMessages) => void): this;
+  dataMatch(matcher: (messages: SqsMessages) => void): this;
 
   /** Assert that duration is less than threshold (ms) */
   durationLessThan(ms: number): this;
@@ -314,7 +314,7 @@ class SqsReceiveResultExpectationImpl implements SqsReceiveResultExpectation {
     return this;
   }
 
-  messageContains(
+  dataContains(
     subset: { body?: string; attributes?: Record<string, string> },
   ): this {
     const found = this.#result.messages.some((msg) => {
@@ -339,7 +339,7 @@ class SqsReceiveResultExpectationImpl implements SqsReceiveResultExpectation {
     return this;
   }
 
-  messagesMatch(matcher: (messages: SqsMessages) => void): this {
+  dataMatch(matcher: (messages: SqsMessages) => void): this {
     matcher(this.#result.messages);
     return this;
   }
@@ -727,7 +727,7 @@ export type SqsExpectation<R extends SqsResult> = R extends SqsSendResult
  *   .ok()
  *   .hasContent()
  *   .countAtLeast(1)
- *   .messageContains({ body: "orderId" });
+ *   .dataContains({ body: "orderId" });
  * ```
  *
  * @example Batch operations

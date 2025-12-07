@@ -62,13 +62,13 @@ import { createHttpClient, expectHttpResponse } from "@probitas/client-http";
 export default scenario("example http request")
   .resource(
     "http",
-    () => createHttpClient({ baseUrl: "http://localhost:18080" }),
+    () => createHttpClient({ url: "http://localhost:18080" }),
   )
   .step("call API", (ctx) => ctx.resources.http.get("/get?hello=world"))
   .step("assert response", (ctx) => {
     expectHttpResponse(ctx.previous)
       .ok()
-      .jsonContains({ args: { hello: "world" } });
+      .dataContains({ args: { hello: "world" } });
   })
   .build();
 ```

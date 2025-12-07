@@ -7,8 +7,29 @@ PostgreSQL client package.
 ## PostgresClient
 
 ```typescript
+/**
+ * PostgreSQL connection configuration object.
+ */
+interface PostgresConnectionConfig {
+  /** Host name or IP address */
+  readonly host: string;
+
+  /** Port number (default: 5432) */
+  readonly port?: number;
+
+  /** Database name */
+  readonly database?: string;
+
+  /** Username */
+  readonly user?: string;
+
+  /** Password */
+  readonly password?: string;
+}
+
 interface PostgresClientConfig extends CommonOptions {
-  readonly connection: string | ConnectionConfig;
+  /** Connection URL (string or config object) */
+  readonly url: string | PostgresConnectionConfig;
   readonly pool?: PoolConfig;
   readonly applicationName?: string;
 }
@@ -51,7 +72,7 @@ import { createPostgresClient } from "@probitas/client-sql-postgres";
 import { expectSqlQueryResult } from "@probitas/client-sql";
 
 const db = await createPostgresClient({
-  connection: "postgresql://user:pass@localhost:5432/mydb",
+  url: "postgresql://user:pass@localhost:5432/mydb",
 });
 
 // Run a query
@@ -73,6 +94,17 @@ await db.transaction(async (tx) => {
 for await (const notification of db.listen("my_channel")) {
   console.log(notification.payload);
 }
+
+// Using connection config object
+const dbWithConfig = await createPostgresClient({
+  url: {
+    host: "localhost",
+    port: 5432,
+    database: "mydb",
+    user: "user",
+    password: "pass",
+  },
+});
 
 await db.close();
 ```

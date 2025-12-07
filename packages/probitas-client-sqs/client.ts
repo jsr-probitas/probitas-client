@@ -18,6 +18,7 @@ import type {
   SqsBatchMessage,
   SqsClient,
   SqsClientConfig,
+  SqsConnectionConfig,
   SqsDeleteBatchResult,
   SqsDeleteQueueResult,
   SqsDeleteResult,
@@ -216,6 +217,25 @@ function validateMessageSize(body: string): void {
 }
 
 /**
+ * Resolve the endpoint URL from string or connection config.
+ */
+function resolveEndpointUrl(
+  url: string | SqsConnectionConfig | undefined,
+): string | undefined {
+  if (url === undefined) {
+    return undefined; // Let AWS SDK use default endpoint
+  }
+  if (typeof url === "string") {
+    return url;
+  }
+  const protocol = url.protocol ?? "https";
+  const host = url.host ?? "localhost";
+  const port = url.port ?? 4566; // LocalStack default
+  const path = url.path ?? "";
+  return `${protocol}://${host}:${port}${path}`;
+}
+
+/**
  * Create a new Amazon SQS client instance.
  *
  * The client provides queue management, message publishing and consumption,
@@ -245,7 +265,7 @@ function validateMessageSize(body: string): void {
  * ```ts
  * const sqs = await createSqsClient({
  *   region: "us-east-1",
- *   endpoint: "http://localhost:4566",
+ *   url: "http://localhost:4566",
  *   credentials: {
  *     accessKeyId: "test",
  *     secretAccessKey: "test",
@@ -313,7 +333,7 @@ function validateMessageSize(body: string): void {
  * ```ts
  * await using sqs = await createSqsClient({
  *   region: "us-east-1",
- *   endpoint: "http://localhost:4566",
+ *   url: "http://localhost:4566",
  * });
  *
  * await sqs.ensureQueue("test-queue");
@@ -328,7 +348,7 @@ export function createSqsClient(
 
   try {
     sqsClient = new SQSClient({
-      endpoint: config.endpoint,
+      endpoint: resolveEndpointUrl(config.url),
       region: config.region,
       credentials: config.credentials,
     });
@@ -359,7 +379,7 @@ class SqsClientImpl implements SqsClient {
     logger.debug("SQS client created", {
       queueUrl: this.#queueUrl,
       region: config.region,
-      hasEndpoint: !!config.endpoint,
+      hasUrl: !!config.url,
     });
   }
 

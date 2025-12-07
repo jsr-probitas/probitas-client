@@ -53,7 +53,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
     });
 
     assertExists(client);
@@ -66,7 +66,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
     });
 
     const services = await client.reflection.listServices();
@@ -86,7 +86,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
     });
 
     const services = await client.reflection.listServices();
@@ -108,7 +108,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
     });
 
     const services = await client.reflection.listServices();
@@ -143,7 +143,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
     });
 
     const services = await client.reflection.listServices();
@@ -174,7 +174,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn(t) {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
       protocol: "grpc",
     });
 
@@ -187,7 +187,7 @@ Deno.test({
 
       expectConnectRpcResponse(response)
         .ok()
-        .code(0)
+        .status(0)
         .hasContent();
 
       const data = response.data<{ message: string }>();
@@ -204,7 +204,7 @@ Deno.test({
 
       expectConnectRpcResponse(response)
         .ok()
-        .code(0)
+        .status(0)
         .hasContent()
         .dataContains({ message: "Test message" })
         .durationLessThan(5000);
@@ -244,7 +244,7 @@ Deno.test({
       "per-request throwOnError: false returns error response",
       async () => {
         await using client = createConnectRpcClient({
-          address: CONNECTRPC_URL,
+          url: CONNECTRPC_URL,
         });
 
         const response = await client.call(
@@ -261,7 +261,7 @@ Deno.test({
 
     await t.step("throwOnError: true (default) throws error", async () => {
       await using client = createConnectRpcClient({
-        address: CONNECTRPC_URL,
+        url: CONNECTRPC_URL,
       });
 
       try {
@@ -282,7 +282,7 @@ Deno.test({
 
     await t.step("client config throwOnError: false", async () => {
       await using client = createConnectRpcClient({
-        address: CONNECTRPC_URL,
+        url: CONNECTRPC_URL,
         throwOnError: false,
       });
 
@@ -303,7 +303,7 @@ Deno.test({
   async fn(t) {
     await t.step("metadata (headers) are sent and received", async () => {
       await using client = createConnectRpcClient({
-        address: CONNECTRPC_URL,
+        url: CONNECTRPC_URL,
         metadata: {
           "x-custom-header": "custom-value",
         },
@@ -321,7 +321,7 @@ Deno.test({
 
     await t.step("per-request metadata overrides config", async () => {
       await using client = createConnectRpcClient({
-        address: CONNECTRPC_URL,
+        url: CONNECTRPC_URL,
         metadata: {
           "x-header": "from-config",
         },
@@ -344,7 +344,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
     });
 
     const response = await client.call(
@@ -362,7 +362,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
       protocol: "grpc",
     });
 
@@ -388,7 +388,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
     });
 
     const controller = new AbortController();
@@ -413,7 +413,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
       protocol: "connect",
     });
 
@@ -432,7 +432,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
       protocol: "grpc",
     });
 
@@ -451,7 +451,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn() {
     await using client = createConnectRpcClient({
-      address: CONNECTRPC_URL,
+      url: CONNECTRPC_URL,
       protocol: "grpc-web",
     });
 
@@ -471,7 +471,7 @@ Deno.test({
   async fn(t) {
     await t.step("ConnectRpcError includes kind property", async () => {
       await using client = createConnectRpcClient({
-        address: CONNECTRPC_URL,
+        url: CONNECTRPC_URL,
       });
 
       try {
@@ -494,7 +494,7 @@ Deno.test({
 
     await t.step("error response has correct structure", async () => {
       await using client = createConnectRpcClient({
-        address: CONNECTRPC_URL,
+        url: CONNECTRPC_URL,
         throwOnError: false,
       });
 

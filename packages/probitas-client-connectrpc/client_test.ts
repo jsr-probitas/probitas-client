@@ -10,14 +10,14 @@ import type { FileDescriptorSet } from "./types.ts";
 
 Deno.test("createConnectRpcClient - creates client with reflection by default", async () => {
   const client = createConnectRpcClient({
-    address: "localhost:50051",
+    url: "http://localhost:50051",
   });
 
   try {
     assertExists(client);
     assertEquals(client.reflection.enabled, true);
     assertExists(client.config);
-    assertEquals(client.config.address, "localhost:50051");
+    assertEquals(client.config.url, "http://localhost:50051");
   } finally {
     await client.close();
   }
@@ -28,7 +28,7 @@ Deno.test("createConnectRpcClient - supports different protocols", async () => {
 
   for (const protocol of protocols) {
     const client = createConnectRpcClient({
-      address: "localhost:50051",
+      url: "http://localhost:50051",
       protocol,
     });
 
@@ -46,7 +46,7 @@ Deno.test("createConnectRpcClient - supports different HTTP versions", async () 
 
   for (const httpVersion of versions) {
     const client = createConnectRpcClient({
-      address: "localhost:50051",
+      url: "http://localhost:50051",
       httpVersion,
     });
 
@@ -61,7 +61,7 @@ Deno.test("createConnectRpcClient - supports different HTTP versions", async () 
 
 Deno.test("createConnectRpcClient - handles TLS config", async () => {
   const client = createConnectRpcClient({
-    address: "localhost:50051",
+    url: "http://localhost:50051",
     tls: {
       insecure: true,
     },
@@ -78,7 +78,7 @@ Deno.test("createConnectRpcClient - handles TLS config", async () => {
 
 Deno.test("createConnectRpcClient - supports metadata", async () => {
   const client = createConnectRpcClient({
-    address: "localhost:50051",
+    url: "http://localhost:50051",
     metadata: {
       "x-custom-header": "value",
     },
@@ -98,7 +98,7 @@ Deno.test("createConnectRpcClient - using statement support", async () => {
 
   {
     await using client = createConnectRpcClient({
-      address: "localhost:50051",
+      url: "http://localhost:50051",
     });
 
     assertExists(client);
@@ -117,7 +117,7 @@ Deno.test("createConnectRpcClient - using statement support", async () => {
 
 Deno.test("createConnectRpcClient - throwOnError config option", async () => {
   const client = createConnectRpcClient({
-    address: "localhost:50051",
+    url: "http://localhost:50051",
     throwOnError: false,
   });
 
@@ -141,7 +141,7 @@ Deno.test("createConnectRpcClient - supports Uint8Array schema (FileDescriptorSe
   const emptyFileDescriptorSet = new Uint8Array([]);
 
   const client = createConnectRpcClient({
-    address: "localhost:50051",
+    url: "http://localhost:50051",
     schema: emptyFileDescriptorSet,
   });
 
@@ -160,7 +160,7 @@ Deno.test("createConnectRpcClient - Uint8Array schema creates FileRegistry for R
   const emptyFileDescriptorSet = new Uint8Array([]);
 
   const client = createConnectRpcClient({
-    address: "localhost:50051",
+    url: "http://localhost:50051",
     schema: emptyFileDescriptorSet,
   });
 
@@ -194,7 +194,7 @@ Deno.test("createConnectRpcClient - FileDescriptorSet object schema creates File
   );
 
   const client = createConnectRpcClient({
-    address: "localhost:50051",
+    url: "http://localhost:50051",
     schema: fileDescriptorSet,
   });
 
@@ -227,7 +227,7 @@ Deno.test("createConnectRpcClient - string schema loads file and creates FileReg
     await Deno.writeFile(tempFile, new Uint8Array([]));
 
     const client = createConnectRpcClient({
-      address: "localhost:50051",
+      url: "http://localhost:50051",
       schema: tempFile,
     });
 
@@ -259,7 +259,7 @@ Deno.test("createConnectRpcClient - string schema throws on non-existent file", 
   await assertRejects(
     async () => {
       const client = createConnectRpcClient({
-        address: "localhost:50051",
+        url: "http://localhost:50051",
         schema: "/non/existent/path/to/schema.binpb",
       });
       // Client creation is synchronous for file loading, so this should throw immediately

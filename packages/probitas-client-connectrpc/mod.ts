@@ -8,7 +8,7 @@
  *
  * - **Protocol Support**: Connect, gRPC, and gRPC-Web protocols
  * - **Server Reflection**: Auto-discover services and methods at runtime
- * - **Fluent Assertions**: Chain assertions like `.ok()`, `.dataContains()`, `.code()`
+ * - **Fluent Assertions**: Chain assertions like `.ok()`, `.dataContains()`, `.status()`
  * - **TLS Support**: Configure secure connections with custom certificates
  * - **Duration Tracking**: Built-in timing for performance assertions
  * - **Error Handling**: Test error responses without throwing exceptions
@@ -27,7 +27,7 @@
  *
  * // Create client (uses reflection by default)
  * const client = createConnectRpcClient({
- *   address: "localhost:50051",
+ *   url: "http://localhost:50051",
  * });
  *
  * // Discover services via reflection
@@ -66,14 +66,14 @@
  *
  * expectConnectRpcResponse(errorResponse)
  *   .notOk()
- *   .code(3)  // INVALID_ARGUMENT
- *   .messageContains("invalid");
+ *   .status(3)  // INVALID_ARGUMENT
+ *   .errorContains("invalid");
  * ```
  *
  * ## Using with `using` Statement
  *
  * ```ts
- * await using client = createConnectRpcClient({ address: "localhost:50051" });
+ * await using client = createConnectRpcClient({ url: "http://localhost:50051" });
  *
  * const res = await client.call("echo.EchoService", "echo", { message: "test" });
  * expectConnectRpcResponse(res).ok();

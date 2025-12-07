@@ -8,6 +8,7 @@ import type {
   RabbitMqChannel,
   RabbitMqClient,
   RabbitMqClientConfig,
+  RabbitMqConnectionConfig,
   RabbitMqConsumeOptions,
   RabbitMqConsumeResult,
   RabbitMqExchangeOptions,
@@ -206,6 +207,33 @@ function sanitizeUrl(url: string): string {
 }
 
 /**
+ * Resolve RabbitMQ connection URL from string or config object.
+ */
+function resolveRabbitMqUrl(url: string | RabbitMqConnectionConfig): string {
+  if (typeof url === "string") {
+    return url;
+  }
+  const host = url.host ?? "localhost";
+  const port = url.port ?? 5672;
+  const vhost = url.vhost ?? "/";
+
+  let connectionUrl = `amqp://`;
+
+  if (url.username && url.password) {
+    connectionUrl += `${encodeURIComponent(url.username)}:${
+      encodeURIComponent(url.password)
+    }@`;
+  }
+
+  connectionUrl += `${host}:${port}`;
+
+  // Encode vhost (/ needs to be %2F)
+  connectionUrl += `/${encodeURIComponent(vhost)}`;
+
+  return connectionUrl;
+}
+
+/**
  * Create a new RabbitMQ client instance.
  *
  * The client provides queue and exchange management, message publishing
@@ -214,7 +242,7 @@ function sanitizeUrl(url: string): string {
  * @param config - RabbitMQ client configuration
  * @returns A promise resolving to a new RabbitMQ client instance
  *
- * @example Basic usage
+ * @example Basic usage with string URL
  * ```ts
  * const rabbit = await createRabbitMqClient({
  *   url: "amqp://guest:guest@localhost:5672",
@@ -228,6 +256,19 @@ function sanitizeUrl(url: string): string {
  *
  * await channel.close();
  * await rabbit.close();
+ * ```
+ *
+ * @example With connection config object
+ * ```ts
+ * const rabbit = await createRabbitMqClient({
+ *   url: {
+ *     host: "localhost",
+ *     port: 5672,
+ *     username: "guest",
+ *     password: "guest",
+ *     vhost: "/",
+ *   },
+ * });
  * ```
  *
  * @example Exchange and binding
@@ -271,6 +312,7 @@ export async function createRabbitMqClient(
   config: RabbitMqClientConfig,
 ): Promise<RabbitMqClient> {
   let connection: amqp.ChannelModel;
+  const resolvedUrl = resolveRabbitMqUrl(config.url);
 
   try {
     const connectOptions: amqp.Options.Connect = {};
@@ -280,22 +322,22 @@ export async function createRabbitMqClient(
     }
 
     logger.debug("RabbitMQ client connecting", {
-      url: sanitizeUrl(config.url),
+      url: sanitizeUrl(resolvedUrl),
       heartbeat: config.heartbeat,
     });
 
     connection = await withOptions(
-      amqp.connect(config.url, connectOptions),
+      amqp.connect(resolvedUrl, connectOptions),
       config,
       "connect",
     );
 
     logger.debug("RabbitMQ client connected", {
-      url: sanitizeUrl(config.url),
+      url: sanitizeUrl(resolvedUrl),
     });
   } catch (error) {
     logger.error("RabbitMQ connection failed", {
-      url: sanitizeUrl(config.url),
+      url: sanitizeUrl(resolvedUrl),
       error: error instanceof Error ? error.message : String(error),
     });
     if (error instanceof TimeoutError || error instanceof AbortError) {

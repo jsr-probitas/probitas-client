@@ -25,7 +25,7 @@
  * import { createMongoClient, expectMongoResult } from "@probitas/client-mongodb";
  *
  * const client = await createMongoClient({
- *   uri: "mongodb://localhost:27017",
+ *   url: "mongodb://localhost:27017",
  *   database: "testdb",
  * });
  *
@@ -42,7 +42,7 @@
  *
  * // Find one document
  * const user = await users.findOne({ name: "Alice" });
- * expectMongoResult(user).ok().docContains({ email: "alice@example.com" });
+ * expectMongoResult(user).ok().dataContains({ email: "alice@example.com" });
  *
  * await client.close();
  * ```
@@ -76,7 +76,7 @@
  *
  * ```ts
  * await using client = await createMongoClient({
- *   uri: "mongodb://localhost:27017",
+ *   url: "mongodb://localhost:27017",
  *   database: "testdb",
  * });
  *

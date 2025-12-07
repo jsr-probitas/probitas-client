@@ -127,8 +127,8 @@ interface HttpResponseExpectation {
   textMatch(matcher: (text: string) => void): this;
 
   // --- Body checks (JSON) ---
-  jsonContains<T = any>(subset: Partial<T>): this;
-  jsonMatch<T = any>(matcher: (body: T) => void): this;
+  dataContains<T = any>(subset: Partial<T>): this;
+  dataMatch<T = any>(matcher: (body: T) => void): this;
 
   // --- Performance ---
   durationLessThan(ms: number): this;
@@ -155,8 +155,26 @@ interface CookieConfig {
   readonly initial?: Record<string, string>;
 }
 
+/**
+ * HTTP connection configuration object.
+ */
+interface HttpConnectionConfig {
+  /** Host name or IP address */
+  readonly host: string;
+
+  /** Port number */
+  readonly port?: number;
+
+  /** Protocol ("http" or "https") */
+  readonly protocol?: "http" | "https";
+
+  /** Base path (e.g., "/api/v1") */
+  readonly basePath?: string;
+}
+
 interface HttpClientConfig extends CommonOptions {
-  readonly baseUrl: string;
+  /** Server URL (string or config object) */
+  readonly url: string | HttpConnectionConfig;
   readonly headers?: Record<string, string>;
   readonly fetch?: typeof fetch;
 
@@ -268,7 +286,7 @@ function createHttpClient(config: HttpClientConfig): HttpClient;
 ```typescript
 import { createHttpClient, expectHttpResponse } from "@probitas/client-http";
 
-const http = createHttpClient({ baseUrl: "http://localhost:3000" });
+const http = createHttpClient({ url: "http://localhost:3000" });
 
 // GET - synchronous, repeatable body access
 const res = await http.get("/users/123");
@@ -285,8 +303,8 @@ expectHttpResponse(res2)
   .ok()
   .status(201)
   .contentType("application/json")
-  .jsonContains({ name: "John" })
-  .jsonMatch<User>((user) => {
+  .dataContains({ name: "John" })
+  .dataMatch<User>((user) => {
     if (!user.id) throw new Error("Missing id");
   });
 const created = res2.json<User>();
@@ -303,7 +321,7 @@ expectHttpResponse(res3).notOk().status(404);
 
 // Disable throwing at the client level
 const httpNoThrow = createHttpClient({
-  baseUrl: "http://localhost:3000",
+  url: "http://localhost:3000",
   throwOnError: false,
 });
 const res4 = await httpNoThrow.get("/error"); // no exception
@@ -313,7 +331,7 @@ if (!res4.ok) {
 
 // Automatic cookie management (enabled by default)
 const http2 = createHttpClient({
-  baseUrl: "http://localhost:3000",
+  url: "http://localhost:3000",
   cookies: { initial: { session: "initial-token" } },
 });
 
@@ -330,7 +348,12 @@ http2.clearCookies();
 
 // Disable cookies entirely
 const httpNoCookies = createHttpClient({
-  baseUrl: "http://localhost:3000",
+  url: "http://localhost:3000",
   cookies: { disabled: true },
+});
+
+// Using connection config object
+const httpWithConfig = createHttpClient({
+  url: { host: "localhost", port: 3000, protocol: "http" },
 });
 ```

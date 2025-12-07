@@ -1,6 +1,7 @@
 import type {
   GraphqlClient,
   GraphqlClientConfig,
+  GraphqlConnectionConfig,
   GraphqlErrorItem,
   GraphqlOptions,
   GraphqlResponse,
@@ -40,6 +41,21 @@ function mergeHeaders(
 }
 
 /**
+ * Resolve endpoint URL from string or connection config.
+ */
+function resolveEndpointUrl(url: string | GraphqlConnectionConfig): string {
+  if (typeof url === "string") {
+    return url;
+  }
+  const protocol = url.protocol ?? "http";
+  const host = url.host ?? "localhost";
+  const port = url.port;
+  const path = url.path ?? "/graphql";
+  const portSuffix = port ? `:${port}` : "";
+  return `${protocol}://${host}${portSuffix}${path}`;
+}
+
+/**
  * GraphQL response structure from server.
  */
 interface GraphqlResponseBody<T> {
@@ -53,13 +69,15 @@ interface GraphqlResponseBody<T> {
  */
 class GraphqlClientImpl implements GraphqlClient {
   readonly config: GraphqlClientConfig;
+  readonly #endpointUrl: string;
 
   constructor(config: GraphqlClientConfig) {
     this.config = config;
+    this.#endpointUrl = resolveEndpointUrl(config.url);
 
     // Log client creation
     logger.debug("GraphQL client created", {
-      endpoint: config.endpoint,
+      endpoint: this.#endpointUrl,
       wsEndpoint: config.wsEndpoint,
       headersCount: config.headers ? Object.keys(config.headers).length : 0,
     });
@@ -84,15 +102,6 @@ class GraphqlClientImpl implements GraphqlClient {
   }
 
   // deno-lint-ignore no-explicit-any
-  mutate<TData = any, TVariables = Record<string, any>>(
-    mutation: string,
-    variables?: TVariables,
-    options?: GraphqlOptions,
-  ): Promise<GraphqlResponse<TData>> {
-    return this.mutation<TData, TVariables>(mutation, variables, options);
-  }
-
-  // deno-lint-ignore no-explicit-any
   async execute<TData = any, TVariables = Record<string, any>>(
     document: string,
     variables?: TVariables,
@@ -112,7 +121,7 @@ class GraphqlClientImpl implements GraphqlClient {
 
     // Log request start
     logger.debug("GraphQL request starting", {
-      endpoint: this.config.endpoint,
+      endpoint: this.#endpointUrl,
       operationName: options?.operationName,
       hasVariables: variables !== undefined,
       variableKeys: variables ? Object.keys(variables) : [],
@@ -130,7 +139,7 @@ class GraphqlClientImpl implements GraphqlClient {
 
     let rawResponse: Response;
     try {
-      rawResponse = await fetchFn(this.config.endpoint, {
+      rawResponse = await fetchFn(this.#endpointUrl, {
         method: "POST",
         headers,
         body,
@@ -139,7 +148,7 @@ class GraphqlClientImpl implements GraphqlClient {
     } catch (error) {
       const duration = performance.now() - startTime;
       logger.error("GraphQL network request failed", {
-        endpoint: this.config.endpoint,
+        endpoint: this.#endpointUrl,
         operationName: options?.operationName,
         duration: `${duration.toFixed(2)}ms`,
         error: error instanceof Error ? error.message : String(error),
@@ -157,7 +166,7 @@ class GraphqlClientImpl implements GraphqlClient {
     if (!rawResponse.ok) {
       await rawResponse.body?.cancel();
       logger.warn("GraphQL network error response", {
-        endpoint: this.config.endpoint,
+        endpoint: this.#endpointUrl,
         operationName: options?.operationName,
         status: rawResponse.status,
         statusText: rawResponse.statusText,
@@ -173,7 +182,7 @@ class GraphqlClientImpl implements GraphqlClient {
       responseBody = await rawResponse.json();
     } catch (error) {
       logger.error("GraphQL response parsing failed", {
-        endpoint: this.config.endpoint,
+        endpoint: this.#endpointUrl,
         operationName: options?.operationName,
         duration: `${duration.toFixed(2)}ms`,
         error: error instanceof Error ? error.message : String(error),
@@ -194,7 +203,7 @@ class GraphqlClientImpl implements GraphqlClient {
 
     // Log response
     logger.debug("GraphQL response received", {
-      endpoint: this.config.endpoint,
+      endpoint: this.#endpointUrl,
       operationName: options?.operationName,
       status: rawResponse.status,
       duration: `${duration.toFixed(2)}ms`,
@@ -214,7 +223,7 @@ class GraphqlClientImpl implements GraphqlClient {
 
     if (!response.ok && shouldThrow && response.errors) {
       logger.warn("GraphQL execution error", {
-        endpoint: this.config.endpoint,
+        endpoint: this.#endpointUrl,
         operationName: options?.operationName,
         duration: `${duration.toFixed(2)}ms`,
         errorCount: response.errors.length,
@@ -491,13 +500,13 @@ class GraphqlClientImpl implements GraphqlClient {
  * The client provides methods for executing GraphQL queries, mutations,
  * and subscriptions with automatic error handling and response parsing.
  *
- * @param config - Client configuration including endpoint URL and default options
+ * @param config - Client configuration including URL and default options
  * @returns A new GraphQL client instance
  *
  * @example Basic query
  * ```ts
  * const client = createGraphqlClient({
- *   endpoint: "http://localhost:4000/graphql",
+ *   url: "http://localhost:4000/graphql",
  * });
  *
  * const response = await client.query(`
@@ -508,6 +517,13 @@ class GraphqlClientImpl implements GraphqlClient {
  *
  * console.log(response.data());
  * await client.close();
+ * ```
+ *
+ * @example Using connection config object
+ * ```ts
+ * const client = createGraphqlClient({
+ *   url: { host: "api.example.com", port: 443, protocol: "https" },
+ * });
  * ```
  *
  * @example Mutation with error handling
@@ -526,7 +542,7 @@ class GraphqlClientImpl implements GraphqlClient {
  * @example Using `await using` for automatic cleanup
  * ```ts
  * await using client = createGraphqlClient({
- *   endpoint: "http://localhost:4000/graphql",
+ *   url: "http://localhost:4000/graphql",
  * });
  * const response = await client.query(`{ __typename }`);
  * // Client automatically closed when scope exits

@@ -81,6 +81,37 @@ export interface MySqlClient extends AsyncDisposable {
 }
 
 /**
+ * Resolve a connection URL from string or config object.
+ * If a string is provided, it is returned as-is.
+ * If a config object is provided, a MySQL connection URL is constructed.
+ */
+function resolveConnectionUrl(url: string | MySqlConnectionConfig): string {
+  if (typeof url === "string") {
+    return url;
+  }
+  const host = url.host ?? "localhost";
+  const port = url.port ?? 3306;
+
+  let connectionUrl = `mysql://`;
+
+  if (url.username && url.password) {
+    connectionUrl += `${encodeURIComponent(url.username)}:${
+      encodeURIComponent(url.password)
+    }@`;
+  } else if (url.username) {
+    connectionUrl += `${encodeURIComponent(url.username)}@`;
+  }
+
+  connectionUrl += `${host}:${port}`;
+
+  if (url.database) {
+    connectionUrl += `/${url.database}`;
+  }
+
+  return connectionUrl;
+}
+
+/**
  * Parse a MySQL connection URL into connection config.
  * Supports format: mysql://user:password@host:port/database
  */
@@ -93,7 +124,7 @@ function parseConnectionUrl(url: string): MySqlConnectionConfig {
   return {
     host: parsed.hostname,
     port: parsed.port ? parseInt(parsed.port, 10) : undefined,
-    user: decodeURIComponent(parsed.username),
+    username: decodeURIComponent(parsed.username),
     password: parsed.password ? decodeURIComponent(parsed.password) : undefined,
     database: parsed.pathname.slice(1), // Remove leading "/"
   };
@@ -108,10 +139,10 @@ function parseConnectionUrl(url: string): MySqlConnectionConfig {
  * @param config - MySQL client configuration
  * @returns A promise resolving to a new MySQL client instance
  *
- * @example Using connection URL
+ * @example Using URL string
  * ```ts
  * const client = await createMySqlClient({
- *   connection: "mysql://user:password@localhost:3306/testdb",
+ *   url: "mysql://user:password@localhost:3306/testdb",
  * });
  *
  * const result = await client.query<{ id: number; name: string }>(
@@ -126,10 +157,10 @@ function parseConnectionUrl(url: string): MySqlConnectionConfig {
  * @example Using connection config object
  * ```ts
  * const client = await createMySqlClient({
- *   connection: {
+ *   url: {
  *     host: "localhost",
  *     port: 3306,
- *     user: "root",
+ *     username: "root",
  *     password: "password",
  *     database: "testdb",
  *   },
@@ -148,7 +179,7 @@ function parseConnectionUrl(url: string): MySqlConnectionConfig {
  * @example Using `await using` for automatic cleanup
  * ```ts
  * await using client = await createMySqlClient({
- *   connection: "mysql://localhost:3306/testdb",
+ *   url: "mysql://localhost:3306/testdb",
  * });
  *
  * const result = await client.query("SELECT 1");
@@ -158,32 +189,39 @@ function parseConnectionUrl(url: string): MySqlConnectionConfig {
 export async function createMySqlClient(
   config: MySqlClientConfig,
 ): Promise<MySqlClient> {
-  const connConfig = typeof config.connection === "string"
-    ? parseConnectionUrl(config.connection)
-    : config.connection;
+  // Resolve URL to connection config
+  const connectionUrl = resolveConnectionUrl(config.url);
+  const connConfig = parseConnectionUrl(connectionUrl);
+
+  // Get charset from config object if provided
+  const charset = typeof config.url === "object"
+    ? config.url.charset
+    : undefined;
+
+  // Get TLS from config object if provided
+  const tls = typeof config.url === "object" ? config.url.tls : undefined;
 
   const poolConfig: mysql.PoolOptions = {
-    host: connConfig.host,
+    host: connConfig.host ?? "localhost",
     port: connConfig.port ?? 3306,
-    user: connConfig.user,
+    user: connConfig.username,
     password: connConfig.password,
     database: connConfig.database,
-    charset: config.charset,
+    charset,
     timezone: config.timezone,
     waitForConnections: config.pool?.waitForConnections ?? true,
     connectionLimit: config.pool?.connectionLimit ?? 10,
     queueLimit: config.pool?.queueLimit ?? 0,
     idleTimeout: config.pool?.idleTimeout ?? 10000,
     enableKeepAlive: true,
-    multipleStatements: connConfig.multipleStatements ?? false,
   };
 
-  if (connConfig.tls) {
+  if (tls) {
     poolConfig.ssl = {
-      ca: connConfig.tls.ca,
-      cert: connConfig.tls.cert,
-      key: connConfig.tls.key,
-      rejectUnauthorized: connConfig.tls.rejectUnauthorized ?? true,
+      ca: tls.ca,
+      cert: tls.cert,
+      key: tls.key,
+      rejectUnauthorized: tls.rejectUnauthorized ?? true,
     };
   }
 
@@ -211,18 +249,18 @@ class MySqlClientImpl implements MySqlClient {
     this.#pool = pool;
 
     // Log client creation with sanitized connection info
-    const connInfo = typeof config.connection === "string"
-      ? { connection: "[connection-url]" }
+    const connInfo = typeof config.url === "string"
+      ? { url: "[connection-url]" }
       : {
-        host: config.connection.host,
-        port: config.connection.port ?? 3306,
-        database: config.connection.database,
-        user: config.connection.user,
+        host: config.url.host ?? "localhost",
+        port: config.url.port ?? 3306,
+        database: config.url.database,
+        username: config.url.username,
       };
 
     logger.debug("MySQL client created", {
       ...connInfo,
-      charset: config.charset,
+      charset: typeof config.url === "object" ? config.url.charset : undefined,
       timezone: config.timezone,
       connectionLimit: config.pool?.connectionLimit ?? 10,
     });

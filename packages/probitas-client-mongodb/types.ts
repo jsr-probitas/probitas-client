@@ -1,4 +1,26 @@
-import type { CommonOptions } from "@probitas/client";
+import type { CommonConnectionConfig, CommonOptions } from "@probitas/client";
+
+/**
+ * MongoDB connection configuration.
+ *
+ * Extends CommonConnectionConfig with MongoDB-specific options.
+ */
+export interface MongoConnectionConfig extends CommonConnectionConfig {
+  /**
+   * Database name to connect to.
+   */
+  readonly database?: string;
+
+  /**
+   * Authentication database.
+   */
+  readonly authSource?: string;
+
+  /**
+   * Replica set name.
+   */
+  readonly replicaSet?: string;
+}
 
 /**
  * MongoDB document type
@@ -135,10 +157,39 @@ export interface MongoUpdateOptions extends CommonOptions {
 }
 
 /**
- * MongoDB client configuration
+ * MongoDB client configuration.
+ *
+ * @example Using a connection string
+ * ```ts
+ * const config: MongoClientConfig = {
+ *   url: "mongodb://localhost:27017",
+ *   database: "testdb",
+ * };
+ * ```
+ *
+ * @example Using a configuration object
+ * ```ts
+ * const config: MongoClientConfig = {
+ *   url: {
+ *     host: "localhost",
+ *     port: 27017,
+ *     username: "admin",
+ *     password: "secret",
+ *     authSource: "admin",
+ *   },
+ *   database: "testdb",
+ * };
+ * ```
  */
 export interface MongoClientConfig extends CommonOptions {
-  readonly uri: string;
+  /**
+   * MongoDB connection URL or configuration object.
+   */
+  readonly url: string | MongoConnectionConfig;
+
+  /**
+   * Database name to connect to.
+   */
   readonly database: string;
 }
 

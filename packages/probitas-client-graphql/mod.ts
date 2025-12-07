@@ -29,7 +29,7 @@
  *   outdent,
  * } from "@probitas/client-graphql";
  *
- * const client = createGraphqlClient({ endpoint: "http://localhost:4000/graphql" });
+ * const client = createGraphqlClient({ url: "http://localhost:4000/graphql" });
  *
  * // Query with variables
  * const res = await client.query(outdent`
@@ -59,7 +59,7 @@
  * ## Using with `using` Statement
  *
  * ```ts
- * await using client = createGraphqlClient({ endpoint: "http://localhost:4000/graphql" });
+ * await using client = createGraphqlClient({ url: "http://localhost:4000/graphql" });
  *
  * const res = await client.query(`{ __typename }`);
  * expectGraphqlResponse(res).ok();

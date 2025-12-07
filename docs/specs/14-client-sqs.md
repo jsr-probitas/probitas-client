@@ -184,11 +184,27 @@ function expectSqsResult(result: SqsResult); // returns the expectation matching
 ## SqsClient
 
 ```typescript
+/**
+ * SQS connection configuration object.
+ */
+interface SqsConnectionConfig {
+  /** Host name or IP address */
+  readonly host: string;
+
+  /** Port number */
+  readonly port?: number;
+
+  /** Protocol ("http" or "https") */
+  readonly protocol?: "http" | "https";
+}
+
 interface SqsClientConfig extends CommonOptions {
   readonly region: string;
   readonly credentials?: { accessKeyId: string; secretAccessKey: string };
   readonly queueUrl: string;
-  readonly endpoint?: string; // LocalStack
+
+  /** Custom endpoint URL (for LocalStack, etc.) */
+  readonly url?: string | SqsConnectionConfig;
 }
 
 interface SqsClient extends AsyncDisposable {
@@ -247,7 +263,7 @@ import {
 const sqs = await createSqsClient({
   region: "ap-northeast-1",
   queueUrl: "https://sqs.ap-northeast-1.amazonaws.com/123456789/my-queue",
-  endpoint: "http://localhost:4566", // LocalStack
+  url: "http://localhost:4566", // LocalStack
 });
 
 // Send
@@ -268,6 +284,13 @@ for (const msg of receiveResult.messages) {
   console.log(JSON.parse(msg.body));
   await sqs.delete(msg.receiptHandle);
 }
+
+// Using connection config object for LocalStack
+const sqsWithConfig = await createSqsClient({
+  region: "ap-northeast-1",
+  queueUrl: "http://localhost:4566/000000000000/my-queue",
+  url: { host: "localhost", port: 4566, protocol: "http" },
+});
 
 await sqs.close();
 ```

@@ -19,14 +19,14 @@ function createMockFetch(
 Deno.test("createHttpClient", async (t) => {
   await t.step("returns HttpClient with config", () => {
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
     });
-    assertEquals(client.config.baseUrl, "http://localhost:3000");
+    assertEquals(client.config.url, "http://localhost:3000");
   });
 
   await t.step("implements AsyncDisposable", async () => {
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
     });
     // Check that client has Symbol.asyncDispose
     assertEquals(typeof client[Symbol.asyncDispose], "function");
@@ -43,7 +43,7 @@ Deno.test("HttpClient.get", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -63,7 +63,7 @@ Deno.test("HttpClient.get", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -72,7 +72,7 @@ Deno.test("HttpClient.get", async (t) => {
 
     assertEquals(response.ok, true);
     assertEquals(response.status, 200);
-    assertEquals(response.json(), { id: 1, name: "John" });
+    assertEquals(response.data(), { id: 1, name: "John" });
   });
 
   await t.step("includes query parameters", async () => {
@@ -83,7 +83,7 @@ Deno.test("HttpClient.get", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -106,7 +106,7 @@ Deno.test("HttpClient.get", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -127,7 +127,7 @@ Deno.test("HttpClient.get", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       headers: { Authorization: "Bearer token123", "X-Custom": "from-config" },
       fetch: mockFetch,
     });
@@ -155,7 +155,7 @@ Deno.test("HttpClient.post", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -179,7 +179,7 @@ Deno.test("HttpClient.post", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -199,7 +199,7 @@ Deno.test("HttpClient.post", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -220,7 +220,7 @@ Deno.test("HttpClient.post", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -243,7 +243,7 @@ Deno.test("HttpClient.put", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -264,7 +264,7 @@ Deno.test("HttpClient.patch", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -285,7 +285,7 @@ Deno.test("HttpClient.delete", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -306,7 +306,7 @@ Deno.test("HttpClient.request", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -325,7 +325,7 @@ Deno.test("HttpClient.request", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -348,7 +348,7 @@ Deno.test("HttpClient error handling", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -369,7 +369,7 @@ Deno.test("HttpClient response duration", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -388,7 +388,7 @@ Deno.test("HttpClient throwOnError option", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -407,7 +407,7 @@ Deno.test("HttpClient throwOnError option", async (t) => {
       });
 
       const client = createHttpClient({
-        baseUrl: "http://localhost:3000",
+        url: "http://localhost:3000",
         fetch: mockFetch,
       });
 
@@ -431,7 +431,7 @@ Deno.test("HttpClient throwOnError option", async (t) => {
       });
 
       const client = createHttpClient({
-        baseUrl: "http://localhost:3000",
+        url: "http://localhost:3000",
         fetch: mockFetch,
         throwOnError: false,
       });
@@ -452,7 +452,7 @@ Deno.test("HttpClient throwOnError option", async (t) => {
       });
 
       const client = createHttpClient({
-        baseUrl: "http://localhost:3000",
+        url: "http://localhost:3000",
         fetch: mockFetch,
         throwOnError: false,
       });
@@ -473,7 +473,7 @@ Deno.test("HttpClient throwOnError option", async (t) => {
       });
 
       const client = createHttpClient({
-        baseUrl: "http://localhost:3000",
+        url: "http://localhost:3000",
         fetch: mockFetch,
         throwOnError: true,
       });
@@ -492,7 +492,7 @@ Deno.test("HttpClient throwOnError option", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -510,7 +510,7 @@ Deno.test("HttpClient throwOnError option", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -526,14 +526,14 @@ Deno.test("HttpClient throwOnError option", async (t) => {
 Deno.test("HttpClient cookie handling", async (t) => {
   await t.step("getCookies returns empty object when no cookies set", () => {
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
     });
     assertEquals(client.getCookies(), {});
   });
 
   await t.step("getCookies returns initial cookies", () => {
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       cookies: { initial: { foo: "bar", baz: "qux" } },
     });
     assertEquals(client.getCookies(), { foo: "bar", baz: "qux" });
@@ -541,7 +541,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
 
   await t.step("setCookie throws when cookies are disabled", () => {
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       cookies: { disabled: true },
     });
     assertThrows(
@@ -553,7 +553,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
 
   await t.step("setCookie adds cookie (enabled by default)", () => {
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
     });
     client.setCookie("session", "abc123");
     assertEquals(client.getCookies(), { session: "abc123" });
@@ -561,7 +561,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
 
   await t.step("setCookie overwrites existing cookie", () => {
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       cookies: { initial: { session: "old" } },
     });
     client.setCookie("session", "new");
@@ -570,7 +570,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
 
   await t.step("clearCookies removes all cookies", () => {
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       cookies: { initial: { a: "1", b: "2" } },
     });
     client.clearCookies();
@@ -585,7 +585,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
       cookies: { initial: { session: "abc", user: "john" } },
     });
@@ -606,7 +606,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
       cookies: { disabled: true },
     });
@@ -625,7 +625,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -644,7 +644,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 
@@ -664,7 +664,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
       });
 
       const client = createHttpClient({
-        baseUrl: "http://localhost:3000",
+        url: "http://localhost:3000",
         fetch: mockFetch,
       });
 
@@ -683,7 +683,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
       cookies: { disabled: true },
     });
@@ -710,7 +710,7 @@ Deno.test("HttpClient cookie handling", async (t) => {
     });
 
     const client = createHttpClient({
-      baseUrl: "http://localhost:3000",
+      url: "http://localhost:3000",
       fetch: mockFetch,
     });
 

@@ -34,6 +34,33 @@ interface RetryOptions {
 }
 ```
 
+## CommonConnectionConfig
+
+Base interface for connection configuration objects. Each client provides its
+own `XxxConnectionConfig` type that extends this pattern.
+
+```typescript
+/**
+ * Common connection configuration fields.
+ * Client-specific configs may add additional fields.
+ */
+interface CommonConnectionConfig {
+  /** Host name or IP address */
+  readonly host: string;
+
+  /** Port number */
+  readonly port?: number;
+
+  /** Protocol (client-specific, e.g., "http", "https", "amqp", "amqps") */
+  readonly protocol?: string;
+}
+```
+
+All network clients use the unified `url` option that accepts either:
+
+- A string URL (e.g., `"http://localhost:3000"`)
+- A connection config object (e.g., `{ host: "localhost", port: 3000 }`)
+
 ## ClientError
 
 ```typescript

@@ -1,4 +1,4 @@
-import type { CommonOptions } from "@probitas/client";
+import type { CommonConnectionConfig, CommonOptions } from "@probitas/client";
 
 /**
  * HTTP response with pre-loaded body for synchronous access.
@@ -46,7 +46,7 @@ export interface HttpResponse {
    * @template T - defaults to any for test convenience
    */
   // deno-lint-ignore no-explicit-any
-  json<T = any>(): T | null;
+  data<T = any>(): T | null;
 
   // --- Additional properties ---
 
@@ -122,11 +122,43 @@ export interface CookieConfig {
 }
 
 /**
+ * HTTP connection configuration.
+ *
+ * Extends CommonConnectionConfig with HTTP-specific options.
+ */
+export interface HttpConnectionConfig extends CommonConnectionConfig {
+  /**
+   * Protocol to use.
+   * @default "http"
+   */
+  readonly protocol?: "http" | "https";
+
+  /**
+   * Base path prefix for all requests.
+   * @default ""
+   */
+  readonly path?: string;
+}
+
+/**
  * HTTP client configuration.
  */
 export interface HttpClientConfig extends CommonOptions {
-  /** Base URL for all requests */
-  readonly baseUrl: string;
+  /**
+   * Base URL for all requests.
+   *
+   * Can be a URL string or a connection configuration object.
+   *
+   * @example
+   * ```ts
+   * // String URL
+   * { url: "http://localhost:3000" }
+   *
+   * // Connection config object
+   * { url: { host: "api.example.com", port: 443, protocol: "https" } }
+   * ```
+   */
+  readonly url: string | HttpConnectionConfig;
 
   /** Default headers for all requests */
   readonly headers?: Record<string, string>;

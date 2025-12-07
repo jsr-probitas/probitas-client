@@ -1,4 +1,28 @@
-import type { CommonOptions } from "@probitas/client";
+import type { CommonConnectionConfig, CommonOptions } from "@probitas/client";
+
+/**
+ * SQS connection configuration.
+ *
+ * Extends CommonConnectionConfig with SQS-specific options.
+ */
+export interface SqsConnectionConfig extends CommonConnectionConfig {
+  /**
+   * Protocol to use.
+   * @default "https"
+   */
+  readonly protocol?: "http" | "https";
+
+  /**
+   * Custom path (for LocalStack or custom endpoints).
+   * @default ""
+   */
+  readonly path?: string;
+
+  /**
+   * AWS region (required for AWS, optional for LocalStack).
+   */
+  readonly region?: string;
+}
 
 /**
  * SQS client configuration.
@@ -13,8 +37,12 @@ export interface SqsClientConfig extends CommonOptions {
   };
   /** SQS queue URL (optional - can be set later or used with ensureQueue) */
   readonly queueUrl?: string;
-  /** SQS endpoint URL (e.g., http://localhost:4566 for LocalStack) */
-  readonly endpoint?: string;
+  /**
+   * SQS endpoint URL (e.g., "http://localhost:4566" for LocalStack).
+   * Can be a string URL or a connection config object.
+   * Optional for real AWS (uses default endpoint), required for LocalStack.
+   */
+  readonly url?: string | SqsConnectionConfig;
 }
 
 /**

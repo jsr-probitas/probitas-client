@@ -27,6 +27,7 @@ import { ConnectionError } from "@probitas/client";
 import type {
   ConnectProtocol,
   ConnectRpcClientConfig,
+  ConnectRpcConnectionConfig,
   ConnectRpcOptions,
   HttpVersion,
   MethodInfo,
@@ -152,7 +153,29 @@ export interface ConnectRpcClient extends AsyncDisposable {
 }
 
 /**
- * Create base URL from address and TLS config.
+ * Resolve URL from string or connection config to a full URL string.
+ *
+ * @param url - URL string or connection configuration object
+ * @returns Full URL string
+ */
+function resolveAddress(url: string | ConnectRpcConnectionConfig): string {
+  if (typeof url === "string") {
+    // If it looks like a URL (starts with http:// or https://), use as-is
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+    // Otherwise assume it's host:port format and add http://
+    return `http://${url}`;
+  }
+  const protocol = url.protocol ?? "http";
+  const host = url.host ?? "localhost";
+  const port = url.port ?? 50051;
+  const path = url.path ?? "";
+  return `${protocol}://${host}:${port}${path}`;
+}
+
+/**
+ * Create base URL from resolved address and TLS config.
  */
 function createBaseUrl(address: string, tls?: TlsConfig): string {
   // If address already has protocol, use as-is
@@ -228,13 +251,13 @@ function toMethodInfo(
  * The client supports multiple protocols (Connect, gRPC, gRPC-Web) and provides
  * Server Reflection for runtime service discovery without compile-time code generation.
  *
- * @param config - Client configuration including server address and protocol options
+ * @param config - Client configuration including server URL and protocol options
  * @returns A new ConnectRPC client instance
  *
  * @example Basic usage with reflection
  * ```ts
  * const client = createConnectRpcClient({
- *   address: "localhost:50051",
+ *   url: "http://localhost:50051",
  * });
  *
  * // Call a method
@@ -251,7 +274,7 @@ function toMethodInfo(
  * @example Service discovery with reflection
  * ```ts
  * const client = createConnectRpcClient({
- *   address: "localhost:50051",
+ *   url: "http://localhost:50051",
  * });
  *
  * // Discover available services
@@ -269,27 +292,38 @@ function toMethodInfo(
  * ```ts
  * // Connect protocol (HTTP/1.1 or HTTP/2)
  * const connectClient = createConnectRpcClient({
- *   address: "localhost:8080",
+ *   url: "http://localhost:8080",
  *   protocol: "connect",
  * });
  *
  * // gRPC protocol (HTTP/2 with binary protobuf)
  * const grpcClient = createConnectRpcClient({
- *   address: "localhost:50051",
+ *   url: "http://localhost:50051",
  *   protocol: "grpc",
  * });
  *
  * // gRPC-Web protocol (for browser compatibility)
  * const grpcWebClient = createConnectRpcClient({
- *   address: "localhost:8080",
+ *   url: "http://localhost:8080",
  *   protocol: "grpc-web",
+ * });
+ * ```
+ *
+ * @example Using connection config object
+ * ```ts
+ * const client = createConnectRpcClient({
+ *   url: {
+ *     host: "grpc.example.com",
+ *     port: 443,
+ *     protocol: "https",
+ *   },
  * });
  * ```
  *
  * @example Using `await using` for automatic cleanup
  * ```ts
  * await using client = createConnectRpcClient({
- *   address: "localhost:50051",
+ *   url: "http://localhost:50051",
  * });
  *
  * const res = await client.call("echo.EchoService", "echo", { message: "test" });
@@ -300,21 +334,24 @@ export function createConnectRpcClient(
   config: ConnectRpcClientConfig,
 ): ConnectRpcClient {
   const {
-    address,
+    url,
     protocol = "grpc",
     httpVersion = "2",
     tls,
     schema = "reflection",
   } = config;
 
+  // Resolve URL from string or connection config
+  const resolvedUrl = resolveAddress(url);
+
   logger.debug("Creating ConnectRPC client", {
-    address,
+    url: resolvedUrl,
     protocol,
     httpVersion,
     schemaType: typeof schema === "string" ? "reflection" : "FileDescriptorSet",
   });
 
-  const baseUrl = createBaseUrl(address, tls);
+  const baseUrl = createBaseUrl(resolvedUrl, tls);
 
   // Create Http2SessionManager for proper connection lifecycle management.
   //

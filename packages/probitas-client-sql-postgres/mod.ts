@@ -26,7 +26,7 @@
  * import { createPostgresClient, expectSqlQueryResult } from "@probitas/client-sql-postgres";
  *
  * const client = await createPostgresClient({
- *   connection: "postgres://user:pass@localhost:5432/mydb",
+ *   url: "postgres://user:pass@localhost:5432/mydb",
  * });
  *
  * // Query with parameters
@@ -76,7 +76,7 @@
  *
  * ```ts
  * await using client = await createPostgresClient({
- *   connection: "postgres://localhost:5432/testdb",
+ *   url: "postgres://localhost:5432/testdb",
  * });
  *
  * const result = await client.query("SELECT 1 as n");

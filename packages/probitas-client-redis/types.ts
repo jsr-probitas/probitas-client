@@ -1,4 +1,4 @@
-import type { CommonOptions } from "@probitas/client";
+import type { CommonConnectionConfig, CommonOptions } from "@probitas/client";
 
 /**
  * Redis operation result (internal base - not exported directly)
@@ -89,19 +89,38 @@ export interface RedisMessage {
 }
 
 /**
- * Redis client configuration
+ * Redis connection configuration.
+ *
+ * Extends CommonConnectionConfig with Redis-specific options.
+ */
+export interface RedisConnectionConfig extends CommonConnectionConfig {
+  /**
+   * Database index.
+   * @default 0
+   */
+  readonly db?: number;
+}
+
+/**
+ * Redis client configuration.
  */
 export interface RedisClientConfig extends CommonOptions {
-  /** Redis URL (redis://user:password@host:port/db) */
-  readonly url?: string;
-  /** Redis host */
-  readonly host?: string;
-  /** Redis port */
-  readonly port?: number;
-  /** Redis password */
-  readonly password?: string;
-  /** Database number */
-  readonly db?: number;
+  /**
+   * Redis connection URL or configuration object.
+   *
+   * @example
+   * ```ts
+   * // String URL
+   * { url: "redis://localhost:6379" }
+   *
+   * // With password
+   * { url: "redis://:password@localhost:6379/0" }
+   *
+   * // Config object
+   * { url: { port: 6379, password: "secret", db: 1 } }
+   * ```
+   */
+  readonly url: string | RedisConnectionConfig;
 }
 
 /**

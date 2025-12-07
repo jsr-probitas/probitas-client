@@ -14,14 +14,14 @@ function createMockFetch(
 Deno.test("createGraphqlClient", async (t) => {
   await t.step("returns GraphqlClient with config", () => {
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
     });
-    assertEquals(client.config.endpoint, "http://localhost:4000/graphql");
+    assertEquals(client.config.url, "http://localhost:4000/graphql");
   });
 
   await t.step("implements AsyncDisposable", async () => {
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
     });
     assertEquals(typeof client[Symbol.asyncDispose], "function");
     await client.close();
@@ -40,7 +40,7 @@ Deno.test("GraphqlClient.query", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -61,7 +61,7 @@ Deno.test("GraphqlClient.query", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -82,7 +82,7 @@ Deno.test("GraphqlClient.query", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -105,7 +105,7 @@ Deno.test("GraphqlClient.query", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -130,7 +130,7 @@ Deno.test("GraphqlClient.query", async (t) => {
       });
 
       const client = createGraphqlClient({
-        endpoint: "http://localhost:4000/graphql",
+        url: "http://localhost:4000/graphql",
         fetch: mockFetch,
       });
 
@@ -157,7 +157,7 @@ Deno.test("GraphqlClient.query", async (t) => {
       });
 
       const client = createGraphqlClient({
-        endpoint: "http://localhost:4000/graphql",
+        url: "http://localhost:4000/graphql",
         fetch: mockFetch,
         throwOnError: false,
       });
@@ -184,7 +184,7 @@ Deno.test("GraphqlClient.query", async (t) => {
       });
 
       const client = createGraphqlClient({
-        endpoint: "http://localhost:4000/graphql",
+        url: "http://localhost:4000/graphql",
         fetch: mockFetch,
       });
 
@@ -210,7 +210,7 @@ Deno.test("GraphqlClient.query", async (t) => {
       });
 
       const client = createGraphqlClient({
-        endpoint: "http://localhost:4000/graphql",
+        url: "http://localhost:4000/graphql",
         fetch: mockFetch,
         throwOnError: false,
       });
@@ -233,7 +233,7 @@ Deno.test("GraphqlClient.mutation", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -249,32 +249,6 @@ Deno.test("GraphqlClient.mutation", async (t) => {
   });
 });
 
-Deno.test("GraphqlClient.mutate", async (t) => {
-  await t.step("is an alias for mutation", async () => {
-    let capturedRequest: Request | undefined;
-    const mockFetch = createMockFetch((req) => {
-      capturedRequest = req;
-      return new Response(JSON.stringify({ data: { createUser: { id: 1 } } }));
-    });
-
-    const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
-      fetch: mockFetch,
-    });
-
-    const response = await client.mutate(
-      "mutation CreateUser($name: String!) { createUser(name: $name) { id } }",
-      { name: "Jane" },
-    );
-    await client.close();
-
-    const body = await capturedRequest?.json();
-    assertEquals(body.query.includes("mutation"), true);
-    assertEquals(body.variables, { name: "Jane" });
-    assertEquals(response.data(), { createUser: { id: 1 } });
-  });
-});
-
 Deno.test("GraphqlClient.execute", async (t) => {
   await t.step("works for queries", async () => {
     const mockFetch = createMockFetch(() => {
@@ -282,7 +256,7 @@ Deno.test("GraphqlClient.execute", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -298,7 +272,7 @@ Deno.test("GraphqlClient.execute", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -318,7 +292,7 @@ Deno.test("GraphqlClient headers", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -339,7 +313,7 @@ Deno.test("GraphqlClient headers", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       headers: { Authorization: "Bearer token" },
       fetch: mockFetch,
     });
@@ -365,7 +339,7 @@ Deno.test("GraphqlClient headers", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       headers: { Authorization: "Bearer old-token" },
       fetch: mockFetch,
     });
@@ -389,7 +363,7 @@ Deno.test("GraphqlClient response", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -406,7 +380,7 @@ Deno.test("GraphqlClient response", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -427,7 +401,7 @@ Deno.test("GraphqlClient response", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -443,7 +417,7 @@ Deno.test("GraphqlClient response", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -461,7 +435,7 @@ Deno.test("GraphqlClient network errors", async (t) => {
     });
 
     const client = createGraphqlClient({
-      endpoint: "http://localhost:4000/graphql",
+      url: "http://localhost:4000/graphql",
       fetch: mockFetch,
     });
 
@@ -485,7 +459,7 @@ Deno.test("GraphqlClient network errors", async (t) => {
       });
 
       const client = createGraphqlClient({
-        endpoint: "http://localhost:4000/graphql",
+        url: "http://localhost:4000/graphql",
         fetch: mockFetch,
       });
 
@@ -506,7 +480,7 @@ Deno.test("GraphqlClient network errors", async (t) => {
       });
 
       const client = createGraphqlClient({
-        endpoint: "http://localhost:4000/graphql",
+        url: "http://localhost:4000/graphql",
         fetch: mockFetch,
       });
 
@@ -534,7 +508,7 @@ Deno.test("GraphqlClient partial data with errors", async (t) => {
       });
 
       const client = createGraphqlClient({
-        endpoint: "http://localhost:4000/graphql",
+        url: "http://localhost:4000/graphql",
         fetch: mockFetch,
         throwOnError: false,
       });
@@ -554,7 +528,7 @@ Deno.test("GraphqlClient.subscribe", async (t) => {
     "throws GraphqlNetworkError when wsEndpoint is not configured",
     async () => {
       const client = createGraphqlClient({
-        endpoint: "http://localhost:4000/graphql",
+        url: "http://localhost:4000/graphql",
       });
 
       const iterator = client.subscribe("subscription { newMessage { id } }");

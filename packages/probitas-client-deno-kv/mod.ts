@@ -35,7 +35,7 @@
  *
  * // Get a value with type
  * const getResult = await kv.get<{ name: string; age: number }>(["users", "1"]);
- * expectDenoKvResult(getResult).ok().hasContent().valueContains({ name: "Alice" });
+ * expectDenoKvResult(getResult).ok().hasContent().dataContains({ name: "Alice" });
  *
  * // List entries by prefix
  * const listResult = await kv.list<{ name: string }>({ prefix: ["users"] });

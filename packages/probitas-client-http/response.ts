@@ -63,7 +63,7 @@ class HttpResponseImpl implements HttpResponse {
   }
 
   // deno-lint-ignore no-explicit-any
-  json<T = any>(): T | null {
+  data<T = any>(): T | null {
     if (this.body === null) {
       return null;
     }

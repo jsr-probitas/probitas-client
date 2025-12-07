@@ -2,6 +2,7 @@ import type {
   BodyInit,
   HttpClient,
   HttpClientConfig,
+  HttpConnectionConfig,
   HttpOptions,
   HttpResponse,
   QueryValue,
@@ -41,6 +42,23 @@ function formatBodyPreview(body: unknown): string | undefined {
   } catch {
     return "<unserializable>";
   }
+}
+
+/**
+ * Resolve URL from string or HttpConnectionConfig.
+ */
+function resolveBaseUrl(url: string | HttpConnectionConfig): string {
+  if (typeof url === "string") {
+    return url;
+  }
+  const protocol = url.protocol ?? "http";
+  const host = url.host ?? "localhost";
+  const port = url.port;
+  const path = url.path ?? "";
+
+  // Build URL with port if specified
+  const portSuffix = port ? `:${port}` : "";
+  return `${protocol}://${host}${portSuffix}${path}`;
 }
 
 /**
@@ -162,18 +180,20 @@ function throwHttpError(response: HttpResponse): never {
  */
 class HttpClientImpl implements HttpClient {
   readonly config: HttpClientConfig;
+  readonly #baseUrl: string;
   readonly #cookieJar: Map<string, string>;
   readonly #cookiesEnabled: boolean;
 
   constructor(config: HttpClientConfig) {
     this.config = config;
+    this.#baseUrl = resolveBaseUrl(config.url);
     // Cookies are enabled by default
     this.#cookiesEnabled = !(config.cookies?.disabled ?? false);
     this.#cookieJar = new Map();
 
     // Log client creation
     logger.debug("HTTP client created", {
-      baseUrl: config.baseUrl,
+      url: this.#baseUrl,
       cookiesEnabled: this.#cookiesEnabled,
       redirect: config.redirect ?? "follow",
     });
@@ -252,7 +272,7 @@ class HttpClientImpl implements HttpClient {
     body?: BodyInit,
     options?: HttpOptions,
   ): Promise<HttpResponse> {
-    const url = buildUrl(this.config.baseUrl, path, options?.query);
+    const url = buildUrl(this.#baseUrl, path, options?.query);
     const prepared = prepareBody(body);
     const headers = mergeHeaders(
       this.config.headers,
@@ -377,23 +397,30 @@ class HttpClientImpl implements HttpClient {
  * The client provides methods for making HTTP requests with automatic
  * cookie handling, response body pre-loading, and error handling.
  *
- * @param config - Client configuration including base URL and default options
+ * @param config - Client configuration including URL and default options
  * @returns A new HTTP client instance
  *
- * @example Basic usage
+ * @example Basic usage with string URL
  * ```ts
- * const http = createHttpClient({ baseUrl: "http://localhost:3000" });
+ * const http = createHttpClient({ url: "http://localhost:3000" });
  *
  * const response = await http.get("/users/123");
- * console.log(response.json());
+ * console.log(response.data());
  *
  * await http.close();
+ * ```
+ *
+ * @example With connection config object
+ * ```ts
+ * const http = createHttpClient({
+ *   url: { host: "api.example.com", port: 443, protocol: "https" },
+ * });
  * ```
  *
  * @example With default headers
  * ```ts
  * const http = createHttpClient({
- *   baseUrl: "http://localhost:3000",
+ *   url: "http://localhost:3000",
  *   headers: {
  *     "Authorization": "Bearer token123",
  *     "Accept": "application/json",
@@ -403,7 +430,7 @@ class HttpClientImpl implements HttpClient {
  *
  * @example Using `await using` for automatic cleanup
  * ```ts
- * await using http = createHttpClient({ baseUrl: "http://localhost:3000" });
+ * await using http = createHttpClient({ url: "http://localhost:3000" });
  * const response = await http.get("/health");
  * // Client automatically closed when scope exits
  * ```

@@ -71,6 +71,21 @@
  * await client.publish("events", JSON.stringify({ type: "update" }));
  * ```
  *
+ * ## Connection Configuration
+ *
+ * ```ts
+ * // Using URL string
+ * const client1 = await createRedisClient({ url: "redis://localhost:6379" });
+ *
+ * // Using URL with password and database
+ * const client2 = await createRedisClient({ url: "redis://:secret@localhost:6379/1" });
+ *
+ * // Using config object
+ * const client3 = await createRedisClient({
+ *   url: { host: "localhost", port: 6379, password: "secret", db: 1 },
+ * });
+ * ```
+ *
  * ## Using with `using` Statement
  *
  * ```ts

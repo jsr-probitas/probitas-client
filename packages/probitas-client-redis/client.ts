@@ -7,6 +7,7 @@ import type {
   RedisClient,
   RedisClientConfig,
   RedisCommonResult,
+  RedisConnectionConfig,
   RedisCountResult,
   RedisGetResult,
   RedisHashResult,
@@ -20,6 +21,32 @@ import { RedisCommandError, RedisConnectionError } from "./errors.ts";
 type RedisInstance = InstanceType<typeof Redis>;
 
 const logger = getLogger("probitas", "client", "redis");
+
+/**
+ * Resolve Redis connection URL from string or configuration object.
+ */
+function resolveRedisUrl(url: string | RedisConnectionConfig): string {
+  if (typeof url === "string") {
+    return url;
+  }
+  const host = url.host ?? "localhost";
+  const port = url.port ?? 6379;
+  const db = url.db ?? 0;
+
+  let connectionUrl = "redis://";
+
+  if (url.password) {
+    connectionUrl += `:${encodeURIComponent(url.password)}@`;
+  }
+
+  connectionUrl += `${host}:${port}`;
+
+  if (db !== 0) {
+    connectionUrl += `/${db}`;
+  }
+
+  return connectionUrl;
+}
 
 /**
  * Format a value for logging, truncating long strings.
@@ -103,7 +130,7 @@ async function withOptions<T>(
  * @param config - Redis client configuration
  * @returns A promise resolving to a new Redis client instance
  *
- * @example Using URL
+ * @example Using URL string
  * ```ts
  * const client = await createRedisClient({
  *   url: "redis://localhost:6379/0",
@@ -116,13 +143,15 @@ async function withOptions<T>(
  * await client.close();
  * ```
  *
- * @example Using host/port configuration
+ * @example Using connection config object
  * ```ts
  * const client = await createRedisClient({
- *   host: "localhost",
- *   port: 6379,
- *   password: "secret",
- *   db: 0,
+ *   url: {
+ *     host: "localhost",
+ *     port: 6379,
+ *     password: "secret",
+ *     db: 0,
+ *   },
  * });
  * ```
  *
@@ -171,36 +200,18 @@ export async function createRedisClient(
   let redis: RedisInstance | undefined;
 
   try {
-    // Log client creation attempt
-    if (config.url) {
-      logger.debug("Creating Redis client from URL", {
-        url: config.url,
-        timeout: config.timeout ?? 10000,
-      });
-    } else {
-      logger.debug("Creating Redis client from host/port", {
-        host: config.host ?? "localhost",
-        port: config.port ?? 6379,
-        db: config.db ?? 0,
-        timeout: config.timeout ?? 10000,
-      });
-    }
+    const resolvedUrl = resolveRedisUrl(config.url);
 
-    if (config.url) {
-      redis = new Redis(config.url, {
-        lazyConnect: true,
-        connectTimeout: config.timeout ?? 10000,
-      });
-    } else {
-      redis = new Redis({
-        host: config.host ?? "localhost",
-        port: config.port ?? 6379,
-        password: config.password,
-        db: config.db ?? 0,
-        lazyConnect: true,
-        connectTimeout: config.timeout ?? 10000,
-      });
-    }
+    // Log client creation attempt
+    logger.debug("Creating Redis client", {
+      url: typeof config.url === "string" ? config.url : resolvedUrl,
+      timeout: config.timeout ?? 10000,
+    });
+
+    redis = new Redis(resolvedUrl, {
+      lazyConnect: true,
+      connectTimeout: config.timeout ?? 10000,
+    });
 
     await redis.connect();
     logger.debug("Redis client connected successfully");

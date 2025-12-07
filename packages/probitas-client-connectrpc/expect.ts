@@ -19,31 +19,46 @@ export interface ConnectRpcResponseExpectation {
   notOk(): this;
 
   /** Verify the exact status code. */
-  code(code: ConnectRpcStatusCode): this;
+  status(code: ConnectRpcStatusCode): this;
 
   /** Verify the status code is one of the specified values. */
-  codeIn(...codes: ConnectRpcStatusCode[]): this;
+  statusIn(...codes: ConnectRpcStatusCode[]): this;
 
-  /** Verify the status message matches exactly or by regex. */
-  message(expected: string | RegExp): this;
+  /** Verify the status code is not one of the specified values. */
+  statusNotIn(...codes: ConnectRpcStatusCode[]): this;
 
-  /** Verify the status message contains the substring. */
-  messageContains(substring: string): this;
+  /** Verify the error message matches exactly or by regex. */
+  error(expected: string | RegExp): this;
 
-  /** Verify the status message using a custom matcher. */
-  messageMatch(matcher: (message: string) => void): this;
+  /** Verify the error message contains the substring. */
+  errorContains(substring: string): this;
+
+  /** Verify the error message using a custom matcher. */
+  errorMatch(matcher: (message: string) => void): this;
 
   /** Verify a header value matches exactly or by regex. */
-  headers(key: string, expected: string | RegExp): this;
+  header(name: string, expected: string | RegExp): this;
 
-  /** Verify that a header key exists. */
-  headersExist(key: string): this;
+  /** Verify that a header exists. */
+  headerExists(name: string): this;
+
+  /** Verify that a header value contains the substring. */
+  headerContains(name: string, substring: string): this;
+
+  /** Verify a header value using a custom matcher. */
+  headerMatch(name: string, matcher: (value: string) => void): this;
 
   /** Verify a trailer value matches exactly or by regex. */
-  trailers(key: string, expected: string | RegExp): this;
+  trailer(name: string, expected: string | RegExp): this;
 
-  /** Verify that a trailer key exists. */
-  trailersExist(key: string): this;
+  /** Verify that a trailer exists. */
+  trailerExists(name: string): this;
+
+  /** Verify that a trailer value contains the substring. */
+  trailerContains(name: string, substring: string): this;
+
+  /** Verify a trailer value using a custom matcher. */
+  trailerMatch(name: string, matcher: (value: string) => void): this;
 
   /** Verify that data() is null. */
   noContent(): this;
@@ -89,19 +104,19 @@ class ConnectRpcResponseExpectationImpl
     return this;
   }
 
-  code(code: ConnectRpcStatusCode): this {
+  status(code: ConnectRpcStatusCode): this {
     if (this.#response.code !== code) {
       throw new Error(
-        `Expected code ${code}, got ${this.#response.code}`,
+        `Expected status ${code}, got ${this.#response.code}`,
       );
     }
     return this;
   }
 
-  codeIn(...codes: ConnectRpcStatusCode[]): this {
+  statusIn(...codes: ConnectRpcStatusCode[]): this {
     if (!codes.includes(this.#response.code)) {
       throw new Error(
-        `Expected code to be one of [${
+        `Expected status to be one of [${
           codes.join(", ")
         }], got ${this.#response.code}`,
       );
@@ -109,81 +124,136 @@ class ConnectRpcResponseExpectationImpl
     return this;
   }
 
-  message(expected: string | RegExp): this {
+  statusNotIn(...codes: ConnectRpcStatusCode[]): this {
+    if (codes.includes(this.#response.code)) {
+      throw new Error(
+        `Expected status to not be one of [${
+          codes.join(", ")
+        }], got ${this.#response.code}`,
+      );
+    }
+    return this;
+  }
+
+  error(expected: string | RegExp): this {
     const msg = this.#response.message;
     if (typeof expected === "string") {
       if (msg !== expected) {
-        throw new Error(`Expected message "${expected}", got "${msg}"`);
+        throw new Error(`Expected error "${expected}", got "${msg}"`);
       }
     } else {
       if (!expected.test(msg)) {
         throw new Error(
-          `Expected message to match ${expected}, got "${msg}"`,
+          `Expected error to match ${expected}, got "${msg}"`,
         );
       }
     }
     return this;
   }
 
-  messageContains(substring: string): this {
+  errorContains(substring: string): this {
     if (!this.#response.message.includes(substring)) {
-      throw new Error(`Expected message to contain "${substring}"`);
+      throw new Error(`Expected error to contain "${substring}"`);
     }
     return this;
   }
 
-  messageMatch(matcher: (message: string) => void): this {
+  errorMatch(matcher: (message: string) => void): this {
     matcher(this.#response.message);
     return this;
   }
 
-  headers(key: string, expected: string | RegExp): this {
-    const value = this.#response.headers[key];
+  header(name: string, expected: string | RegExp): this {
+    const value = this.#response.headers[name];
     if (typeof expected === "string") {
       if (value !== expected) {
         throw new Error(
-          `Expected header "${key}" to be "${expected}", got "${value}"`,
+          `Expected header "${name}" to be "${expected}", got "${value}"`,
         );
       }
     } else {
       if (value === undefined || !expected.test(value)) {
         throw new Error(
-          `Expected header "${key}" to match ${expected}, got "${value}"`,
+          `Expected header "${name}" to match ${expected}, got "${value}"`,
         );
       }
     }
     return this;
   }
 
-  headersExist(key: string): this {
-    if (!(key in this.#response.headers)) {
-      throw new Error(`Expected header "${key}" to exist`);
+  headerExists(name: string): this {
+    if (!(name in this.#response.headers)) {
+      throw new Error(`Expected header "${name}" to exist`);
     }
     return this;
   }
 
-  trailers(key: string, expected: string | RegExp): this {
-    const value = this.#response.trailers[key];
+  headerContains(name: string, substring: string): this {
+    const value = this.#response.headers[name];
+    if (value === undefined) {
+      throw new Error(`Expected header "${name}" to exist`);
+    }
+    if (!value.includes(substring)) {
+      throw new Error(
+        `Expected header "${name}" to contain "${substring}", got "${value}"`,
+      );
+    }
+    return this;
+  }
+
+  headerMatch(name: string, matcher: (value: string) => void): this {
+    const value = this.#response.headers[name];
+    if (value === undefined) {
+      throw new Error(`Expected header "${name}" to exist`);
+    }
+    matcher(value);
+    return this;
+  }
+
+  trailer(name: string, expected: string | RegExp): this {
+    const value = this.#response.trailers[name];
     if (typeof expected === "string") {
       if (value !== expected) {
         throw new Error(
-          `Expected trailer "${key}" to be "${expected}", got "${value}"`,
+          `Expected trailer "${name}" to be "${expected}", got "${value}"`,
         );
       }
     } else {
       if (value === undefined || !expected.test(value)) {
         throw new Error(
-          `Expected trailer "${key}" to match ${expected}, got "${value}"`,
+          `Expected trailer "${name}" to match ${expected}, got "${value}"`,
         );
       }
     }
     return this;
   }
 
-  trailersExist(key: string): this {
-    if (!(key in this.#response.trailers)) {
-      throw new Error(`Expected trailer "${key}" to exist`);
+  trailerExists(name: string): this {
+    if (!(name in this.#response.trailers)) {
+      throw new Error(`Expected trailer "${name}" to exist`);
     }
+    return this;
+  }
+
+  trailerContains(name: string, substring: string): this {
+    const value = this.#response.trailers[name];
+    if (value === undefined) {
+      throw new Error(`Expected trailer "${name}" to exist`);
+    }
+    if (!value.includes(substring)) {
+      throw new Error(
+        `Expected trailer "${name}" to contain "${substring}", got "${value}"`,
+      );
+    }
+    return this;
+  }
+
+  trailerMatch(name: string, matcher: (value: string) => void): this {
+    const value = this.#response.trailers[name];
+    if (value === undefined) {
+      throw new Error(`Expected trailer "${name}" to exist`);
+    }
+    matcher(value);
     return this;
   }
 
@@ -268,16 +338,16 @@ class ConnectRpcResponseExpectationImpl
  *
  * expectConnectRpcResponse(response)
  *   .notOk()
- *   .code(5)  // NOT_FOUND
- *   .messageContains("not found");
+ *   .status(5)  // NOT_FOUND
+ *   .errorContains("not found");
  * ```
  *
  * @example Header and trailer assertions
  * ```ts
  * expectConnectRpcResponse(response)
  *   .ok()
- *   .headersExist("x-request-id")
- *   .trailersExist("grpc-status");
+ *   .headerExists("x-request-id")
+ *   .trailerExists("grpc-status");
  * ```
  *
  * @example Performance assertions

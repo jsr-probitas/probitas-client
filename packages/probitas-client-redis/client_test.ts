@@ -236,8 +236,7 @@ Deno.test({
       await assertRejects(
         async () => {
           await createRedisClient({
-            host: "invalid-host-that-does-not-exist",
-            port: 6379,
+            url: { host: "invalid-host-that-does-not-exist", port: 6379 },
             timeout: 100,
           });
         },
@@ -256,8 +255,7 @@ Deno.test("RedisClient interface", async (t) => {
 
   await t.step("has config property", () => {
     const config: RedisClientConfig = {
-      host: "localhost",
-      port: 6379,
+      url: { host: "localhost", port: 6379 },
     };
     const client = createMockRedisClient({ config });
     assertEquals(client.config, config);

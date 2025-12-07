@@ -139,67 +139,67 @@ Deno.test("expectMongoResult with MongoFindResult", async (t) => {
     );
   });
 
-  await t.step("docs() passes when count matches", () => {
+  await t.step("count() passes when count matches", () => {
     const result = createFindResult([{ id: 1 }, { id: 2 }]);
-    expectMongoResult(result).docs(2);
+    expectMongoResult(result).count(2);
   });
 
-  await t.step("docs() throws when count doesn't match", () => {
+  await t.step("count() throws when count doesn't match", () => {
     const result = createFindResult([{ id: 1 }]);
     assertThrows(
-      () => expectMongoResult(result).docs(2),
+      () => expectMongoResult(result).count(2),
       Error,
       "Expected 2 documents",
     );
   });
 
-  await t.step("docsAtLeast() passes when count is sufficient", () => {
+  await t.step("countAtLeast() passes when count is sufficient", () => {
     const result = createFindResult([{ id: 1 }, { id: 2 }, { id: 3 }]);
-    expectMongoResult(result).docsAtLeast(2);
+    expectMongoResult(result).countAtLeast(2);
   });
 
-  await t.step("docsAtLeast() throws when count is insufficient", () => {
+  await t.step("countAtLeast() throws when count is insufficient", () => {
     const result = createFindResult([{ id: 1 }]);
     assertThrows(
-      () => expectMongoResult(result).docsAtLeast(2),
+      () => expectMongoResult(result).countAtLeast(2),
       Error,
       "Expected at least 2 documents",
     );
   });
 
-  await t.step("docsAtMost() passes when count is within limit", () => {
+  await t.step("countAtMost() passes when count is within limit", () => {
     const result = createFindResult([{ id: 1 }, { id: 2 }]);
-    expectMongoResult(result).docsAtMost(3);
+    expectMongoResult(result).countAtMost(3);
   });
 
-  await t.step("docsAtMost() throws when count exceeds limit", () => {
+  await t.step("countAtMost() throws when count exceeds limit", () => {
     const result = createFindResult([{ id: 1 }, { id: 2 }, { id: 3 }]);
     assertThrows(
-      () => expectMongoResult(result).docsAtMost(2),
+      () => expectMongoResult(result).countAtMost(2),
       Error,
       "Expected at most 2 documents",
     );
   });
 
-  await t.step("docContains() passes when subset matches", () => {
+  await t.step("dataContains() passes when subset matches", () => {
     const result = createFindResult([
       { id: 1, name: "Alice", age: 30 },
       { id: 2, name: "Bob", age: 25 },
     ]);
-    expectMongoResult(result).docContains({ name: "Alice" });
+    expectMongoResult(result).dataContains({ name: "Alice" });
   });
 
-  await t.step("docContains() passes with nested object subset", () => {
+  await t.step("dataContains() passes with nested object subset", () => {
     // deno-lint-ignore no-explicit-any
     const result = createFindResult<any>([
       { id: 1, user: { name: "Alice", profile: { city: "NYC" } } },
     ]);
-    expectMongoResult(result).docContains({
+    expectMongoResult(result).dataContains({
       user: { name: "Alice" },
     });
   });
 
-  await t.step("docContains() passes with deeply nested subset", () => {
+  await t.step("dataContains() passes with deeply nested subset", () => {
     // deno-lint-ignore no-explicit-any
     const result = createFindResult<any>([
       {
@@ -212,76 +212,79 @@ Deno.test("expectMongoResult with MongoFindResult", async (t) => {
         },
       },
     ]);
-    expectMongoResult(result).docContains({
+    expectMongoResult(result).dataContains({
       data: { user: { profile: { name: "John" } } },
     });
   });
 
-  await t.step("docContains() passes with nested array elements", () => {
+  await t.step("dataContains() passes with nested array elements", () => {
     // deno-lint-ignore no-explicit-any
     const result = createFindResult<any>([
       { id: 1, items: [1, 2, 3], nested: { values: [10, 20, 30] } },
     ]);
-    expectMongoResult(result).docContains({ items: [1, 2, 3] });
+    expectMongoResult(result).dataContains({ items: [1, 2, 3] });
   });
 
-  await t.step("docContains() throws when nested object does not match", () => {
-    // deno-lint-ignore no-explicit-any
-    const result = createFindResult<any>([
-      { id: 1, args: { name: "probitas", version: "1.0" } },
-    ]);
-    assertThrows(
-      () =>
-        expectMongoResult(result).docContains({
-          args: { name: "different" },
-        }),
-      Error,
-      "Expected at least one document to contain",
-    );
-  });
+  await t.step(
+    "dataContains() throws when nested object does not match",
+    () => {
+      // deno-lint-ignore no-explicit-any
+      const result = createFindResult<any>([
+        { id: 1, args: { name: "probitas", version: "1.0" } },
+      ]);
+      assertThrows(
+        () =>
+          expectMongoResult(result).dataContains({
+            args: { name: "different" },
+          }),
+        Error,
+        "Expected at least one document to contain",
+      );
+    },
+  );
 
-  await t.step("docContains() throws when nested property is missing", () => {
+  await t.step("dataContains() throws when nested property is missing", () => {
     // deno-lint-ignore no-explicit-any
     const result = createFindResult<any>([
       { id: 1, args: { version: "1.0" } },
     ]);
     assertThrows(
-      () => expectMongoResult(result).docContains({ args: { name: "test" } }),
+      () => expectMongoResult(result).dataContains({ args: { name: "test" } }),
       Error,
       "Expected at least one document to contain",
     );
   });
 
   await t.step(
-    "docContains() passes with mixed nested and top-level properties",
+    "dataContains() passes with mixed nested and top-level properties",
     () => {
       // deno-lint-ignore no-explicit-any
       const result = createFindResult<any>([
         { id: 1, status: "ok", data: { message: "Hello", count: 42 } },
       ]);
-      expectMongoResult(result).docContains({
+      expectMongoResult(result).dataContains({
         status: "ok",
         data: { message: "Hello" },
       });
     },
   );
 
-  await t.step("docContains() throws when no document matches", () => {
+  await t.step("dataContains() throws when no document matches", () => {
     const result = createFindResult([
       { id: 1, name: "Alice" },
       { id: 2, name: "Bob" },
     ]);
     assertThrows(
-      () => expectMongoResult(result).docContains({ name: "Charlie" }),
+      () => expectMongoResult(result).dataContains({ name: "Charlie" }),
       Error,
       "Expected at least one document to contain",
     );
   });
 
-  await t.step("docMatch() calls matcher with docs", () => {
+  await t.step("dataMatch() calls matcher with docs", () => {
     const result = createFindResult([{ id: 1 }, { id: 2 }]);
     let called = false;
-    expectMongoResult(result).docMatch((docs) => {
+    expectMongoResult(result).dataMatch((docs) => {
       assertEquals(docs.length, 2);
       assertEquals(docs.first(), { id: 1 });
       called = true;
@@ -308,9 +311,9 @@ Deno.test("expectMongoResult with MongoFindResult", async (t) => {
     expectMongoResult(result)
       .ok()
       .hasContent()
-      .docs(1)
-      .docsAtLeast(1)
-      .docContains({ name: "Alice" })
+      .count(1)
+      .countAtLeast(1)
+      .dataContains({ name: "Alice" })
       .durationLessThan(100);
   });
 });
@@ -423,17 +426,17 @@ Deno.test("expectMongoResult with MongoUpdateResult", async (t) => {
     );
   });
 
-  await t.step("wasUpserted() passes when upsertedId exists", () => {
+  await t.step("hasUpsertedId() passes when upsertedId exists", () => {
     const result = createUpdateResult(0, 0, true, 10, "new123");
-    expectMongoResult(result).wasUpserted();
+    expectMongoResult(result).hasUpsertedId();
   });
 
-  await t.step("wasUpserted() throws when no upsert", () => {
+  await t.step("hasUpsertedId() throws when no upsert", () => {
     const result = createUpdateResult(1, 1);
     assertThrows(
-      () => expectMongoResult(result).wasUpserted(),
+      () => expectMongoResult(result).hasUpsertedId(),
       Error,
-      "Expected upsert",
+      "Expected upsertedId",
     );
   });
 
@@ -525,72 +528,72 @@ Deno.test("expectMongoResult with MongoFindOneResult", async (t) => {
     );
   });
 
-  await t.step("found() passes when document exists", () => {
+  await t.step("hasContent() passes when document exists", () => {
     const result = createFindOneResult({ id: 1, name: "Alice" });
-    expectMongoResult(result).found();
+    expectMongoResult(result).hasContent();
   });
 
-  await t.step("found() throws when document is undefined", () => {
+  await t.step("hasContent() throws when document is undefined", () => {
     const result = createFindOneResult<{ id: number }>(undefined);
     assertThrows(
-      () => expectMongoResult(result).found(),
+      () => expectMongoResult(result).hasContent(),
       Error,
       "Expected document to be found",
     );
   });
 
-  await t.step("notFound() passes when document is undefined", () => {
+  await t.step("noContent() passes when document is undefined", () => {
     const result = createFindOneResult<{ id: number }>(undefined);
-    expectMongoResult(result).notFound();
+    expectMongoResult(result).noContent();
   });
 
-  await t.step("notFound() throws when document exists", () => {
+  await t.step("noContent() throws when document exists", () => {
     const result = createFindOneResult({ id: 1 });
     assertThrows(
-      () => expectMongoResult(result).notFound(),
+      () => expectMongoResult(result).noContent(),
       Error,
       "Expected document not to be found",
     );
   });
 
-  await t.step("docContains() passes when subset matches", () => {
+  await t.step("dataContains() passes when subset matches", () => {
     const result = createFindOneResult({ id: 1, name: "Alice", age: 30 });
-    expectMongoResult(result).docContains({ name: "Alice" });
+    expectMongoResult(result).dataContains({ name: "Alice" });
   });
 
-  await t.step("docContains() passes with nested object", () => {
+  await t.step("dataContains() passes with nested object", () => {
     // deno-lint-ignore no-explicit-any
     const result = createFindOneResult<any>({
       id: 1,
       user: { name: "Alice", profile: { city: "NYC" } },
     });
-    expectMongoResult(result).docContains({
+    expectMongoResult(result).dataContains({
       user: { name: "Alice" },
     });
   });
 
-  await t.step("docContains() throws when doc is undefined", () => {
+  await t.step("dataContains() throws when doc is undefined", () => {
     const result = createFindOneResult<{ name: string }>(undefined);
     assertThrows(
-      () => expectMongoResult(result).docContains({ name: "Alice" }),
+      () => expectMongoResult(result).dataContains({ name: "Alice" }),
       Error,
       "doc is undefined",
     );
   });
 
-  await t.step("docContains() throws when subset doesn't match", () => {
+  await t.step("dataContains() throws when subset doesn't match", () => {
     const result = createFindOneResult({ id: 1, name: "Alice" });
     assertThrows(
-      () => expectMongoResult(result).docContains({ name: "Bob" }),
+      () => expectMongoResult(result).dataContains({ name: "Bob" }),
       Error,
       "Expected document to contain",
     );
   });
 
-  await t.step("docMatch() calls matcher with document", () => {
+  await t.step("dataMatch() calls matcher with document", () => {
     const result = createFindOneResult({ id: 1, name: "Alice" });
     let called = false;
-    expectMongoResult(result).docMatch((doc) => {
+    expectMongoResult(result).dataMatch((doc) => {
       assertEquals(doc.id, 1);
       assertEquals(doc.name, "Alice");
       called = true;
@@ -598,10 +601,10 @@ Deno.test("expectMongoResult with MongoFindOneResult", async (t) => {
     assertEquals(called, true);
   });
 
-  await t.step("docMatch() throws when doc is undefined", () => {
+  await t.step("dataMatch() throws when doc is undefined", () => {
     const result = createFindOneResult<{ id: number }>(undefined);
     assertThrows(
-      () => expectMongoResult(result).docMatch(() => {}),
+      () => expectMongoResult(result).dataMatch(() => {}),
       Error,
       "doc is undefined",
     );
@@ -629,8 +632,8 @@ Deno.test("expectMongoResult with MongoFindOneResult", async (t) => {
     );
     expectMongoResult(result)
       .ok()
-      .found()
-      .docContains({ name: "Alice" })
+      .hasContent()
+      .dataContains({ name: "Alice" })
       .durationLessThan(100);
   });
 });
@@ -729,34 +732,6 @@ Deno.test("expectMongoResult with MongoCountResult", async (t) => {
     );
   });
 
-  await t.step("isEmpty() passes when count is 0", () => {
-    const result = createCountResult(0);
-    expectMongoResult(result).isEmpty();
-  });
-
-  await t.step("isEmpty() throws when count is not 0", () => {
-    const result = createCountResult(5);
-    assertThrows(
-      () => expectMongoResult(result).isEmpty(),
-      Error,
-      "Expected count to be 0, got 5",
-    );
-  });
-
-  await t.step("isNotEmpty() passes when count is not 0", () => {
-    const result = createCountResult(5);
-    expectMongoResult(result).isNotEmpty();
-  });
-
-  await t.step("isNotEmpty() throws when count is 0", () => {
-    const result = createCountResult(0);
-    assertThrows(
-      () => expectMongoResult(result).isNotEmpty(),
-      Error,
-      "Expected count to be non-zero",
-    );
-  });
-
   await t.step("durationLessThan() passes when duration is less", () => {
     const result = createCountResult(10, true, 50);
     expectMongoResult(result).durationLessThan(100);
@@ -779,7 +754,6 @@ Deno.test("expectMongoResult with MongoCountResult", async (t) => {
       .countAtLeast(10)
       .countAtMost(50)
       .countBetween(20, 30)
-      .isNotEmpty()
       .durationLessThan(100);
   });
 });

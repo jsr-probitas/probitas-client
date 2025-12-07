@@ -36,7 +36,7 @@ function createMockResponse(
     },
     text: () => body ? new TextDecoder().decode(body) : null,
     // deno-lint-ignore no-explicit-any
-    json: <T = any>() =>
+    data: <T = any>() =>
       body ? JSON.parse(new TextDecoder().decode(body)) as T : null,
   };
 }
@@ -105,6 +105,27 @@ Deno.test("expectHttpResponse.statusInRange", async (t) => {
   });
 });
 
+Deno.test("expectHttpResponse.statusNotIn", async (t) => {
+  await t.step("passes when status is not in list", () => {
+    const response = createMockResponse({ status: 200 });
+    expectHttpResponse(response).statusNotIn(400, 401, 404, 500);
+  });
+
+  await t.step("throws when status is in list", () => {
+    const response = createMockResponse({ status: 404 });
+    assertThrows(
+      () => expectHttpResponse(response).statusNotIn(400, 404, 500),
+      Error,
+      "Expected status not in [400, 404, 500], got 404",
+    );
+  });
+
+  await t.step("passes with empty list", () => {
+    const response = createMockResponse({ status: 200 });
+    expectHttpResponse(response).statusNotIn();
+  });
+});
+
 Deno.test("expectHttpResponse.header", async (t) => {
   await t.step("passes when header matches string", () => {
     const headers = new Headers({ "X-Custom": "value123" });
@@ -149,6 +170,69 @@ Deno.test("expectHttpResponse.headerExists", async (t) => {
     const response = createMockResponse({ headers: new Headers() });
     assertThrows(
       () => expectHttpResponse(response).headerExists("X-Missing"),
+      Error,
+      "Header X-Missing not found",
+    );
+  });
+});
+
+Deno.test("expectHttpResponse.headerContains", async (t) => {
+  await t.step("passes when header contains substring", () => {
+    const headers = new Headers({
+      "Content-Type": "application/json; charset=utf-8",
+    });
+    const response = createMockResponse({ headers });
+    expectHttpResponse(response).headerContains("Content-Type", "json");
+  });
+
+  await t.step("throws when header does not contain substring", () => {
+    const headers = new Headers({ "Content-Type": "text/plain" });
+    const response = createMockResponse({ headers });
+    assertThrows(
+      () => expectHttpResponse(response).headerContains("Content-Type", "json"),
+      Error,
+      'Expected header Content-Type to contain "json"',
+    );
+  });
+
+  await t.step("throws when header is missing", () => {
+    const response = createMockResponse({ headers: new Headers() });
+    assertThrows(
+      () => expectHttpResponse(response).headerContains("X-Missing", "value"),
+      Error,
+      "Header X-Missing not found",
+    );
+  });
+});
+
+Deno.test("expectHttpResponse.headerMatch", async (t) => {
+  await t.step("calls matcher with header value", () => {
+    const headers = new Headers({ "X-Custom": "test-value" });
+    const response = createMockResponse({ headers });
+    let capturedValue = "";
+    expectHttpResponse(response).headerMatch("X-Custom", (value) => {
+      capturedValue = value;
+    });
+    assertEquals(capturedValue, "test-value");
+  });
+
+  await t.step("throws if matcher throws", () => {
+    const headers = new Headers({ "X-Custom": "value" });
+    const response = createMockResponse({ headers });
+    assertThrows(
+      () =>
+        expectHttpResponse(response).headerMatch("X-Custom", () => {
+          throw new Error("custom error");
+        }),
+      Error,
+      "custom error",
+    );
+  });
+
+  await t.step("throws when header is missing", () => {
+    const response = createMockResponse({ headers: new Headers() });
+    assertThrows(
+      () => expectHttpResponse(response).headerMatch("X-Missing", () => {}),
       Error,
       "Header X-Missing not found",
     );
@@ -287,28 +371,28 @@ Deno.test("expectHttpResponse.textMatch", async (t) => {
   });
 });
 
-Deno.test("expectHttpResponse.jsonContains", async (t) => {
-  await t.step("passes when JSON contains subset", () => {
+Deno.test("expectHttpResponse.dataContains", async (t) => {
+  await t.step("passes when data contains subset", () => {
     const body = new TextEncoder().encode(
       JSON.stringify({ id: 1, name: "John", age: 30 }),
     );
     const response = createMockResponse({ body });
-    expectHttpResponse(response).jsonContains({ name: "John" });
+    expectHttpResponse(response).dataContains({ name: "John" });
   });
 
-  await t.step("throws when JSON does not contain subset", () => {
+  await t.step("throws when data does not contain subset", () => {
     const body = new TextEncoder().encode(
       JSON.stringify({ id: 1, name: "John" }),
     );
     const response = createMockResponse({ body });
     assertThrows(
-      () => expectHttpResponse(response).jsonContains({ name: "Jane" }),
+      () => expectHttpResponse(response).dataContains({ name: "Jane" }),
       Error,
-      "JSON does not contain expected properties",
+      "Data does not contain expected properties",
     );
   });
 
-  await t.step("passes when JSON contains nested object subset", () => {
+  await t.step("passes when data contains nested object subset", () => {
     const body = new TextEncoder().encode(
       JSON.stringify({
         args: { name: "probitas", version: "1.0" },
@@ -316,10 +400,10 @@ Deno.test("expectHttpResponse.jsonContains", async (t) => {
       }),
     );
     const response = createMockResponse({ body });
-    expectHttpResponse(response).jsonContains({ args: { name: "probitas" } });
+    expectHttpResponse(response).dataContains({ args: { name: "probitas" } });
   });
 
-  await t.step("passes when JSON contains deeply nested subset", () => {
+  await t.step("passes when data contains deeply nested subset", () => {
     const body = new TextEncoder().encode(
       JSON.stringify({
         data: {
@@ -331,12 +415,12 @@ Deno.test("expectHttpResponse.jsonContains", async (t) => {
       }),
     );
     const response = createMockResponse({ body });
-    expectHttpResponse(response).jsonContains({
+    expectHttpResponse(response).dataContains({
       data: { user: { profile: { name: "John" } } },
     });
   });
 
-  await t.step("passes when JSON contains nested array elements", () => {
+  await t.step("passes when data contains nested array elements", () => {
     const body = new TextEncoder().encode(
       JSON.stringify({
         items: [1, 2, 3],
@@ -344,7 +428,7 @@ Deno.test("expectHttpResponse.jsonContains", async (t) => {
       }),
     );
     const response = createMockResponse({ body });
-    expectHttpResponse(response).jsonContains({ items: [1, 2, 3] });
+    expectHttpResponse(response).dataContains({ items: [1, 2, 3] });
   });
 
   await t.step("throws when nested object does not match", () => {
@@ -356,11 +440,11 @@ Deno.test("expectHttpResponse.jsonContains", async (t) => {
     const response = createMockResponse({ body });
     assertThrows(
       () =>
-        expectHttpResponse(response).jsonContains({
+        expectHttpResponse(response).dataContains({
           args: { name: "different" },
         }),
       Error,
-      "JSON does not contain expected properties",
+      "Data does not contain expected properties",
     );
   });
 
@@ -373,9 +457,9 @@ Deno.test("expectHttpResponse.jsonContains", async (t) => {
     const response = createMockResponse({ body });
     assertThrows(
       () =>
-        expectHttpResponse(response).jsonContains({ args: { name: "test" } }),
+        expectHttpResponse(response).dataContains({ args: { name: "test" } }),
       Error,
-      "JSON does not contain expected properties",
+      "Data does not contain expected properties",
     );
   });
 
@@ -387,24 +471,24 @@ Deno.test("expectHttpResponse.jsonContains", async (t) => {
       }),
     );
     const response = createMockResponse({ body });
-    expectHttpResponse(response).jsonContains({
+    expectHttpResponse(response).dataContains({
       status: "ok",
       data: { message: "Hello" },
     });
   });
 });
 
-Deno.test("expectHttpResponse.jsonMatch", async (t) => {
-  await t.step("calls matcher with parsed JSON", () => {
+Deno.test("expectHttpResponse.dataMatch", async (t) => {
+  await t.step("calls matcher with parsed data", () => {
     const body = new TextEncoder().encode(
       JSON.stringify({ id: 1, name: "John" }),
     );
     const response = createMockResponse({ body });
-    let capturedJson = null;
-    expectHttpResponse(response).jsonMatch((json) => {
-      capturedJson = json;
+    let capturedData = null;
+    expectHttpResponse(response).dataMatch((data) => {
+      capturedData = data;
     });
-    assertEquals(capturedJson, { id: 1, name: "John" });
+    assertEquals(capturedData, { id: 1, name: "John" });
   });
 
   await t.step("supports type parameter", () => {
@@ -416,7 +500,7 @@ Deno.test("expectHttpResponse.jsonMatch", async (t) => {
       JSON.stringify({ id: 1, name: "John" }),
     );
     const response = createMockResponse({ body });
-    expectHttpResponse(response).jsonMatch<User>((user) => {
+    expectHttpResponse(response).dataMatch<User>((user) => {
       assertEquals(user.id, 1);
       assertEquals(user.name, "John");
     });
@@ -458,7 +542,7 @@ Deno.test("expectHttpResponse chaining", async (t) => {
       .status(200)
       .contentType("application/json")
       .hasContent()
-      .jsonContains({ name: "John" })
+      .dataContains({ name: "John" })
       .durationLessThan(100);
   });
 });

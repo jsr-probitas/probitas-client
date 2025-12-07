@@ -24,7 +24,7 @@ const CONNECTION_STRING =
 async function isPostgresAvailable(): Promise<boolean> {
   try {
     const client = await createPostgresClient({
-      connection: CONNECTION_STRING,
+      url: CONNECTION_STRING,
     });
     await client.close();
     return true;
@@ -41,7 +41,7 @@ Deno.test({
   async fn(t) {
     await t.step("has dialect property", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -53,7 +53,7 @@ Deno.test({
 
     await t.step("executes simple SELECT query", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -71,7 +71,7 @@ Deno.test({
 
     await t.step("queryOne returns first row", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -87,7 +87,7 @@ Deno.test({
 
     await t.step("queryOne returns undefined when no rows", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -101,7 +101,7 @@ Deno.test({
 
     await t.step("executes parameterized query", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -118,7 +118,7 @@ Deno.test({
 
     await t.step("transaction auto-commit on success", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -148,7 +148,7 @@ Deno.test({
 
     await t.step("transaction auto-rollback on error", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -184,7 +184,7 @@ Deno.test({
 
     await t.step("transaction with isolation level", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -206,7 +206,7 @@ Deno.test({
 
     await t.step("transaction returns value", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -225,7 +225,7 @@ Deno.test({
 
     await t.step("constraint error handling - unique violation", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -260,7 +260,7 @@ Deno.test({
 
     await t.step("syntax error handling", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -278,7 +278,7 @@ Deno.test({
 
       {
         await using client = await createPostgresClient({
-          connection: CONNECTION_STRING,
+          url: CONNECTION_STRING,
         });
 
         clientRef = client;
@@ -300,7 +300,7 @@ Deno.test({
 
     await t.step("multiple queries in sequence", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -320,7 +320,7 @@ Deno.test({
 
     await t.step("result metadata includes duration", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -335,13 +335,13 @@ Deno.test({
       }
     });
 
-    await t.step("connection config object", async () => {
+    await t.step("url config object", async () => {
       const client = await createPostgresClient({
-        connection: {
+        url: {
           host: "localhost",
           port: 15432,
           database: "testdb",
-          user: "testuser",
+          username: "testuser",
           password: "testpassword",
         },
       });
@@ -358,7 +358,7 @@ Deno.test({
 
     await t.step("pool configuration", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
         pool: {
           max: 5,
           idleTimeout: 10000,
@@ -378,7 +378,7 @@ Deno.test({
 
     await t.step("application name", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
         applicationName: "test-app",
       });
 
@@ -394,7 +394,7 @@ Deno.test({
 
     await t.step("notify sends notification", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {
@@ -407,7 +407,7 @@ Deno.test({
 
     await t.step("copyTo returns query results as arrays", async () => {
       const client = await createPostgresClient({
-        connection: CONNECTION_STRING,
+        url: CONNECTION_STRING,
       });
 
       try {

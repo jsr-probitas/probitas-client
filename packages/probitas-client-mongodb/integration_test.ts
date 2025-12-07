@@ -2,13 +2,13 @@ import { assertEquals, assertExists } from "@std/assert";
 import { createMongoClient, expectMongoResult } from "./mod.ts";
 import type { MongoClient } from "./types.ts";
 
-const MONGODB_URI = Deno.env.get("MONGODB_URI") ?? "mongodb://localhost:27017";
+const MONGODB_URL = Deno.env.get("MONGODB_URL") ?? "mongodb://localhost:27017";
 const MONGODB_DATABASE = Deno.env.get("MONGODB_DATABASE") ?? "testdb";
 
 async function isServiceAvailable(): Promise<boolean> {
   try {
     const client = await createMongoClient({
-      uri: MONGODB_URI,
+      url: MONGODB_URL,
       database: MONGODB_DATABASE,
       timeout: 2000,
     });
@@ -22,7 +22,7 @@ async function isServiceAvailable(): Promise<boolean> {
 async function isReplicaSet(): Promise<boolean> {
   try {
     const client = await createMongoClient({
-      uri: MONGODB_URI,
+      url: MONGODB_URL,
       database: MONGODB_DATABASE,
       timeout: 2000,
     });
@@ -61,7 +61,7 @@ Deno.test({
 
     await t.step("setup: create client", async () => {
       client = await createMongoClient({
-        uri: MONGODB_URI,
+        url: MONGODB_URL,
         database: MONGODB_DATABASE,
       });
       assertExists(client);
@@ -97,7 +97,7 @@ Deno.test({
       expectMongoResult(result)
         .ok()
         .hasContent()
-        .docs(4);
+        .count(4);
     });
 
     await t.step("find: with filter", async () => {
@@ -106,9 +106,9 @@ Deno.test({
       expectMongoResult(result)
         .ok()
         .hasContent()
-        .docs(2)
-        .docContains({ name: "Alice" })
-        .docContains({ name: "Charlie" });
+        .count(2)
+        .dataContains({ name: "Alice" })
+        .dataContains({ name: "Charlie" });
     });
 
     await t.step("find: with sort and limit", async () => {
@@ -116,7 +116,7 @@ Deno.test({
       const result = await users.find({}, { sort: { age: 1 }, limit: 2 });
       expectMongoResult(result)
         .ok()
-        .docs(2);
+        .count(2);
       assertEquals(result.docs.first()?.name, "Bob");
       assertEquals(result.docs.last()?.name, "Diana");
     });
@@ -124,7 +124,7 @@ Deno.test({
     await t.step("findOne: retrieves single document", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.findOne({ name: "Alice" });
-      expectMongoResult(result).ok().found();
+      expectMongoResult(result).ok().hasContent();
       assertExists(result.doc);
       assertEquals(result.doc.name, "Alice");
       assertEquals(result.doc.age, 30);
@@ -133,7 +133,7 @@ Deno.test({
     await t.step("findOne: returns undefined when not found", async () => {
       const users = client.collection<User>(testCollection);
       const result = await users.findOne({ name: "NonExistent" });
-      expectMongoResult(result).ok().notFound();
+      expectMongoResult(result).ok().noContent();
     });
 
     await t.step("updateOne: updates a document", async () => {
@@ -157,7 +157,7 @@ Deno.test({
       );
       expectMongoResult(result)
         .ok()
-        .wasUpserted();
+        .hasUpsertedId();
     });
 
     await t.step("updateMany: updates multiple documents", async () => {
@@ -192,7 +192,7 @@ Deno.test({
       expectMongoResult(result)
         .ok()
         .hasContent()
-        .docs(1);
+        .count(1);
       assertExists(result.docs.first()?.avgAge);
     });
 
@@ -231,7 +231,7 @@ Deno.test({
   ignore: !(await isReplicaSet()),
   async fn(t) {
     const client = await createMongoClient({
-      uri: MONGODB_URI,
+      url: MONGODB_URL,
       database: MONGODB_DATABASE,
     });
 
@@ -262,7 +262,7 @@ Deno.test({
   ignore: !(await isServiceAvailable()),
   async fn(t) {
     const client = await createMongoClient({
-      uri: MONGODB_URI,
+      url: MONGODB_URL,
       database: MONGODB_DATABASE,
     });
 

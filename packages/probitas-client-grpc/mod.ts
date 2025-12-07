@@ -10,7 +10,7 @@
  *
  * - **Native gRPC**: Uses gRPC protocol (HTTP/2 with binary protobuf)
  * - **Server Reflection**: Auto-discover services and methods at runtime
- * - **Fluent Assertions**: Chain assertions like `.ok()`, `.dataContains()`, `.code()`
+ * - **Fluent Assertions**: Chain assertions like `.ok()`, `.dataContains()`, `.status()`
  * - **TLS Support**: Configure secure connections with custom certificates
  * - **Duration Tracking**: Built-in timing for performance assertions
  * - **Error Handling**: Test error responses without throwing exceptions
@@ -29,7 +29,7 @@
  *
  * // Create client (uses reflection by default)
  * const client = createGrpcClient({
- *   address: "localhost:50051",
+ *   url: "http://localhost:50051",
  * });
  *
  * // Call a method with fluent assertions
@@ -62,7 +62,7 @@
  * ## Using with `using` Statement
  *
  * ```ts
- * await using client = createGrpcClient({ address: "localhost:50051" });
+ * await using client = createGrpcClient({ url: "http://localhost:50051" });
  *
  * const res = await client.call("echo.EchoService", "echo", { message: "test" });
  * expectGrpcResponse(res).ok();
@@ -145,7 +145,7 @@ export interface GrpcClientConfig
  * @example Basic usage with reflection
  * ```ts
  * const client = createGrpcClient({
- *   address: "localhost:50051",
+ *   url: "http://localhost:50051",
  * });
  *
  * // Call a method
@@ -162,7 +162,7 @@ export interface GrpcClientConfig
  * @example Service discovery with reflection
  * ```ts
  * const client = createGrpcClient({
- *   address: "localhost:50051",
+ *   url: "http://localhost:50051",
  * });
  *
  * // Discover available services
@@ -187,13 +187,13 @@ export interface GrpcClientConfig
  *
  * expectGrpcResponse(response)
  *   .notOk()
- *   .code(5);  // NOT_FOUND
+ *   .status(5);  // NOT_FOUND
  * ```
  *
  * @example Using `await using` for automatic cleanup
  * ```ts
  * await using client = createGrpcClient({
- *   address: "localhost:50051",
+ *   url: "http://localhost:50051",
  * });
  *
  * const res = await client.call("echo.EchoService", "echo", { message: "test" });

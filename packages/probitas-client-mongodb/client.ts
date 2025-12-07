@@ -14,6 +14,7 @@ import type {
   MongoClient,
   MongoClientConfig,
   MongoCollection,
+  MongoConnectionConfig,
   MongoCountResult,
   MongoDeleteResult,
   MongoFindOneResult,
@@ -37,18 +38,58 @@ import { createMongoDocs } from "./results.ts";
 const logger = getLogger("probitas", "client", "mongodb");
 
 /**
- * Sanitize MongoDB URI for logging (remove password and sensitive info).
+ * Resolve MongoDB connection URL from string or configuration object.
  */
-function sanitizeUri(uri: string): string {
+function resolveMongoUrl(url: string | MongoConnectionConfig): string {
+  if (typeof url === "string") {
+    return url;
+  }
+
+  const host = url.host ?? "localhost";
+  const port = url.port ?? 27017;
+
+  let connectionUrl = "mongodb://";
+
+  // Add credentials if provided
+  if (url.username && url.password) {
+    connectionUrl += `${encodeURIComponent(url.username)}:${
+      encodeURIComponent(url.password)
+    }@`;
+  }
+
+  connectionUrl += `${host}:${port}`;
+
+  // Add database if provided
+  if (url.database) {
+    connectionUrl += `/${url.database}`;
+  }
+
+  // Add query parameters
+  const params = new URLSearchParams();
+  if (url.authSource) params.set("authSource", url.authSource);
+  if (url.replicaSet) params.set("replicaSet", url.replicaSet);
+
+  const queryString = params.toString();
+  if (queryString) {
+    connectionUrl += `?${queryString}`;
+  }
+
+  return connectionUrl;
+}
+
+/**
+ * Sanitize MongoDB URL for logging (remove password and sensitive info).
+ */
+function sanitizeUrl(url: string): string {
   try {
-    const url = new URL(uri);
-    if (url.password) {
-      url.password = "***";
+    const parsed = new URL(url);
+    if (parsed.password) {
+      parsed.password = "***";
     }
-    return url.toString();
+    return parsed.toString();
   } catch {
     // If parsing fails, return as-is
-    return uri;
+    return url;
   }
 }
 
@@ -190,10 +231,10 @@ function convertMongoError(
  * @param config - MongoDB client configuration
  * @returns A promise resolving to a new MongoDB client instance
  *
- * @example Basic usage
+ * @example Basic usage with connection string
  * ```ts
  * const mongo = await createMongoClient({
- *   uri: "mongodb://localhost:27017",
+ *   url: "mongodb://localhost:27017",
  *   database: "testdb",
  * });
  *
@@ -202,6 +243,20 @@ function convertMongoError(
  * console.log(result.docs.first());
  *
  * await mongo.close();
+ * ```
+ *
+ * @example Using connection config object
+ * ```ts
+ * const mongo = await createMongoClient({
+ *   url: {
+ *     host: "localhost",
+ *     port: 27017,
+ *     username: "admin",
+ *     password: "secret",
+ *     authSource: "admin",
+ *   },
+ *   database: "testdb",
+ * });
  * ```
  *
  * @example Insert and query documents
@@ -240,7 +295,7 @@ function convertMongoError(
  * @example Using `await using` for automatic cleanup
  * ```ts
  * await using mongo = await createMongoClient({
- *   uri: "mongodb://localhost:27017",
+ *   url: "mongodb://localhost:27017",
  *   database: "testdb",
  * });
  *
@@ -252,9 +307,10 @@ export async function createMongoClient(
   config: MongoClientConfig,
 ): Promise<MongoClient> {
   let client: NativeMongoClient;
+  const connectionUrl = resolveMongoUrl(config.url);
 
   logger.debug("MongoDB client creation starting", {
-    uri: sanitizeUri(config.uri),
+    url: sanitizeUrl(connectionUrl),
     database: config.database,
     timeout: config.timeout,
   });
@@ -265,7 +321,7 @@ export async function createMongoClient(
       connectTimeoutMS: config.timeout ?? 10000,
       serverSelectionTimeoutMS: config.timeout ?? 10000,
     } as MongoClientOptions;
-    client = new NativeMongoClient(config.uri, options);
+    client = new NativeMongoClient(connectionUrl, options);
 
     await client.connect();
     logger.debug("MongoDB client connected successfully", {

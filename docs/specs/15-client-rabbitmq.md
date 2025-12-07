@@ -138,8 +138,32 @@ function expectRabbitMqQueueResult(
 ## RabbitMqClient
 
 ```typescript
+/**
+ * RabbitMQ connection configuration object.
+ */
+interface RabbitMqConnectionConfig {
+  /** Host name or IP address */
+  readonly host: string;
+
+  /** Port number (default: 5672) */
+  readonly port?: number;
+
+  /** Protocol ("amqp" or "amqps") */
+  readonly protocol?: "amqp" | "amqps";
+
+  /** Username */
+  readonly user?: string;
+
+  /** Password */
+  readonly password?: string;
+
+  /** Virtual host (default: "/") */
+  readonly vhost?: string;
+}
+
 interface RabbitMqClientConfig extends CommonOptions {
-  readonly url: string;
+  /** Connection URL (string or config object) */
+  readonly url: string | RabbitMqConnectionConfig;
   readonly heartbeat?: number;
   readonly prefetch?: number;
 }
@@ -319,6 +343,11 @@ for await (const msg of channel.consume("my-queue")) {
   console.log(msg.fields.routingKey);
   await channel.ack(msg);
 }
+
+// Using connection config object
+const rabbitWithConfig = await createRabbitMqClient({
+  url: { host: "localhost", port: 5672, user: "guest", password: "guest" },
+});
 
 await channel.close();
 await rabbit.close();

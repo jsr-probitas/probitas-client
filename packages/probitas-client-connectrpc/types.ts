@@ -6,7 +6,7 @@
 
 import type { MessageShape } from "@bufbuild/protobuf";
 import type { FileDescriptorSetSchema } from "@bufbuild/protobuf/wkt";
-import type { CommonOptions } from "@probitas/client";
+import type { CommonConnectionConfig, CommonOptions } from "@probitas/client";
 
 /**
  * FileDescriptorSet message type from @bufbuild/protobuf.
@@ -39,11 +39,43 @@ export interface TlsConfig {
 }
 
 /**
+ * ConnectRPC connection configuration.
+ *
+ * Extends CommonConnectionConfig with ConnectRPC-specific options.
+ */
+export interface ConnectRpcConnectionConfig extends CommonConnectionConfig {
+  /**
+   * Protocol to use.
+   * @default "http"
+   */
+  readonly protocol?: "http" | "https";
+
+  /**
+   * Service path prefix.
+   * @default ""
+   */
+  readonly path?: string;
+}
+
+/**
  * Configuration for creating a ConnectRPC client.
  */
 export interface ConnectRpcClientConfig extends CommonOptions {
-  /** Server address (host:port or full URL). */
-  readonly address: string;
+  /**
+   * Server URL for ConnectRPC connections.
+   *
+   * Can be a URL string or a connection configuration object.
+   *
+   * @example
+   * ```ts
+   * // String URL
+   * { url: "http://localhost:50051" }
+   *
+   * // Connection config object
+   * { url: { host: "grpc.example.com", port: 443, protocol: "https" } }
+   * ```
+   */
+  readonly url: string | ConnectRpcConnectionConfig;
 
   /**
    * Protocol to use.

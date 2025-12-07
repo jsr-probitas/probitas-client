@@ -41,7 +41,7 @@ export default scenario("User Registration E2E", { tags: ["e2e"] })
       [id],
     );
 
-    expectSqlQueryResult(result).rows(1);
+    expectSqlQueryResult(result).count(1);
     return result.rows.firstOrThrow();
   })
   .build();
@@ -68,7 +68,7 @@ export default scenario("Create Order", { tags: ["graphql", "mongodb"] })
     }))
   .resource("mongo", () =>
     createMongoClient({
-      uri: "mongodb://localhost:27017",
+      url: "mongodb://localhost:27017",
       database: "orders",
     }))
   .step("Create order via GraphQL", async (ctx) => {
@@ -82,7 +82,7 @@ export default scenario("Create Order", { tags: ["graphql", "mongodb"] })
       }
     `;
 
-    const res = await ctx.resources.gql.mutate(mutation, {
+    const res = await ctx.resources.gql.mutation(mutation, {
       input: {
         items: [{ productId: "PROD-1", quantity: 2 }],
       },
@@ -96,7 +96,7 @@ export default scenario("Create Order", { tags: ["graphql", "mongodb"] })
     const orders = ctx.resources.mongo.collection("orders");
 
     const result = await orders.find({ _id: id });
-    expectMongoFindResult(result).ok().docs(1);
+    expectMongoFindResult(result).ok().count(1);
 
     return result.docs.firstOrThrow();
   })

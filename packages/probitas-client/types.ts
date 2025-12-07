@@ -1,4 +1,50 @@
 /**
+ * Common connection configuration shared across all network clients.
+ *
+ * This interface provides a unified way to configure connection parameters
+ * for all network-based clients. Each client extends this with service-specific
+ * options while maintaining a consistent base.
+ *
+ * @example
+ * ```ts
+ * // Use with string URL
+ * createHttpClient({ url: "http://localhost:3000" });
+ *
+ * // Use with config object
+ * createHttpClient({
+ *   url: {
+ *     host: "api.example.com",
+ *     port: 443,
+ *     username: "user",
+ *     password: "secret",
+ *   },
+ * });
+ * ```
+ */
+export interface CommonConnectionConfig {
+  /**
+   * Hostname or IP address.
+   * @default "localhost"
+   */
+  readonly host?: string;
+
+  /**
+   * Port number. Each service has its own default.
+   */
+  readonly port?: number;
+
+  /**
+   * Username for authentication.
+   */
+  readonly username?: string;
+
+  /**
+   * Password for authentication.
+   */
+  readonly password?: string;
+}
+
+/**
  * Retry configuration options.
  */
 export interface RetryOptions {

@@ -21,7 +21,7 @@ const MYSQL_DATABASE = Deno.env.get("MYSQL_DATABASE") ?? "testdb";
 const connectionConfig: MySqlConnectionConfig = {
   host: MYSQL_HOST,
   port: MYSQL_PORT,
-  user: MYSQL_USER,
+  username: MYSQL_USER,
   password: MYSQL_PASSWORD,
   database: MYSQL_DATABASE,
 };
@@ -40,7 +40,7 @@ async function isMySqlServerAvailable(): Promise<boolean> {
 }
 
 async function createTestClient(): Promise<MySqlClient> {
-  return await createMySqlClient({ connection: connectionConfig });
+  return await createMySqlClient({ url: connectionConfig });
 }
 
 Deno.test({
@@ -57,7 +57,7 @@ Deno.test({
 
         expectSqlQueryResult(result)
           .ok()
-          .rows(1);
+          .count(1);
 
         assertEquals(result.rows.first()?.result, 1);
       } finally {
@@ -71,9 +71,9 @@ Deno.test({
     });
 
     await t.step("connection URL format", async () => {
-      const url =
+      const connectionUrl =
         `mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}`;
-      await using client = await createMySqlClient({ connection: url });
+      await using client = await createMySqlClient({ url: connectionUrl });
 
       const result = await client.query<{ result: number }>(
         "SELECT 1 as result",
@@ -81,7 +81,7 @@ Deno.test({
 
       expectSqlQueryResult(result)
         .ok()
-        .rows(1);
+        .count(1);
     });
 
     await t.step("using with statement (AsyncDisposable)", async () => {
@@ -91,7 +91,7 @@ Deno.test({
 
       expectSqlQueryResult(result)
         .ok()
-        .rows(1);
+        .count(1);
     });
 
     await t.step("parameterized query", async () => {
@@ -104,7 +104,7 @@ Deno.test({
 
       expectSqlQueryResult(result)
         .ok()
-        .rows(1);
+        .count(1);
 
       assertEquals(result.rows.first()?.sum, 30);
     });
@@ -165,7 +165,7 @@ Deno.test({
 
         expectSqlQueryResult(selectResult)
           .ok()
-          .rows(1);
+          .count(1);
 
         assertEquals(selectResult.rows.first()?.name, "Alice");
         assertEquals(selectResult.rows.first()?.email, "alice@example.com");
@@ -203,7 +203,7 @@ Deno.test({
 
         expectSqlQueryResult(result)
           .ok()
-          .rows(1);
+          .count(1);
 
         assertEquals(result.rows.first()?.value, "auto-committed");
       } finally {
@@ -242,7 +242,7 @@ Deno.test({
 
         expectSqlQueryResult(result)
           .ok()
-          .rows(0);
+          .count(0);
       } finally {
         await client.query("DROP TABLE IF EXISTS test_tx_error");
       }

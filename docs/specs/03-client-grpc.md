@@ -131,8 +131,8 @@ interface GrpcResponseExpectation {
   // --- Status checks ---
   ok(): this;
   notOk(): this;
-  code(code: GrpcStatusCode): this;
-  codeIn(...codes: GrpcStatusCode[]): this;
+  status(code: GrpcStatusCode): this;
+  statusIn(...codes: GrpcStatusCode[]): this;
 
   // --- Message checks ---
   message(expected: string | RegExp): this;
@@ -163,9 +163,23 @@ function expectGrpcResponse(response: GrpcResponse): GrpcResponseExpectation;
 ## GrpcClient
 
 ```typescript
+/**
+ * gRPC connection configuration object (alias for ConnectRpcConnectionConfig).
+ */
+interface GrpcConnectionConfig {
+  /** Host name or IP address */
+  readonly host: string;
+
+  /** Port number */
+  readonly port?: number;
+
+  /** Protocol ("http" or "https") */
+  readonly protocol?: "http" | "https";
+}
+
 interface GrpcClientConfig extends CommonOptions {
-  /** Server address (host:port or full URL) */
-  readonly address: string;
+  /** Server URL (string or config object) */
+  readonly url: string | GrpcConnectionConfig;
 
   /** TLS configuration */
   readonly tls?: TlsConfig;
@@ -247,7 +261,7 @@ import {
 
 // Create client (uses reflection by default)
 const grpc = createGrpcClient({
-  address: "localhost:50051",
+  url: "localhost:50051",
 });
 
 // Discover available services
@@ -293,7 +307,7 @@ const errorRes = await grpc.call(
 );
 expectGrpcResponse(errorRes)
   .notOk()
-  .code(GrpcStatus.INVALID_ARGUMENT);
+  .status(GrpcStatus.INVALID_ARGUMENT);
 
 // Server streaming
 for await (
@@ -309,8 +323,13 @@ for await (
 // Using FileDescriptorSet instead of reflection
 const descriptorBytes = await Deno.readFile("./descriptor.pb");
 const staticGrpc = createGrpcClient({
-  address: "localhost:50051",
+  url: "localhost:50051",
   schema: descriptorBytes,
+});
+
+// Using connection config object
+const configGrpc = createGrpcClient({
+  url: { host: "localhost", port: 50051, protocol: "http" },
 });
 
 await grpc.close();

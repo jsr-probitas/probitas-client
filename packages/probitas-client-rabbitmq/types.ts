@@ -1,4 +1,4 @@
-import type { CommonOptions } from "@probitas/client";
+import type { CommonConnectionConfig, CommonOptions } from "@probitas/client";
 
 /**
  * RabbitMQ message properties.
@@ -89,11 +89,38 @@ export interface RabbitMqExchangeResult {
 }
 
 /**
+ * RabbitMQ connection configuration.
+ *
+ * Extends CommonConnectionConfig with RabbitMQ-specific options.
+ */
+export interface RabbitMqConnectionConfig extends CommonConnectionConfig {
+  /**
+   * Virtual host.
+   * @default "/"
+   */
+  readonly vhost?: string;
+}
+
+/**
  * RabbitMQ client configuration.
  */
 export interface RabbitMqClientConfig extends CommonOptions {
-  /** AMQP URL (amqp://user:password@host:port/vhost) */
-  readonly url: string;
+  /**
+   * RabbitMQ connection URL or configuration object.
+   *
+   * @example
+   * ```ts
+   * // String URL
+   * { url: "amqp://localhost:5672" }
+   *
+   * // With credentials
+   * { url: "amqp://guest:guest@localhost:5672/%2F" }
+   *
+   * // Config object
+   * { url: { port: 5672, username: "guest", password: "guest", vhost: "/" } }
+   * ```
+   */
+  readonly url: string | RabbitMqConnectionConfig;
   /** Heartbeat interval in seconds */
   readonly heartbeat?: number;
   /** Default prefetch count for channels */

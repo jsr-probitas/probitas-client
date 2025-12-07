@@ -19,11 +19,11 @@ export interface MongoFindResultExpectation<T> {
   notOk(): this;
   noContent(): this;
   hasContent(): this;
-  docs(count: number): this;
-  docsAtLeast(count: number): this;
-  docsAtMost(count: number): this;
-  docContains(subset: Partial<T>): this;
-  docMatch(matcher: (docs: MongoDocs<T>) => void): this;
+  count(expected: number): this;
+  countAtLeast(min: number): this;
+  countAtMost(max: number): this;
+  dataContains(subset: Partial<T>): this;
+  dataMatch(matcher: (docs: MongoDocs<T>) => void): this;
   durationLessThan(ms: number): this;
 }
 
@@ -46,7 +46,7 @@ export interface MongoUpdateResultExpectation {
   notOk(): this;
   matchedCount(count: number): this;
   modifiedCount(count: number): this;
-  wasUpserted(): this;
+  hasUpsertedId(): this;
   durationLessThan(ms: number): this;
 }
 
@@ -67,10 +67,10 @@ export interface MongoDeleteResultExpectation {
 export interface MongoFindOneResultExpectation<T> {
   ok(): this;
   notOk(): this;
-  found(): this;
-  notFound(): this;
-  docContains(subset: Partial<T>): this;
-  docMatch(matcher: (doc: T) => void): this;
+  hasContent(): this;
+  noContent(): this;
+  dataContains(subset: Partial<T>): this;
+  dataMatch(matcher: (doc: T) => void): this;
   durationLessThan(ms: number): this;
 }
 
@@ -84,8 +84,6 @@ export interface MongoCountResultExpectation {
   countAtLeast(min: number): this;
   countAtMost(max: number): this;
   countBetween(min: number, max: number): this;
-  isEmpty(): this;
-  isNotEmpty(): this;
   durationLessThan(ms: number): this;
 }
 
@@ -127,34 +125,34 @@ class MongoFindResultExpectationImpl<T>
     return this;
   }
 
-  docs(count: number): this {
-    if (this.#result.docs.length !== count) {
+  count(expected: number): this {
+    if (this.#result.docs.length !== expected) {
       throw new Error(
-        `Expected ${count} documents, got ${this.#result.docs.length}`,
+        `Expected ${expected} documents, got ${this.#result.docs.length}`,
       );
     }
     return this;
   }
 
-  docsAtLeast(count: number): this {
-    if (this.#result.docs.length < count) {
+  countAtLeast(min: number): this {
+    if (this.#result.docs.length < min) {
       throw new Error(
-        `Expected at least ${count} documents, got ${this.#result.docs.length}`,
+        `Expected at least ${min} documents, got ${this.#result.docs.length}`,
       );
     }
     return this;
   }
 
-  docsAtMost(count: number): this {
-    if (this.#result.docs.length > count) {
+  countAtMost(max: number): this {
+    if (this.#result.docs.length > max) {
       throw new Error(
-        `Expected at most ${count} documents, got ${this.#result.docs.length}`,
+        `Expected at most ${max} documents, got ${this.#result.docs.length}`,
       );
     }
     return this;
   }
 
-  docContains(subset: Partial<T>): this {
+  dataContains(subset: Partial<T>): this {
     const found = this.#result.docs.some((doc) => containsSubset(doc, subset));
     if (!found) {
       throw new Error(
@@ -164,7 +162,7 @@ class MongoFindResultExpectationImpl<T>
     return this;
   }
 
-  docMatch(matcher: (docs: MongoDocs<T>) => void): this {
+  dataMatch(matcher: (docs: MongoDocs<T>) => void): this {
     matcher(this.#result.docs);
     return this;
   }
@@ -274,9 +272,9 @@ class MongoUpdateResultExpectationImpl implements MongoUpdateResultExpectation {
     return this;
   }
 
-  wasUpserted(): this {
+  hasUpsertedId(): this {
     if (!this.#result.upsertedId) {
-      throw new Error("Expected upsert, but no document was upserted");
+      throw new Error("Expected upsertedId, but no document was upserted");
     }
     return this;
   }
@@ -362,21 +360,21 @@ class MongoFindOneResultExpectationImpl<T>
     return this;
   }
 
-  found(): this {
+  hasContent(): this {
     if (this.#result.doc === undefined) {
       throw new Error("Expected document to be found, but got undefined");
     }
     return this;
   }
 
-  notFound(): this {
+  noContent(): this {
     if (this.#result.doc !== undefined) {
       throw new Error("Expected document not to be found, but got a document");
     }
     return this;
   }
 
-  docContains(subset: Partial<T>): this {
+  dataContains(subset: Partial<T>): this {
     if (this.#result.doc === undefined) {
       throw new Error(
         "Expected document to contain subset, but doc is undefined",
@@ -390,7 +388,7 @@ class MongoFindOneResultExpectationImpl<T>
     return this;
   }
 
-  docMatch(matcher: (doc: T) => void): this {
+  dataMatch(matcher: (doc: T) => void): this {
     if (this.#result.doc === undefined) {
       throw new Error("Expected document for matching, but doc is undefined");
     }
@@ -465,22 +463,6 @@ class MongoCountResultExpectationImpl implements MongoCountResultExpectation {
     return this;
   }
 
-  isEmpty(): this {
-    if (this.#result.count !== 0) {
-      throw new Error(
-        `Expected count to be 0, got ${this.#result.count}`,
-      );
-    }
-    return this;
-  }
-
-  isNotEmpty(): this {
-    if (this.#result.count === 0) {
-      throw new Error("Expected count to be non-zero, but got 0");
-    }
-    return this;
-  }
-
   durationLessThan(ms: number): this {
     if (this.#result.duration >= ms) {
       throw new Error(
@@ -514,7 +496,7 @@ export type MongoExpectation<R extends MongoResult> = R extends
  * ```ts
  * // For find result - returns MongoFindResultExpectation
  * const findResult = await users.find({ age: { $gte: 30 } });
- * expectMongoResult(findResult).ok().hasContent().docs(2);
+ * expectMongoResult(findResult).ok().hasContent().count(2);
  *
  * // For insert result - returns MongoInsertResultExpectation
  * const insertResult = await users.insertOne({ name: "Alice", age: 30 });
@@ -530,7 +512,7 @@ export type MongoExpectation<R extends MongoResult> = R extends
  *
  * // For findOne result - returns MongoFindOneResultExpectation
  * const findOneResult = await users.findOne({ name: "Alice" });
- * expectMongoResult(findOneResult).ok().found().docContains({ name: "Alice" });
+ * expectMongoResult(findOneResult).ok().hasContent().dataContains({ name: "Alice" });
  *
  * // For count result - returns MongoCountResultExpectation
  * const countResult = await users.countDocuments();

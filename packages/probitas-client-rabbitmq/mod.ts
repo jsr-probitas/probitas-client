@@ -24,28 +24,42 @@
  * ```ts
  * import { createRabbitMqClient, expectRabbitMqResult } from "@probitas/client-rabbitmq";
  *
+ * // Using string URL
  * const client = await createRabbitMqClient({
  *   url: "amqp://localhost:5672",
  * });
  *
+ * // Or using connection config object
+ * const client2 = await createRabbitMqClient({
+ *   url: {
+ *     host: "localhost",
+ *     port: 5672,
+ *     username: "guest",
+ *     password: "guest",
+ *     vhost: "/",
+ *   },
+ * });
+ *
  * // Create a channel
- * const channel = await client.createChannel();
+ * const channel = await client.channel();
  *
  * // Declare a queue
  * const queueResult = await channel.assertQueue("test-queue", { durable: true });
  * expectRabbitMqResult(queueResult).ok();
  *
  * // Publish a message
- * const publishResult = await channel.publish("", "test-queue", "Hello, World!", {
+ * const content = new TextEncoder().encode("Hello, World!");
+ * const publishResult = await channel.sendToQueue("test-queue", content, {
  *   contentType: "text/plain",
  * });
  * expectRabbitMqResult(publishResult).ok();
  *
  * // Consume messages
- * const consumeResult = await channel.consume("test-queue", async (msg) => {
- *   console.log("Received:", msg.content);
+ * for await (const msg of channel.consume("test-queue")) {
+ *   console.log("Received:", new TextDecoder().decode(msg.content));
  *   await channel.ack(msg);
- * });
+ *   break;
+ * }
  *
  * await client.close();
  * ```
@@ -61,7 +75,8 @@
  * await channel.bindQueue("user-events", "events", "user.*");
  *
  * // Publish to exchange with routing key
- * await channel.publish("events", "user.created", JSON.stringify({ id: 1, name: "Alice" }), {
+ * const content = new TextEncoder().encode(JSON.stringify({ id: 1, name: "Alice" }));
+ * await channel.publish("events", "user.created", content, {
  *   contentType: "application/json",
  * });
  * ```
@@ -70,7 +85,7 @@
  *
  * ```ts
  * await using client = await createRabbitMqClient({ url: "amqp://localhost:5672" });
- * const channel = await client.createChannel();
+ * const channel = await client.channel();
  *
  * await channel.assertQueue("test");
  * // Client automatically closed when block exits

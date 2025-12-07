@@ -1,4 +1,4 @@
-import type { CommonOptions } from "@probitas/client";
+import type { CommonConnectionConfig, CommonOptions } from "@probitas/client";
 
 /**
  * TLS/SSL configuration for MySQL connections.
@@ -50,35 +50,25 @@ export interface MySqlPoolConfig {
 }
 
 /**
- * Detailed connection configuration for MySQL.
+ * MySQL connection configuration.
+ *
+ * Extends CommonConnectionConfig with MySQL-specific options.
  */
-export interface MySqlConnectionConfig {
-  /** MySQL server hostname. */
-  readonly host: string;
+export interface MySqlConnectionConfig extends CommonConnectionConfig {
+  /**
+   * Database name to connect to.
+   */
+  readonly database?: string;
 
   /**
-   * MySQL server port.
-   * @default 3306
+   * TLS configuration.
    */
-  readonly port?: number;
-
-  /** Database user. */
-  readonly user: string;
-
-  /** Database password. */
-  readonly password?: string;
-
-  /** Database name. */
-  readonly database: string;
-
-  /** TLS/SSL configuration. */
   readonly tls?: MySqlTlsConfig;
 
   /**
-   * Enable multiple statements in a single query.
-   * @default false
+   * Character set.
    */
-  readonly multipleStatements?: boolean;
+  readonly charset?: string;
 }
 
 /**
@@ -86,17 +76,15 @@ export interface MySqlConnectionConfig {
  */
 export interface MySqlClientConfig extends CommonOptions {
   /**
-   * Connection configuration.
+   * Connection URL or configuration.
+   *
    * Can be a connection URL string (e.g., "mysql://user:pass@host:port/database")
-   * or a detailed ConnectionConfig object.
+   * or a detailed MySqlConnectionConfig object.
    */
-  readonly connection: string | MySqlConnectionConfig;
+  readonly url: string | MySqlConnectionConfig;
 
   /** Connection pool configuration. */
   readonly pool?: MySqlPoolConfig;
-
-  /** Character set for the connection. */
-  readonly charset?: string;
 
   /** Timezone for the connection. */
   readonly timezone?: string;

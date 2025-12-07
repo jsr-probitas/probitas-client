@@ -22,13 +22,13 @@
  * ## Quick Start
  *
  * ```ts
- * import { createMysqlClient, expectSqlQueryResult } from "@probitas/client-sql-mysql";
+ * import { createMySqlClient, expectSqlQueryResult } from "@probitas/client-sql-mysql";
  *
- * const client = await createMysqlClient({
- *   connection: {
+ * const client = await createMySqlClient({
+ *   url: {
  *     host: "localhost",
  *     port: 3306,
- *     user: "root",
+ *     username: "root",
  *     password: "secret",
  *     database: "mydb",
  *   },
@@ -66,8 +66,8 @@
  * ## Using with `using` Statement
  *
  * ```ts
- * await using client = await createMysqlClient({
- *   connection: { host: "localhost", user: "root", database: "testdb" },
+ * await using client = await createMySqlClient({
+ *   url: { host: "localhost", username: "root", database: "testdb" },
  * });
  *
  * const result = await client.query("SELECT 1 as n");

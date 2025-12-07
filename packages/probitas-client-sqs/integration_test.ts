@@ -28,7 +28,7 @@ async function createTestQueue(
   name: string,
 ): Promise<{ queueUrl: string; cleanup: () => Promise<void> }> {
   const sqsClient = new SQSClient({
-    endpoint: SQS_ENDPOINT,
+    endpoint: SQS_ENDPOINT, // AWS SDK still uses endpoint directly
     region: SQS_REGION,
     credentials: {
       accessKeyId: "test",
@@ -61,7 +61,7 @@ Deno.test({
     const { queueUrl, cleanup } = await createTestQueue(testQueueName);
 
     const client = await createSqsClient({
-      endpoint: SQS_ENDPOINT,
+      url: SQS_ENDPOINT,
       region: SQS_REGION,
       queueUrl,
       credentials: {
@@ -301,7 +301,7 @@ Deno.test({
 
       await t.step("Closed client throws error", async () => {
         const tempClient = await createSqsClient({
-          endpoint: SQS_ENDPOINT,
+          url: SQS_ENDPOINT,
           region: SQS_REGION,
           queueUrl,
           credentials: {
@@ -416,7 +416,7 @@ Deno.test({
   async fn(t) {
     // Create client without queueUrl
     const client = await createSqsClient({
-      endpoint: SQS_ENDPOINT,
+      url: SQS_ENDPOINT,
       region: SQS_REGION,
       credentials: {
         accessKeyId: "test",
@@ -486,7 +486,7 @@ Deno.test({
 
           // Create a second client and set queue URL manually
           const client2 = await createSqsClient({
-            endpoint: SQS_ENDPOINT,
+            url: SQS_ENDPOINT,
             region: SQS_REGION,
             credentials: {
               accessKeyId: "test",

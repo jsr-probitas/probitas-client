@@ -149,20 +149,20 @@ Deno.test("expectDenoKvResult with GetResult", async (t) => {
     );
   });
 
-  await t.step("valueContains() passes when value contains subset", () => {
+  await t.step("dataContains() passes when value contains subset", () => {
     const result = createGetResult({ value: { name: "Alice", age: 30 } });
-    expectDenoKvResult(result).valueContains({ name: "Alice" });
+    expectDenoKvResult(result).dataContains({ name: "Alice" });
   });
 
-  await t.step("valueContains() passes with nested object subset", () => {
+  await t.step("dataContains() passes with nested object subset", () => {
     // deno-lint-ignore no-explicit-any
     const result = createGetResult<any>({
       value: { user: { name: "Alice", profile: { city: "NYC" } } },
     });
-    expectDenoKvResult(result).valueContains({ user: { name: "Alice" } });
+    expectDenoKvResult(result).dataContains({ user: { name: "Alice" } });
   });
 
-  await t.step("valueContains() passes with deeply nested subset", () => {
+  await t.step("dataContains() passes with deeply nested subset", () => {
     // deno-lint-ignore no-explicit-any
     const result = createGetResult<any>({
       value: {
@@ -174,21 +174,21 @@ Deno.test("expectDenoKvResult with GetResult", async (t) => {
         },
       },
     });
-    expectDenoKvResult(result).valueContains({
+    expectDenoKvResult(result).dataContains({
       data: { user: { profile: { name: "John" } } },
     });
   });
 
-  await t.step("valueContains() passes with nested array elements", () => {
+  await t.step("dataContains() passes with nested array elements", () => {
     // deno-lint-ignore no-explicit-any
     const result = createGetResult<any>({
       value: { items: [1, 2, 3], nested: { values: [10, 20, 30] } },
     });
-    expectDenoKvResult(result).valueContains({ items: [1, 2, 3] });
+    expectDenoKvResult(result).dataContains({ items: [1, 2, 3] });
   });
 
   await t.step(
-    "valueContains() throws when nested object does not match",
+    "dataContains() throws when nested object does not match",
     () => {
       // deno-lint-ignore no-explicit-any
       const result = createGetResult<any>({
@@ -196,36 +196,35 @@ Deno.test("expectDenoKvResult with GetResult", async (t) => {
       });
       assertThrows(
         () =>
-          expectDenoKvResult(result).valueContains({
+          expectDenoKvResult(result).dataContains({
             args: { name: "different" },
           }),
         Error,
-        "Value does not contain expected properties",
+        "Data does not contain expected properties",
       );
     },
   );
 
-  await t.step("valueContains() throws when nested property is missing", () => {
+  await t.step("dataContains() throws when nested property is missing", () => {
     // deno-lint-ignore no-explicit-any
     const result = createGetResult<any>({
       value: { args: { version: "1.0" } },
     });
     assertThrows(
-      () =>
-        expectDenoKvResult(result).valueContains({ args: { name: "test" } }),
+      () => expectDenoKvResult(result).dataContains({ args: { name: "test" } }),
       Error,
-      "Value does not contain expected properties",
+      "Data does not contain expected properties",
     );
   });
 
   await t.step(
-    "valueContains() passes with mixed nested and top-level properties",
+    "dataContains() passes with mixed nested and top-level properties",
     () => {
       // deno-lint-ignore no-explicit-any
       const result = createGetResult<any>({
         value: { status: "ok", data: { message: "Hello", count: 42 } },
       });
-      expectDenoKvResult(result).valueContains({
+      expectDenoKvResult(result).dataContains({
         status: "ok",
         data: { message: "Hello" },
       });
@@ -233,31 +232,31 @@ Deno.test("expectDenoKvResult with GetResult", async (t) => {
   );
 
   await t.step(
-    "valueContains() throws when value does not contain subset",
+    "dataContains() throws when value does not contain subset",
     () => {
       const result = createGetResult({ value: { name: "Alice" } });
       assertThrows(
-        () => expectDenoKvResult(result).valueContains({ name: "Bob" }),
+        () => expectDenoKvResult(result).dataContains({ name: "Bob" }),
         Error,
-        "Value does not contain expected properties",
+        "Data does not contain expected properties",
       );
     },
   );
 
-  await t.step("valueMatch() calls matcher with value", () => {
+  await t.step("dataMatch() calls matcher with value", () => {
     const result = createGetResult({ value: { name: "Alice" } });
     let captured = null;
-    expectDenoKvResult(result).valueMatch((v) => {
+    expectDenoKvResult(result).dataMatch((v) => {
       captured = v;
     });
     assertEquals(captured, { name: "Alice" });
   });
 
-  await t.step("valueMatch() throws if matcher throws", () => {
+  await t.step("dataMatch() throws if matcher throws", () => {
     const result = createGetResult({ value: { name: "Alice" } });
     assertThrows(
       () =>
-        expectDenoKvResult(result).valueMatch(() => {
+        expectDenoKvResult(result).dataMatch(() => {
           throw new Error("custom error");
         }),
       Error,
@@ -310,7 +309,7 @@ Deno.test("expectDenoKvResult with GetResult", async (t) => {
     expectDenoKvResult(result)
       .ok()
       .hasContent()
-      .valueContains({ name: "Alice" })
+      .dataContains({ name: "Alice" })
       .hasVersionstamp()
       .durationLessThan(100);
   });
@@ -718,7 +717,7 @@ Deno.test("expectDenoKvResult type inference", async (t) => {
     // TypeScript should infer DenoKvGetResultExpectation
     // which has noContent(), hasContent(), value(), etc.
     const expectation = expectDenoKvResult(result);
-    expectation.ok().hasContent().valueContains({ name: "Alice" });
+    expectation.ok().hasContent().dataContains({ name: "Alice" });
   });
 
   await t.step("infers ListResultExpectation for list result", () => {

@@ -1,5 +1,5 @@
 import postgres from "postgres";
-import type { CommonOptions } from "@probitas/client";
+import type { CommonConnectionConfig, CommonOptions } from "@probitas/client";
 import { ConnectionError } from "@probitas/client";
 import { getLogger } from "@probitas/logger";
 import {
@@ -34,23 +34,46 @@ function formatParams(params: unknown): string {
 }
 
 /**
- * Connection configuration for PostgreSQL.
+ * SSL/TLS configuration for PostgreSQL connection.
  */
-export interface PostgresConnectionConfig {
-  /** Database host */
-  readonly host?: string;
+export interface PostgresSslConfig {
+  /**
+   * Whether to reject unauthorized certificates.
+   * @default true
+   */
+  readonly rejectUnauthorized?: boolean;
 
-  /** Database port */
-  readonly port?: number;
+  /**
+   * CA certificate(s) for verification.
+   */
+  readonly ca?: string;
 
-  /** Database name */
+  /**
+   * Client certificate for mutual TLS.
+   */
+  readonly cert?: string;
+
+  /**
+   * Client private key for mutual TLS.
+   */
+  readonly key?: string;
+}
+
+/**
+ * PostgreSQL connection configuration.
+ *
+ * Extends CommonConnectionConfig with PostgreSQL-specific options.
+ */
+export interface PostgresConnectionConfig extends CommonConnectionConfig {
+  /**
+   * Database name to connect to.
+   */
   readonly database?: string;
 
-  /** Database user */
-  readonly user?: string;
-
-  /** Database password */
-  readonly password?: string;
+  /**
+   * SSL/TLS configuration.
+   */
+  readonly ssl?: boolean | PostgresSslConfig;
 }
 
 /**
@@ -71,8 +94,28 @@ export interface PostgresPoolConfig {
  * Configuration for creating a PostgreSQL client.
  */
 export interface PostgresClientConfig extends CommonOptions {
-  /** Connection string or configuration object */
-  readonly connection: string | PostgresConnectionConfig;
+  /**
+   * Connection URL string or configuration object.
+   *
+   * @example Using a URL string
+   * ```ts
+   * { url: "postgres://user:pass@localhost:5432/mydb" }
+   * ```
+   *
+   * @example Using a configuration object
+   * ```ts
+   * {
+   *   url: {
+   *     host: "localhost",
+   *     port: 5432,
+   *     database: "mydb",
+   *     username: "user",
+   *     password: "pass",
+   *   }
+   * }
+   * ```
+   */
+  readonly url: string | PostgresConnectionConfig;
 
   /** Pool configuration */
   readonly pool?: PostgresPoolConfig;
@@ -212,13 +255,13 @@ class PostgresClientImpl implements PostgresClient {
     this.#sql = sql;
 
     // Log client creation with sanitized connection info
-    const connInfo = typeof config.connection === "string"
-      ? { connection: "[connection-string]" }
+    const connInfo = typeof config.url === "string"
+      ? { url: "[connection-string]" }
       : {
-        host: config.connection.host ?? "localhost",
-        port: config.connection.port ?? 5432,
-        database: config.connection.database,
-        user: config.connection.user,
+        host: config.url.host ?? "localhost",
+        port: config.url.port ?? 5432,
+        database: config.url.database,
+        username: config.url.username,
       };
 
     logger.debug("PostgreSQL client created", {
@@ -540,6 +583,30 @@ class PostgresClientImpl implements PostgresClient {
 }
 
 /**
+ * Resolve SSL configuration for postgres.js.
+ */
+function resolveSslOptions(
+  ssl: boolean | PostgresSslConfig | undefined,
+): postgres.Options<Record<string, postgres.PostgresType>>["ssl"] {
+  if (ssl === undefined) {
+    return undefined;
+  }
+  if (ssl === true) {
+    return { rejectUnauthorized: true };
+  }
+  if (ssl === false) {
+    return false;
+  }
+  // PostgresSslConfig object
+  return {
+    rejectUnauthorized: ssl.rejectUnauthorized ?? true,
+    ca: ssl.ca,
+    cert: ssl.cert,
+    key: ssl.key,
+  };
+}
+
+/**
  * Create a new PostgreSQL client instance.
  *
  * The client provides connection pooling, parameterized queries, transaction support,
@@ -548,10 +615,10 @@ class PostgresClientImpl implements PostgresClient {
  * @param config - PostgreSQL client configuration
  * @returns A promise resolving to a new PostgreSQL client instance
  *
- * @example Using connection string
+ * @example Using URL string
  * ```ts
  * const client = await createPostgresClient({
- *   connection: "postgres://user:pass@localhost:5432/mydb",
+ *   url: "postgres://user:pass@localhost:5432/mydb",
  * });
  *
  * const result = await client.query("SELECT * FROM users WHERE id = $1", [1]);
@@ -563,11 +630,11 @@ class PostgresClientImpl implements PostgresClient {
  * @example Using connection config object
  * ```ts
  * const client = await createPostgresClient({
- *   connection: {
+ *   url: {
  *     host: "localhost",
  *     port: 5432,
  *     database: "mydb",
- *     user: "user",
+ *     username: "user",
  *     password: "pass",
  *   },
  *   pool: { max: 10 },
@@ -597,7 +664,7 @@ class PostgresClientImpl implements PostgresClient {
  * @example Using `await using` for automatic cleanup
  * ```ts
  * await using client = await createPostgresClient({
- *   connection: "postgres://localhost:5432/mydb",
+ *   url: "postgres://localhost:5432/mydb",
  * });
  *
  * const result = await client.query("SELECT 1");
@@ -628,17 +695,23 @@ export async function createPostgresClient(
 
   let sql: postgres.Sql;
 
-  if (typeof config.connection === "string") {
-    // Connection string
-    sql = postgres(config.connection, options);
+  if (typeof config.url === "string") {
+    // URL string
+    sql = postgres(config.url, options);
   } else {
     // Connection config object
-    const connConfig = config.connection;
+    const connConfig = config.url;
     if (connConfig.host) options.host = connConfig.host;
     if (connConfig.port) options.port = connConfig.port;
     if (connConfig.database) options.database = connConfig.database;
-    if (connConfig.user) options.username = connConfig.user;
+    if (connConfig.username) options.username = connConfig.username;
     if (connConfig.password) options.password = connConfig.password;
+
+    // Handle SSL configuration
+    const sslOptions = resolveSslOptions(connConfig.ssl);
+    if (sslOptions !== undefined) {
+      options.ssl = sslOptions;
+    }
 
     sql = postgres(options);
   }

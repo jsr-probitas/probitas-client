@@ -26,7 +26,7 @@
  *
  * const client = await createSqsClient({
  *   region: "us-east-1",
- *   endpoint: "http://localhost:4566", // LocalStack
+ *   url: "http://localhost:4566", // LocalStack
  *   credentials: {
  *     accessKeyId: "test",
  *     secretAccessKey: "test",
@@ -86,7 +86,7 @@
  * ```ts
  * await using client = await createSqsClient({
  *   region: "us-east-1",
- *   endpoint: "http://localhost:4566",
+ *   url: "http://localhost:4566",
  * });
  *
  * const queue = await client.ensureQueue("test");

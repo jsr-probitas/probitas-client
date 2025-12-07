@@ -6,7 +6,7 @@
  *
  * ## Features
  *
- * - **Fluent Assertions**: Chain assertions like `.ok()`, `.contentType()`, `.jsonContains()`
+ * - **Fluent Assertions**: Chain assertions like `.ok()`, `.contentType()`, `.dataContains()`
  * - **All HTTP Methods**: Support for GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
  * - **Request Building**: Headers, query parameters, body (JSON, form, multipart)
  * - **Response Inspection**: Status codes, headers, cookies, body parsing
@@ -24,14 +24,14 @@
  * ```ts
  * import { createHttpClient, expectHttpResponse } from "@probitas/client-http";
  *
- * const http = createHttpClient({ baseUrl: "http://localhost:3000" });
+ * const http = createHttpClient({ url: "http://localhost:3000" });
  *
  * // GET request with assertions
  * const res = await http.get("/users/123");
  * expectHttpResponse(res)
  *   .ok()
  *   .contentType("application/json")
- *   .jsonContains({ name: "John" });
+ *   .dataContains({ name: "John" });
  *
  * // Extract typed data
  * const user = res.json<User>();
@@ -49,7 +49,7 @@
  * ## Using with `using` Statement
  *
  * ```ts
- * await using http = createHttpClient({ baseUrl: "http://localhost:3000" });
+ * await using http = createHttpClient({ url: "http://localhost:3000" });
  *
  * const res = await http.get("/health");
  * expectHttpResponse(res).ok();

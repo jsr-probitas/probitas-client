@@ -57,18 +57,15 @@ class GraphqlClientError extends ClientError {
 interface GraphqlResponseExpectation {
   // --- Error checks ---
   ok(): this;
-  noErrors(): this;
-  hasErrors(): this;
+  notOk(): this;
   errorCount(n: number): this;
   errorContains(message: string): this;
   error(messageMatcher: string | RegExp): this;
   errorMatch(matcher: (errors: readonly GraphqlError[]) => void): this;
 
   // --- Data checks ---
-  hasData(): this;
-  hasContent(): this; // alias for hasData
-  noData(): this;
-  noContent(): this; // alias for noData
+  hasContent(): this;
+  noContent(): this;
   dataContains<T = any>(subset: Partial<T>): this;
   dataMatch<T = any>(matcher: (data: T) => void): this;
 
@@ -91,10 +88,28 @@ function expectGraphqlResponse(
 ## GraphqlClient
 
 ```typescript
+/**
+ * GraphQL connection configuration object.
+ */
+interface GraphqlConnectionConfig {
+  /** Host name or IP address */
+  readonly host: string;
+
+  /** Port number */
+  readonly port?: number;
+
+  /** Protocol ("http" or "https") */
+  readonly protocol?: "http" | "https";
+
+  /** Path (e.g., "/graphql") */
+  readonly path?: string;
+}
+
 interface GraphqlClientConfig extends CommonOptions {
-  readonly endpoint: string;
+  /** Server URL (string or config object) */
+  readonly url: string | GraphqlConnectionConfig;
   readonly headers?: Record<string, string>;
-  readonly wsEndpoint?: string;
+  readonly wsUrl?: string;
 
   /**
    * Throw GraphqlClientError when GraphQL errors exist.
@@ -112,7 +127,12 @@ interface GraphqlClient extends AsyncDisposable {
     variables?: Record<string, unknown>,
     options?: GraphqlOptions,
   ): Promise<GraphqlResponse>;
-  mutate(
+  mutation(
+    document: string,
+    variables?: Record<string, unknown>,
+    options?: GraphqlOptions,
+  ): Promise<GraphqlResponse>;
+  execute(
     document: string,
     variables?: Record<string, unknown>,
     options?: GraphqlOptions,
@@ -152,7 +172,7 @@ import {
   outdent,
 } from "@probitas/client-graphql";
 
-const gql = createGraphqlClient({ endpoint: "http://localhost:4000/graphql" });
+const gql = createGraphqlClient({ url: "http://localhost:4000/graphql" });
 
 // Without outdent: indentation is preserved
 const withIndent = `
@@ -173,4 +193,9 @@ const res = await gql.query(query, { id: "123" });
 expectGraphqlResponse(res).ok().noErrors();
 
 const { user } = res.data<{ user: User }>()!;
+
+// Using connection config object
+const gqlWithConfig = createGraphqlClient({
+  url: { host: "localhost", port: 4000, protocol: "http", path: "/graphql" },
+});
 ```

@@ -139,8 +139,8 @@ interface ConnectRpcResponseExpectation {
   // --- Status checks ---
   ok(): this;
   notOk(): this;
-  code(code: ConnectRpcStatusCode): this;
-  codeIn(...codes: ConnectRpcStatusCode[]): this;
+  status(code: ConnectRpcStatusCode): this;
+  statusIn(...codes: ConnectRpcStatusCode[]): this;
 
   // --- Message checks ---
   message(expected: string | RegExp): this;
@@ -179,9 +179,23 @@ type ConnectProtocol = "connect" | "grpc" | "grpc-web";
 /** HTTP version for transport */
 type HttpVersion = "1.1" | "2";
 
+/**
+ * ConnectRPC connection configuration object.
+ */
+interface ConnectRpcConnectionConfig {
+  /** Host name or IP address */
+  readonly host: string;
+
+  /** Port number */
+  readonly port?: number;
+
+  /** Protocol ("http" or "https") */
+  readonly protocol?: "http" | "https";
+}
+
 interface ConnectRpcClientConfig extends CommonOptions {
-  /** Server address (host:port or full URL) */
-  readonly address: string;
+  /** Server URL (string or config object) */
+  readonly url: string | ConnectRpcConnectionConfig;
 
   /**
    * Protocol to use.
@@ -339,7 +353,7 @@ import {
 
 // Create client with reflection (default)
 const client = createConnectRpcClient({
-  address: "localhost:50051",
+  url: "localhost:50051",
 });
 
 // Discover services using reflection
@@ -373,7 +387,7 @@ const errorRes = await client.call(
 );
 expectConnectRpcResponse(errorRes)
   .notOk()
-  .code(ConnectRpcStatus.INVALID_ARGUMENT)
+  .status(ConnectRpcStatus.INVALID_ARGUMENT)
   .messageContains("invalid");
 
 // Server streaming
@@ -389,21 +403,26 @@ for await (
 
 // Using different protocols
 const connectClient = createConnectRpcClient({
-  address: "localhost:8080",
+  url: "localhost:8080",
   protocol: "connect", // Use Connect protocol instead of gRPC
   httpVersion: "1.1",
 });
 
 const grpcWebClient = createConnectRpcClient({
-  address: "localhost:8080",
+  url: "localhost:8080",
   protocol: "grpc-web", // Use gRPC-Web protocol
 });
 
 // Using FileDescriptorSet instead of reflection
 const descriptorBytes = await Deno.readFile("./proto/descriptor.pb");
 const staticClient = createConnectRpcClient({
-  address: "localhost:50051",
+  url: "localhost:50051",
   schema: descriptorBytes, // No reflection needed
+});
+
+// Using connection config object
+const configClient = createConnectRpcClient({
+  url: { host: "localhost", port: 50051, protocol: "http" },
 });
 
 await client.close();

@@ -7,8 +7,29 @@ MySQL client package.
 ## MySqlClient
 
 ```typescript
+/**
+ * MySQL connection configuration object.
+ */
+interface MySqlConnectionConfig {
+  /** Host name or IP address */
+  readonly host: string;
+
+  /** Port number (default: 3306) */
+  readonly port?: number;
+
+  /** Database name */
+  readonly database?: string;
+
+  /** Username */
+  readonly user?: string;
+
+  /** Password */
+  readonly password?: string;
+}
+
 interface MySqlClientConfig extends CommonOptions {
-  readonly connection: string | ConnectionConfig;
+  /** Connection URL (string or config object) */
+  readonly url: string | MySqlConnectionConfig;
   readonly pool?: PoolConfig;
   readonly charset?: string;
   readonly timezone?: string;
@@ -44,7 +65,7 @@ import { createMySqlClient } from "@probitas/client-sql-mysql";
 import { expectSqlQueryResult } from "@probitas/client-sql";
 
 const db = await createMySqlClient({
-  connection: "mysql://user:pass@localhost:3306/mydb",
+  url: "mysql://user:pass@localhost:3306/mydb",
   charset: "utf8mb4",
 });
 
@@ -54,6 +75,18 @@ const result = await db.query<{ id: number; name: string }>(
 );
 
 expectSqlQueryResult(result).ok().hasContent();
+
+// Using connection config object
+const dbWithConfig = await createMySqlClient({
+  url: {
+    host: "localhost",
+    port: 3306,
+    database: "mydb",
+    user: "user",
+    password: "pass",
+  },
+  charset: "utf8mb4",
+});
 
 await db.close();
 ```

@@ -9,7 +9,7 @@ Deno.test("createMongoClient", async (t) => {
       await assertRejects(
         async () => {
           await createMongoClient({
-            uri: "mongodb://invalid-host:27017",
+            url: "mongodb://invalid-host:27017",
             database: "test",
             timeout: 100,
           });

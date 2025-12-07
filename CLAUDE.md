@@ -187,6 +187,53 @@ services:
       - "14000:8080"
 ```
 
+## Commit Conventions
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/)
+with [@deno/bump-workspaces](https://jsr.io/@deno/bump-workspaces) for automatic
+version management.
+
+### Version Bump Rules
+
+| Commit Type                                              | Version Bump  | Example                                     |
+| -------------------------------------------------------- | ------------- | ------------------------------------------- |
+| `feat:`                                                  | minor (0.x.0) | `feat(client-http): add retry option`       |
+| `fix:`, `perf:`, `docs:`, `refactor:`, `test:`, `chore:` | patch (0.0.x) | `fix(client-redis): handle timeout errors`  |
+| `BREAKING:` or `!` suffix                                | major (x.0.0) | `feat(client-sql)!: change API signature`   |
+| Any type with `/unstable` scope                          | patch (0.0.x) | `feat(client-http/unstable): experimental`  |
+
+### Scope Convention
+
+Use package name (without `@probitas/` prefix) as scope. **Scopes are required**
+for `BREAKING`, `feat`, `fix`, `perf`, and `deprecation`.
+
+```bash
+# Single package
+feat(client-http): add connection pooling
+fix(client-redis): handle reconnection correctly
+
+# Multiple packages (comma-separated)
+fix(client-sql,client-sql-postgres): fix shared type definitions
+
+# All packages (wildcard)
+docs(*): update API documentation
+refactor(*): apply new linting rules
+
+# Unstable API (always patch, even for BREAKING)
+feat(client-http/unstable): experimental streaming support
+BREAKING(client-http/unstable): change unstable API signature  # Still patch!
+```
+
+### Important Notes
+
+- **All conventional commit types trigger version bumps** (including `docs:`)
+- **Scopes determine affected packages** - bump-workspaces uses commit message
+  scopes, not file paths
+- Use `(*)` to affect all packages at once
+- Use `(scope/unstable)` for unstable API changes (always results in patch)
+- Run `deno run -A jsr:@deno/bump-workspaces/cli --dry-run` to preview version
+  bumps
+
 ## Commands
 
 ```bash

@@ -1,3 +1,103 @@
+/**
+ * Redis client for [Probitas](https://github.com/jsr-probitas/probitas) scenario testing framework.
+ *
+ * This package provides a Redis client with fluent assertion APIs, designed for
+ * integration testing of applications using Redis.
+ *
+ * ## Features
+ *
+ * - **Data Structures**: Strings, Hashes, Lists, Sets, Sorted Sets
+ * - **Pub/Sub**: Publish and subscribe to channels
+ * - **Transactions**: Atomic operations with MULTI/EXEC
+ * - **Fluent Assertions**: `expectRedisResult()` for testing Redis operations
+ * - **Raw Commands**: Execute any Redis command via `command()`
+ * - **Resource Management**: Implements `AsyncDisposable` for proper cleanup
+ *
+ * ## Installation
+ *
+ * ```bash
+ * deno add jsr:@probitas/client-redis
+ * ```
+ *
+ * ## Quick Start
+ *
+ * ```ts
+ * import { createRedisClient, expectRedisResult } from "@probitas/client-redis";
+ *
+ * const client = await createRedisClient({
+ *   url: "redis://localhost:6379/0",
+ * });
+ *
+ * // String operations
+ * await client.set("user:1:name", "Alice", { ex: 3600 });
+ * const result = await client.get("user:1:name");
+ * expectRedisResult(result).ok().valueEquals("Alice");
+ *
+ * // Hash operations
+ * await client.hset("user:1", "email", "alice@example.com");
+ * const email = await client.hget("user:1", "email");
+ * expectRedisResult(email).ok();
+ *
+ * // List operations
+ * await client.rpush("queue", "job1", "job2", "job3");
+ * const job = await client.lpop("queue");
+ * expectRedisResult(job).ok().valueEquals("job1");
+ *
+ * await client.close();
+ * ```
+ *
+ * ## Transactions
+ *
+ * ```ts
+ * // Atomic transaction
+ * const tx = client.multi();
+ * tx.incr("counter");
+ * tx.get("counter");
+ * const result = await tx.exec();
+ * expectRedisResult(result).ok();
+ * ```
+ *
+ * ## Pub/Sub
+ *
+ * ```ts
+ * // Subscribe to a channel
+ * const subscription = client.subscribe("events");
+ * for await (const message of subscription) {
+ *   console.log("Received:", message.message);
+ *   break;
+ * }
+ *
+ * // Publish to a channel
+ * await client.publish("events", JSON.stringify({ type: "update" }));
+ * ```
+ *
+ * ## Using with `using` Statement
+ *
+ * ```ts
+ * await using client = await createRedisClient({ url: "redis://localhost:6379" });
+ *
+ * await client.set("test", "value");
+ * const result = await client.get("test");
+ * expectRedisResult(result).ok();
+ * // Client automatically closed when block exits
+ * ```
+ *
+ * ## Related Packages
+ *
+ * | Package | Description |
+ * |---------|-------------|
+ * | [`@probitas/client`](https://jsr.io/@probitas/client) | Core utilities and types |
+ * | [`@probitas/client-deno-kv`](https://jsr.io/@probitas/client-deno-kv) | Deno KV client |
+ *
+ * ## Links
+ *
+ * - [GitHub Repository](https://github.com/jsr-probitas/probitas-client)
+ * - [Probitas Framework](https://github.com/jsr-probitas/probitas)
+ * - [Redis](https://redis.io/)
+ *
+ * @module
+ */
+
 export type * from "./types.ts";
 export * from "./errors.ts";
 export * from "./client.ts";

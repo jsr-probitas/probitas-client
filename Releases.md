@@ -1,5 +1,21 @@
 ### 2025.12.07
 
+#### @probitas/client-connectrpc 0.2.0 (minor)
+
+- BREAKING(client-connectrpc,client-grpc): rename status() to code() for gRPC
+  consistency
+
+#### @probitas/client-grpc 0.2.0 (minor)
+
+- BREAKING(client-connectrpc,client-grpc): rename status() to code() for gRPC
+  consistency
+
+#### @probitas/client-mongodb 0.2.0 (minor)
+
+- BREAKING(client-mongodb): remove countBetween() for API consistency
+
+### 2025.12.07
+
 #### @probitas/client-redis 0.1.1 (patch)
 
 - fix(client-redis): export RedisResultBase for public API completeness

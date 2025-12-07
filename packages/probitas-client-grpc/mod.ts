@@ -10,7 +10,7 @@
  *
  * - **Native gRPC**: Uses gRPC protocol (HTTP/2 with binary protobuf)
  * - **Server Reflection**: Auto-discover services and methods at runtime
- * - **Fluent Assertions**: Chain assertions like `.ok()`, `.dataContains()`, `.status()`
+ * - **Fluent Assertions**: Chain assertions like `.ok()`, `.dataContains()`, `.code()`
  * - **TLS Support**: Configure secure connections with custom certificates
  * - **Duration Tracking**: Built-in timing for performance assertions
  * - **Error Handling**: Test error responses without throwing exceptions
@@ -187,7 +187,7 @@ export interface GrpcClientConfig
  *
  * expectGrpcResponse(response)
  *   .notOk()
- *   .status(5);  // NOT_FOUND
+ *   .code(5);  // NOT_FOUND
  * ```
  *
  * @example Using `await using` for automatic cleanup

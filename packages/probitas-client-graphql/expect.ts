@@ -46,6 +46,9 @@ export interface GraphqlResponseExpectation {
   /** Assert HTTP status code */
   status(code: number): this;
 
+  /** Assert that HTTP status code is within range (inclusive) */
+  statusInRange(min: number, max: number): this;
+
   /** Assert that HTTP status code is one of the given codes */
   statusIn(...statuses: number[]): this;
 
@@ -195,6 +198,16 @@ class GraphqlResponseExpectationImpl implements GraphqlResponseExpectation {
     if (this.#response.status !== code) {
       throw new Error(
         `Expected status ${code}, got ${this.#response.status}`,
+      );
+    }
+    return this;
+  }
+
+  statusInRange(min: number, max: number): this {
+    const { status } = this.#response;
+    if (status < min || status > max) {
+      throw new Error(
+        `Expected status in range ${min}-${max}, got ${status}`,
       );
     }
     return this;

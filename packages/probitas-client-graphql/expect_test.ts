@@ -480,6 +480,32 @@ Deno.test("expectGraphqlResponse.error()", async (t) => {
   });
 });
 
+Deno.test("expectGraphqlResponse.statusInRange()", async (t) => {
+  await t.step("passes when status is within range", () => {
+    const response = createMockResponse({ data: null, status: 200 });
+    expectGraphqlResponse(response).statusInRange(200, 299);
+  });
+
+  await t.step("passes at lower bound", () => {
+    const response = createMockResponse({ data: null, status: 200 });
+    expectGraphqlResponse(response).statusInRange(200, 299);
+  });
+
+  await t.step("passes at upper bound", () => {
+    const response = createMockResponse({ data: null, status: 299 });
+    expectGraphqlResponse(response).statusInRange(200, 299);
+  });
+
+  await t.step("throws when status is out of range", () => {
+    const response = createMockResponse({ data: null, status: 404 });
+    assertThrows(
+      () => expectGraphqlResponse(response).statusInRange(200, 299),
+      Error,
+      "Expected status in range 200-299, got 404",
+    );
+  });
+});
+
 Deno.test("expectGraphqlResponse.statusIn()", async (t) => {
   await t.step("passes when status is in the list", () => {
     const response = createMockResponse({ data: null, status: 200 });

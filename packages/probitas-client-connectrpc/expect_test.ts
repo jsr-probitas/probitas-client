@@ -338,7 +338,7 @@ Deno.test("expect - method chaining", () => {
 
   expectConnectRpcResponse(response)
     .ok()
-    .status(0)
+    .code(0)
     .headerExists("content-type")
     .dataContains({ status: "success" })
     .durationLessThan(1000);
@@ -356,12 +356,12 @@ Deno.test("expect - error response validation", () => {
 
   expectConnectRpcResponse(response)
     .notOk()
-    .status(16)
+    .code(16)
     .errorContains("invalid")
     .noContent();
 });
 
-Deno.test("expect - statusNotIn() passes when code is not in list", () => {
+Deno.test("expect - codeNotIn() passes when code is not in list", () => {
   const response = new ConnectRpcResponseImpl({
     code: 5, // NOT_FOUND
     message: "Not found",
@@ -371,10 +371,10 @@ Deno.test("expect - statusNotIn() passes when code is not in list", () => {
     responseMessage: null,
   });
 
-  expectConnectRpcResponse(response).statusNotIn(0, 3, 16);
+  expectConnectRpcResponse(response).codeNotIn(0, 3, 16);
 });
 
-Deno.test("expect - statusNotIn() throws when code is in list", () => {
+Deno.test("expect - codeNotIn() throws when code is in list", () => {
   const response = new ConnectRpcResponseImpl({
     code: 5, // NOT_FOUND
     message: "Not found",
@@ -385,13 +385,13 @@ Deno.test("expect - statusNotIn() throws when code is in list", () => {
   });
 
   assertThrows(
-    () => expectConnectRpcResponse(response).statusNotIn(3, 5, 16),
+    () => expectConnectRpcResponse(response).codeNotIn(3, 5, 16),
     Error,
-    "Expected status to not be one of",
+    "Expected code to not be one of",
   );
 });
 
-Deno.test("expect - statusIn() passes when code is in list", () => {
+Deno.test("expect - codeIn() passes when code is in list", () => {
   const response = new ConnectRpcResponseImpl({
     code: 5, // NOT_FOUND
     message: "Not found",
@@ -401,10 +401,10 @@ Deno.test("expect - statusIn() passes when code is in list", () => {
     responseMessage: null,
   });
 
-  expectConnectRpcResponse(response).statusIn(3, 5, 16);
+  expectConnectRpcResponse(response).codeIn(3, 5, 16);
 });
 
-Deno.test("expect - statusIn() throws when code is not in list", () => {
+Deno.test("expect - codeIn() throws when code is not in list", () => {
   const response = new ConnectRpcResponseImpl({
     code: 5, // NOT_FOUND
     message: "Not found",
@@ -415,9 +415,9 @@ Deno.test("expect - statusIn() throws when code is not in list", () => {
   });
 
   assertThrows(
-    () => expectConnectRpcResponse(response).statusIn(0, 3, 16),
+    () => expectConnectRpcResponse(response).codeIn(0, 3, 16),
     Error,
-    "Expected status to be one of",
+    "Expected code to be one of",
   );
 });
 

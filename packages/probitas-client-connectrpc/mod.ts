@@ -8,7 +8,7 @@
  *
  * - **Protocol Support**: Connect, gRPC, and gRPC-Web protocols
  * - **Server Reflection**: Auto-discover services and methods at runtime
- * - **Fluent Assertions**: Chain assertions like `.ok()`, `.dataContains()`, `.status()`
+ * - **Fluent Assertions**: Chain assertions like `.ok()`, `.dataContains()`, `.code()`
  * - **TLS Support**: Configure secure connections with custom certificates
  * - **Duration Tracking**: Built-in timing for performance assertions
  * - **Error Handling**: Test error responses without throwing exceptions
@@ -66,7 +66,7 @@
  *
  * expectConnectRpcResponse(errorResponse)
  *   .notOk()
- *   .status(3)  // INVALID_ARGUMENT
+ *   .code(3)  // INVALID_ARGUMENT
  *   .errorContains("invalid");
  * ```
  *

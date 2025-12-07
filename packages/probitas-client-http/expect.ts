@@ -17,6 +17,9 @@ export interface HttpResponseExpectation {
   /** Assert that response status is within range (inclusive) */
   statusInRange(min: number, max: number): this;
 
+  /** Assert that response status is one of the given values */
+  statusIn(...statuses: number[]): this;
+
   /** Assert that response status is NOT one of the given values */
   statusNotIn(...statuses: number[]): this;
 
@@ -107,6 +110,16 @@ class HttpResponseExpectationImpl implements HttpResponseExpectation {
     if (status < min || status > max) {
       throw new Error(
         `Expected status in range ${min}-${max}, got ${status}`,
+      );
+    }
+    return this;
+  }
+
+  statusIn(...statuses: number[]): this {
+    const { status } = this.#response;
+    if (!statuses.includes(status)) {
+      throw new Error(
+        `Expected status in [${statuses.join(", ")}], got ${status}`,
       );
     }
     return this;

@@ -105,6 +105,27 @@ Deno.test("expectHttpResponse.statusInRange", async (t) => {
   });
 });
 
+Deno.test("expectHttpResponse.statusIn", async (t) => {
+  await t.step("passes when status is in list", () => {
+    const response = createMockResponse({ status: 200 });
+    expectHttpResponse(response).statusIn(200, 201, 204);
+  });
+
+  await t.step("throws when status is not in list", () => {
+    const response = createMockResponse({ status: 404 });
+    assertThrows(
+      () => expectHttpResponse(response).statusIn(200, 201, 204),
+      Error,
+      "Expected status in [200, 201, 204], got 404",
+    );
+  });
+
+  await t.step("passes with single status", () => {
+    const response = createMockResponse({ status: 200 });
+    expectHttpResponse(response).statusIn(200);
+  });
+});
+
 Deno.test("expectHttpResponse.statusNotIn", async (t) => {
   await t.step("passes when status is not in list", () => {
     const response = createMockResponse({ status: 200 });

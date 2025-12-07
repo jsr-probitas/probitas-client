@@ -19,13 +19,13 @@ export interface ConnectRpcResponseExpectation {
   notOk(): this;
 
   /** Verify the exact status code. */
-  status(code: ConnectRpcStatusCode): this;
+  code(expected: ConnectRpcStatusCode): this;
 
   /** Verify the status code is one of the specified values. */
-  statusIn(...codes: ConnectRpcStatusCode[]): this;
+  codeIn(...codes: ConnectRpcStatusCode[]): this;
 
   /** Verify the status code is not one of the specified values. */
-  statusNotIn(...codes: ConnectRpcStatusCode[]): this;
+  codeNotIn(...codes: ConnectRpcStatusCode[]): this;
 
   /** Verify the error message matches exactly or by regex. */
   error(expected: string | RegExp): this;
@@ -104,19 +104,19 @@ class ConnectRpcResponseExpectationImpl
     return this;
   }
 
-  status(code: ConnectRpcStatusCode): this {
-    if (this.#response.code !== code) {
+  code(expected: ConnectRpcStatusCode): this {
+    if (this.#response.code !== expected) {
       throw new Error(
-        `Expected status ${code}, got ${this.#response.code}`,
+        `Expected code ${expected}, got ${this.#response.code}`,
       );
     }
     return this;
   }
 
-  statusIn(...codes: ConnectRpcStatusCode[]): this {
+  codeIn(...codes: ConnectRpcStatusCode[]): this {
     if (!codes.includes(this.#response.code)) {
       throw new Error(
-        `Expected status to be one of [${
+        `Expected code to be one of [${
           codes.join(", ")
         }], got ${this.#response.code}`,
       );
@@ -124,10 +124,10 @@ class ConnectRpcResponseExpectationImpl
     return this;
   }
 
-  statusNotIn(...codes: ConnectRpcStatusCode[]): this {
+  codeNotIn(...codes: ConnectRpcStatusCode[]): this {
     if (codes.includes(this.#response.code)) {
       throw new Error(
-        `Expected status to not be one of [${
+        `Expected code to not be one of [${
           codes.join(", ")
         }], got ${this.#response.code}`,
       );
@@ -338,7 +338,7 @@ class ConnectRpcResponseExpectationImpl
  *
  * expectConnectRpcResponse(response)
  *   .notOk()
- *   .status(5)  // NOT_FOUND
+ *   .code(5)  // NOT_FOUND
  *   .errorContains("not found");
  * ```
  *

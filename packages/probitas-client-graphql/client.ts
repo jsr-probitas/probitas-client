@@ -146,13 +146,6 @@ class GraphqlClientImpl implements GraphqlClient {
         signal: options?.signal,
       });
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("GraphQL network request failed", {
-        endpoint: this.#endpointUrl,
-        operationName: options?.operationName,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       throw new GraphqlNetworkError(
         `Network error: ${
           error instanceof Error ? error.message : String(error)
@@ -165,13 +158,6 @@ class GraphqlClientImpl implements GraphqlClient {
 
     if (!rawResponse.ok) {
       await rawResponse.body?.cancel();
-      logger.warn("GraphQL network error response", {
-        endpoint: this.#endpointUrl,
-        operationName: options?.operationName,
-        status: rawResponse.status,
-        statusText: rawResponse.statusText,
-        duration: `${duration.toFixed(2)}ms`,
-      });
       throw new GraphqlNetworkError(
         `HTTP ${rawResponse.status}: ${rawResponse.statusText}`,
       );
@@ -181,12 +167,6 @@ class GraphqlClientImpl implements GraphqlClient {
     try {
       responseBody = await rawResponse.json();
     } catch (error) {
-      logger.error("GraphQL response parsing failed", {
-        endpoint: this.#endpointUrl,
-        operationName: options?.operationName,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       throw new GraphqlNetworkError("Failed to parse response JSON", {
         cause: error,
       });
@@ -222,18 +202,6 @@ class GraphqlClientImpl implements GraphqlClient {
       true;
 
     if (!response.ok && shouldThrow && response.errors) {
-      logger.warn("GraphQL execution error", {
-        endpoint: this.#endpointUrl,
-        operationName: options?.operationName,
-        duration: `${duration.toFixed(2)}ms`,
-        errorCount: response.errors.length,
-      });
-
-      // Trace log with full error array and paths
-      logger.trace("GraphQL error details", {
-        errors: formatData(response.errors),
-      });
-
       throw new GraphqlExecutionError(response.errors, { response });
     }
 
@@ -248,9 +216,6 @@ class GraphqlClientImpl implements GraphqlClient {
   ): AsyncIterable<GraphqlResponse<TData>> {
     const wsEndpoint = this.config.wsEndpoint;
     if (!wsEndpoint) {
-      logger.error("GraphQL subscription failed", {
-        reason: "WebSocket endpoint not configured",
-      });
       throw new GraphqlNetworkError(
         "WebSocket endpoint (wsEndpoint) is not configured",
       );
@@ -278,10 +243,6 @@ class GraphqlClientImpl implements GraphqlClient {
       };
       const errorHandler = (event: Event) => {
         const errorMessage = (event as ErrorEvent).message ?? "unknown error";
-        logger.error("GraphQL WebSocket connection failed", {
-          wsEndpoint,
-          error: errorMessage,
-        });
         ws.onopen = null;
         ws.onerror = null;
         reject(
@@ -309,16 +270,9 @@ class GraphqlClientImpl implements GraphqlClient {
       const handler = (event: MessageEvent) => {
         const message = JSON.parse(event.data);
         if (message.type === "connection_ack") {
-          logger.debug("GraphQL WebSocket connection acknowledged", {
-            wsEndpoint,
-          });
           cleanup();
           resolve();
         } else if (message.type === "connection_error") {
-          logger.error("GraphQL WebSocket connection error", {
-            wsEndpoint,
-            error: JSON.stringify(message.payload),
-          });
           cleanup();
           reject(
             new GraphqlNetworkError(
@@ -387,11 +341,6 @@ class GraphqlClientImpl implements GraphqlClient {
           break;
         }
         case "error": {
-          logger.error("GraphQL subscription error", {
-            subscriptionId,
-            operationName: options?.operationName,
-            error: JSON.stringify(message.payload),
-          });
           error = new GraphqlNetworkError(
             `Subscription error: ${JSON.stringify(message.payload)}`,
           );
@@ -424,10 +373,6 @@ class GraphqlClientImpl implements GraphqlClient {
     };
 
     ws.onerror = () => {
-      logger.error("GraphQL WebSocket error", {
-        subscriptionId,
-        operationName: options?.operationName,
-      });
       error = new GraphqlNetworkError("WebSocket error during subscription");
       done = true;
       resolveNext?.();
@@ -443,11 +388,6 @@ class GraphqlClientImpl implements GraphqlClient {
             this.config.throwOnError ?? true;
 
           if (!response.ok && shouldThrow && response.errors) {
-            logger.warn("GraphQL subscription execution error", {
-              subscriptionId,
-              operationName: options?.operationName,
-              errorCount: response.errors.length,
-            });
             throw new GraphqlExecutionError(response.errors, { response });
           }
 

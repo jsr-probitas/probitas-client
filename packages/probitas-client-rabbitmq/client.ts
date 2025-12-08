@@ -336,10 +336,6 @@ export async function createRabbitMqClient(
       url: sanitizeUrl(resolvedUrl),
     });
   } catch (error) {
-    logger.error("RabbitMQ connection failed", {
-      url: sanitizeUrl(resolvedUrl),
-      error: error instanceof Error ? error.message : String(error),
-    });
     if (error instanceof TimeoutError || error instanceof AbortError) {
       throw error;
     }
@@ -386,9 +382,6 @@ class RabbitMqClientImpl implements RabbitMqClient {
 
       return new RabbitMqChannelImpl(ch);
     } catch (error) {
-      logger.error("Failed to create channel", {
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, "createChannel");
     }
   }
@@ -401,10 +394,8 @@ class RabbitMqClientImpl implements RabbitMqClient {
       logger.debug("Closing RabbitMQ connection");
       await this.#connection.close();
       logger.debug("RabbitMQ connection closed");
-    } catch (error) {
-      logger.warn("Error closing connection", {
-        error: error instanceof Error ? error.message : String(error),
-      });
+    } catch {
+      // Ignore close errors
     }
   }
 
@@ -472,13 +463,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to assert exchange", {
-        name,
-        type,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, operation);
     }
   }
@@ -512,12 +496,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to delete exchange", {
-        name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, operation);
     }
   }
@@ -588,12 +566,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to assert queue", {
-        name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, operation);
     }
   }
@@ -631,12 +603,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to delete queue", {
-        name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, operation);
     }
   }
@@ -674,12 +640,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to purge queue", {
-        name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, operation);
     }
   }
@@ -721,14 +681,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to bind queue", {
-        queue,
-        exchange,
-        routingKey,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, operation);
     }
   }
@@ -770,14 +722,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to unbind queue", {
-        queue,
-        exchange,
-        routingKey,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, operation);
     }
   }
@@ -847,14 +791,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to publish message", {
-        exchange,
-        routingKey,
-        messageSize: content.length,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, operation);
     }
   }
@@ -923,12 +859,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to get message", {
-        queue,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, operation);
     }
   }
@@ -1010,12 +940,8 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
           logger.debug("Cancelling consumer", { queue, consumerTag });
           await this.#channel.cancel(consumerTag);
           logger.debug("Consumer cancelled", { queue, consumerTag });
-        } catch (error) {
-          logger.warn("Failed to cancel consumer", {
-            queue,
-            consumerTag,
-            error: error instanceof Error ? error.message : String(error),
-          });
+        } catch {
+          // Ignore cancel errors
         }
       }
     }
@@ -1052,11 +978,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       });
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to acknowledge message", {
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       if (
         error instanceof RabbitMqChannelError ||
         error instanceof TimeoutError ||
@@ -1105,11 +1026,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       });
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to nack message", {
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       if (
         error instanceof RabbitMqChannelError ||
         error instanceof TimeoutError ||
@@ -1157,12 +1073,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
         duration,
       });
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Failed to reject message", {
-        requeue: requeue ?? false,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       if (
         error instanceof RabbitMqChannelError ||
         error instanceof TimeoutError ||
@@ -1186,10 +1096,6 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
 
       logger.debug("Prefetch set", { count });
     } catch (error) {
-      logger.error("Failed to set prefetch", {
-        count,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertAmqpError(error, "prefetch");
     }
   }
@@ -1202,10 +1108,8 @@ class RabbitMqChannelImpl implements RabbitMqChannel {
       logger.debug("Closing channel");
       await this.#channel.close();
       logger.debug("Channel closed");
-    } catch (error) {
-      logger.warn("Error closing channel", {
-        error: error instanceof Error ? error.message : String(error),
-      });
+    } catch {
+      // Ignore close errors
     }
   }
 

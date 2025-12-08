@@ -328,11 +328,6 @@ export async function createMongoClient(
       database: config.database,
     });
   } catch (error) {
-    logger.error("MongoDB connection failed", {
-      database: config.database,
-      timeout: config.timeout,
-      error: error instanceof Error ? error.message : String(error),
-    });
     throw new MongoConnectionError(
       `Failed to connect to MongoDB: ${
         error instanceof Error ? error.message : String(error)
@@ -403,11 +398,6 @@ class MongoClientImpl implements MongoClient {
       });
       return result;
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("Transaction failed", {
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       throw error;
     } finally {
       await session.endSession();
@@ -519,12 +509,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB find operation failed", {
-        collection: this.#name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }
@@ -570,12 +554,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB findOne operation failed", {
-        collection: this.#name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }
@@ -619,12 +597,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB insertOne operation failed", {
-        collection: this.#name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }
@@ -670,13 +642,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB insertMany operation failed", {
-        collection: this.#name,
-        documentCount: docs.length,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }
@@ -729,12 +694,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB updateOne operation failed", {
-        collection: this.#name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }
@@ -791,12 +750,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB updateMany operation failed", {
-        collection: this.#name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }
@@ -841,12 +794,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB deleteOne operation failed", {
-        collection: this.#name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }
@@ -891,12 +838,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB deleteMany operation failed", {
-        collection: this.#name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }
@@ -944,13 +885,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB aggregate operation failed", {
-        collection: this.#name,
-        pipelineStages: pipeline.length,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }
@@ -994,12 +928,6 @@ class MongoCollectionImpl<T extends Document> implements MongoCollection<T> {
         duration,
       };
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MongoDB countDocuments operation failed", {
-        collection: this.#name,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       convertMongoError(error, this.#name);
     }
   }

@@ -344,12 +344,6 @@ class MySqlClientImpl implements MySqlClient {
         },
       });
     } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("MySQL query failed", {
-        sql: sqlPreview,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
       throw convertMySqlError(error);
     }
   }

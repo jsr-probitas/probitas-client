@@ -302,84 +302,60 @@ class HttpClientImpl implements HttpClient {
     const redirect = options?.redirect ?? this.config.redirect ?? "follow";
     const startTime = performance.now();
 
-    try {
-      const rawResponse = await fetchFn(url, {
-        method,
-        headers,
-        body: prepared.body as globalThis.BodyInit,
-        signal: options?.signal,
-        redirect,
-      });
+    const rawResponse = await fetchFn(url, {
+      method,
+      headers,
+      body: prepared.body as globalThis.BodyInit,
+      signal: options?.signal,
+      redirect,
+    });
 
-      const duration = performance.now() - startTime;
-      const response = await createHttpResponse(rawResponse, duration);
+    const duration = performance.now() - startTime;
+    const response = await createHttpResponse(rawResponse, duration);
 
-      // Log response
-      logger.debug("HTTP response received", {
-        method,
-        url,
-        status: response.status,
-        statusText: response.statusText,
-        duration: `${duration.toFixed(2)}ms`,
-        contentType: response.headers.get("content-type"),
-        contentLength: response.body?.length,
-      });
-      logger.trace("HTTP response details", {
-        headers: Object.fromEntries(rawResponse.headers.entries()),
-        bodyPreview: response.body
-          ? formatBodyPreview(response.text)
-          : undefined,
-      });
+    // Log response
+    logger.debug("HTTP response received", {
+      method,
+      url,
+      status: response.status,
+      statusText: response.statusText,
+      duration: `${duration.toFixed(2)}ms`,
+      contentType: response.headers.get("content-type"),
+      contentLength: response.body?.length,
+    });
+    logger.trace("HTTP response details", {
+      headers: Object.fromEntries(rawResponse.headers.entries()),
+      bodyPreview: response.body ? formatBodyPreview(response.text) : undefined,
+    });
 
-      // Store cookies from Set-Cookie headers if cookies are enabled
-      if (this.#cookiesEnabled) {
-        // Use getSetCookie() if available (modern API), otherwise fallback to get()
-        const setCookies = rawResponse.headers.getSetCookie?.() ??
-          (rawResponse.headers.get("set-cookie")?.split(/,(?=\s*\w+=)/) ?? []);
-        const parsedCount = setCookies.length;
-        for (const cookieStr of setCookies) {
-          const parsed = parseSetCookie(cookieStr.trim());
-          if (parsed) {
-            this.#cookieJar.set(parsed.name, parsed.value);
-          }
-        }
-        if (parsedCount > 0) {
-          logger.debug("Cookies received and stored", {
-            count: parsedCount,
-          });
+    // Store cookies from Set-Cookie headers if cookies are enabled
+    if (this.#cookiesEnabled) {
+      // Use getSetCookie() if available (modern API), otherwise fallback to get()
+      const setCookies = rawResponse.headers.getSetCookie?.() ??
+        (rawResponse.headers.get("set-cookie")?.split(/,(?=\s*\w+=)/) ?? []);
+      const parsedCount = setCookies.length;
+      for (const cookieStr of setCookies) {
+        const parsed = parseSetCookie(cookieStr.trim());
+        if (parsed) {
+          this.#cookieJar.set(parsed.name, parsed.value);
         }
       }
-
-      // Determine whether to throw on error (request option > config > default true)
-      const shouldThrow = options?.throwOnError ?? this.config.throwOnError ??
-        true;
-
-      if (!response.ok && shouldThrow) {
-        logger.warn("HTTP error response", {
-          method,
-          url,
-          status: response.status,
-          statusText: response.statusText,
-          duration: `${duration.toFixed(2)}ms`,
+      if (parsedCount > 0) {
+        logger.debug("Cookies received and stored", {
+          count: parsedCount,
         });
-        throwHttpError(response);
       }
-
-      return response;
-    } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.error("HTTP request failed", {
-        method,
-        url,
-        duration: `${duration.toFixed(2)}ms`,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      logger.trace("HTTP request error details", {
-        stack: error instanceof Error ? error.stack : undefined,
-        cause: error instanceof Error ? error.cause : undefined,
-      });
-      throw error;
     }
+
+    // Determine whether to throw on error (request option > config > default true)
+    const shouldThrow = options?.throwOnError ?? this.config.throwOnError ??
+      true;
+
+    if (!response.ok && shouldThrow) {
+      throwHttpError(response);
+    }
+
+    return response;
   }
 
   close(): Promise<void> {

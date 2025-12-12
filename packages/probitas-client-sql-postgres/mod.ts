@@ -111,7 +111,6 @@ export { SqlQueryResult } from "@probitas/client-sql";
 export type {
   SqlIsolationLevel,
   SqlQueryResultInit,
-  SqlQueryResultMetadata,
   SqlTransaction,
   SqlTransactionOptions,
 } from "@probitas/client-sql";

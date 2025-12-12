@@ -290,7 +290,7 @@ class MySqlClientImpl implements MySqlClient {
 
     try {
       // deno-lint-ignore no-explicit-any
-      const [rows, fields] = await (this.#pool as any).execute(sql, params);
+      const [rows, _fields] = await (this.#pool as any).execute(sql, params);
       const duration = performance.now() - startTime;
 
       // Handle SELECT queries
@@ -312,9 +312,6 @@ class MySqlClientImpl implements MySqlClient {
           rows: rows as unknown as T[],
           rowCount: rows.length,
           duration,
-          metadata: {
-            warnings: fields ? undefined : undefined,
-          },
         });
       }
 
@@ -334,14 +331,12 @@ class MySqlClientImpl implements MySqlClient {
         rows: [],
         rowCount: resultHeader.affectedRows,
         duration,
-        metadata: {
-          lastInsertId: resultHeader.insertId
-            ? BigInt(resultHeader.insertId)
-            : undefined,
-          warnings: resultHeader.warningStatus > 0
-            ? [`${resultHeader.warningStatus} warning(s)`]
-            : undefined,
-        },
+        lastInsertId: resultHeader.insertId
+          ? BigInt(resultHeader.insertId)
+          : undefined,
+        warnings: resultHeader.warningStatus > 0
+          ? [`${resultHeader.warningStatus} warning(s)`]
+          : undefined,
       });
     } catch (error) {
       throw convertMySqlError(error);

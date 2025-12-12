@@ -9,13 +9,13 @@ Deno.test("SqlQueryResult", async (t) => {
       rows: [{ id: 1, name: "Alice" }],
       rowCount: 1,
       duration: 10,
-      metadata: { lastInsertId: 1n },
+      lastInsertId: 1n,
     });
 
     assertEquals(result.ok, true);
     assertEquals(result.rowCount, 1);
     assertEquals(result.duration, 10);
-    assertEquals(result.metadata.lastInsertId, 1n);
+    assertEquals(result.lastInsertId, 1n);
   });
 
   await t.step("rows is SqlRows instance", () => {
@@ -24,7 +24,6 @@ Deno.test("SqlQueryResult", async (t) => {
       rows: [{ id: 1 }, { id: 2 }],
       rowCount: 0,
       duration: 5,
-      metadata: {},
     });
 
     assertInstanceOf(result.rows, SqlRows);
@@ -37,7 +36,6 @@ Deno.test("SqlQueryResult", async (t) => {
       rows: [{ id: 1 }, { id: 2 }, { id: 3 }],
       rowCount: 0,
       duration: 5,
-      metadata: {},
     });
 
     assertEquals(result.rows.first(), { id: 1 });
@@ -50,7 +48,6 @@ Deno.test("SqlQueryResult", async (t) => {
       rows: [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }],
       rowCount: 0,
       duration: 5,
-      metadata: {},
     });
 
     const names = result.map((row) => row.name);
@@ -73,7 +70,6 @@ Deno.test("SqlQueryResult", async (t) => {
       rows: [{ id: 1, name: "Alice" }],
       rowCount: 0,
       duration: 5,
-      metadata: {},
     });
 
     const users = result.as(User);
@@ -83,28 +79,27 @@ Deno.test("SqlQueryResult", async (t) => {
     assertEquals(users[0].displayName, "User: Alice");
   });
 
-  await t.step("metadata defaults to empty object", () => {
+  await t.step("optional properties default to undefined", () => {
     const result = new SqlQueryResult({
       ok: true,
       rows: [],
       rowCount: 0,
       duration: 0,
-      metadata: {},
     });
 
-    assertEquals(result.metadata.lastInsertId, undefined);
-    assertEquals(result.metadata.warnings, undefined);
+    assertEquals(result.lastInsertId, undefined);
+    assertEquals(result.warnings, undefined);
   });
 
-  await t.step("metadata with warnings", () => {
+  await t.step("warnings property", () => {
     const result = new SqlQueryResult({
       ok: true,
       rows: [],
       rowCount: 0,
       duration: 0,
-      metadata: { warnings: ["truncation occurred"] },
+      warnings: ["truncation occurred"],
     });
 
-    assertEquals(result.metadata.warnings, ["truncation occurred"]);
+    assertEquals(result.warnings, ["truncation occurred"]);
   });
 });

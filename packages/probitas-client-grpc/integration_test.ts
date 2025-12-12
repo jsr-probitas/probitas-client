@@ -189,7 +189,7 @@ Deno.test({
       );
 
       assertEquals(response.ok, true);
-      assertEquals(response.code, 0);
+      assertEquals(response.statusCode, 0);
       assertExists(response.data());
 
       const data = response.data<{ message: string }>();
@@ -205,7 +205,7 @@ Deno.test({
       );
 
       assertEquals(response.ok, true);
-      assertEquals(response.code, 0);
+      assertEquals(response.statusCode, 0);
       assertExists(response.data());
       const data = response.data<{ message: string }>();
       assertEquals(data?.message, "Test message");
@@ -257,7 +257,7 @@ Deno.test({
         );
 
         assertEquals(response.ok, false);
-        assertEquals(response.code, 3);
+        assertEquals(response.statusCode, 3);
       },
     );
 
@@ -424,7 +424,7 @@ Deno.test({
       } catch (error) {
         if (error instanceof GrpcError) {
           assertEquals(error.kind, "connectrpc");
-          assertEquals(typeof error.code, "number");
+          assertEquals(typeof error.statusCode, "number");
           assertExists(error.message);
         } else {
           assertExists(error);
@@ -445,7 +445,7 @@ Deno.test({
       );
 
       assertEquals(response.ok, false);
-      assertEquals(response.code, 3);
+      assertEquals(response.statusCode, 3);
       assertEquals(response.data(), null);
     });
   },

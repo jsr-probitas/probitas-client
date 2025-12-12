@@ -113,7 +113,6 @@ export class DuckDbTransactionImpl implements SqlTransaction {
           rows: rows as T[],
           rowCount: rows.length,
           duration,
-          metadata: {},
         });
       } else {
         // For INSERT/UPDATE/DELETE, rows will be empty
@@ -122,7 +121,6 @@ export class DuckDbTransactionImpl implements SqlTransaction {
           rows: [],
           rowCount: rows.length,
           duration,
-          metadata: {},
         });
       }
     } catch (error) {

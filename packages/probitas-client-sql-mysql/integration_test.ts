@@ -151,7 +151,7 @@ Deno.test({
 
         assertEquals(insertResult.ok, true);
         assertEquals(insertResult.rowCount, 1);
-        assertExists(insertResult.metadata.lastInsertId);
+        assertExists(insertResult.lastInsertId);
 
         // Select
         const selectResult = await client.query<{
@@ -190,7 +190,7 @@ Deno.test({
             "INSERT INTO test_tx_helper (value) VALUES (?)",
             ["auto-committed"],
           );
-          return result.metadata.lastInsertId;
+          return result.lastInsertId;
         });
 
         assertEquals(typeof lastInsertId, "bigint");
@@ -275,9 +275,9 @@ Deno.test({
 
         assertEquals(result.ok, true);
         assertEquals(result.rowCount, 1);
-        assertExists(result.metadata.lastInsertId);
+        assertExists(result.lastInsertId);
 
-        assertEquals(typeof result.metadata.lastInsertId, "bigint");
+        assertEquals(typeof result.lastInsertId, "bigint");
       } finally {
         await client.query("DROP TABLE IF EXISTS test_insert_id");
       }

@@ -77,7 +77,7 @@ Deno.test({
 
         assertEquals(insertResult.ok, true);
         assertEquals(insertResult.rowCount, 1);
-        assertEquals(insertResult.metadata.lastInsertId, 1n);
+        assertEquals(insertResult.lastInsertId, 1n);
 
         const selectResult = await client.query<
           { id: number; name: string; email: string }

@@ -1,32 +1,61 @@
+import type { ClientResult } from "@probitas/client";
+
 /**
  * Result of a get operation.
  */
-export interface DenoKvGetResult<T> {
-  readonly type: "deno-kv:get";
-  readonly ok: boolean;
+export interface DenoKvGetResult<T> extends ClientResult {
+  /**
+   * Result kind discriminator.
+   *
+   * Always `"deno-kv:get"` for KV get operations.
+   */
+  readonly kind: "deno-kv:get";
+
+  /**
+   * The key that was requested.
+   */
   readonly key: Deno.KvKey;
+
+  /**
+   * The retrieved value (null if key doesn't exist).
+   */
   readonly value: T | null;
+
+  /**
+   * Version identifier for optimistic concurrency (null if key doesn't exist).
+   */
   readonly versionstamp: string | null;
-  readonly duration: number;
 }
 
 /**
  * Result of a set operation.
  */
-export interface DenoKvSetResult {
-  readonly type: "deno-kv:set";
-  readonly ok: boolean;
+export interface DenoKvSetResult extends ClientResult {
+  /**
+   * Result kind discriminator.
+   *
+   * Always `"deno-kv:set"` for KV set operations.
+   */
+  readonly kind: "deno-kv:set";
+
+  /**
+   * Version identifier for the newly written value.
+   *
+   * Use this for subsequent conditional updates.
+   */
   readonly versionstamp: string;
-  readonly duration: number;
 }
 
 /**
  * Result of a delete operation.
  */
-export interface DenoKvDeleteResult {
-  readonly type: "deno-kv:delete";
-  readonly ok: boolean;
-  readonly duration: number;
+export interface DenoKvDeleteResult extends ClientResult {
+  /**
+   * Result kind discriminator.
+   *
+   * Always `"deno-kv:delete"` for KV delete operations.
+   */
+  readonly kind: "deno-kv:delete";
 }
 
 /**
@@ -107,21 +136,39 @@ export function createDenoKvEntries<T>(
 /**
  * Result of a list operation.
  */
-export interface DenoKvListResult<T> {
-  readonly type: "deno-kv:list";
-  readonly ok: boolean;
+export interface DenoKvListResult<T> extends ClientResult {
+  /**
+   * Result kind discriminator.
+   *
+   * Always `"deno-kv:list"` for KV list operations.
+   */
+  readonly kind: "deno-kv:list";
+
+  /**
+   * Array of entries matching the list selector.
+   *
+   * Includes helper methods like first(), last(), etc.
+   */
   readonly entries: DenoKvEntries<T>;
-  readonly duration: number;
 }
 
 /**
  * Result of an atomic operation.
  */
-export interface DenoKvAtomicResult {
-  readonly type: "deno-kv:atomic";
-  readonly ok: boolean;
+export interface DenoKvAtomicResult extends ClientResult {
+  /**
+   * Result kind discriminator.
+   *
+   * Always `"deno-kv:atomic"` for KV atomic operations.
+   */
+  readonly kind: "deno-kv:atomic";
+
+  /**
+   * Version identifier for the atomic commit (present only if ok is true).
+   *
+   * Undefined when the atomic operation failed due to version mismatch.
+   */
   readonly versionstamp?: string;
-  readonly duration: number;
 }
 
 /**

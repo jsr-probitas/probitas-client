@@ -303,7 +303,6 @@ class DuckDbClientImpl implements DuckDbClient {
           rows: rows as T[],
           rowCount: rows.length,
           duration,
-          metadata: {},
         });
       } else {
         // For INSERT/UPDATE/DELETE queries
@@ -312,7 +311,6 @@ class DuckDbClientImpl implements DuckDbClient {
           rows: [],
           rowCount: rows.length,
           duration,
-          metadata: {},
         });
       }
     } catch (error) {

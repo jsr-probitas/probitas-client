@@ -1,9 +1,5 @@
 import type postgres from "postgres";
-import {
-  SqlQueryResult,
-  type SqlQueryResultMetadata,
-  type SqlTransaction,
-} from "@probitas/client-sql";
+import { SqlQueryResult, type SqlTransaction } from "@probitas/client-sql";
 import { mapPostgresError } from "./errors.ts";
 
 /**
@@ -56,14 +52,11 @@ export class PostgresTransaction implements SqlTransaction {
       const result = await this.#sql.unsafe<T[]>(sql, params as never[]);
       const duration = performance.now() - startTime;
 
-      const metadata: SqlQueryResultMetadata = {};
-
       return new SqlQueryResult<T>({
         ok: true,
         rows: result as unknown as readonly T[],
         rowCount: result.count ?? result.length,
         duration,
-        metadata,
       });
     } catch (error) {
       throw mapPostgresError(error as { message: string; code?: string });

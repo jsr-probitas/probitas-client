@@ -5,7 +5,6 @@ import { getLogger } from "@probitas/logger";
 import {
   type SqlIsolationLevel,
   SqlQueryResult,
-  type SqlQueryResultMetadata,
   type SqlTransaction,
   type SqlTransactionOptions,
 } from "@probitas/client-sql";
@@ -298,8 +297,6 @@ class PostgresClientImpl implements PostgresClient {
       );
       const duration = performance.now() - startTime;
 
-      const metadata: SqlQueryResultMetadata = {};
-
       logger.debug("PostgreSQL query success", {
         duration: `${duration.toFixed(2)}ms`,
         rowCount: result.count ?? result.length,
@@ -317,7 +314,6 @@ class PostgresClientImpl implements PostgresClient {
         rows: result as unknown as readonly T[],
         rowCount: result.count ?? result.length,
         duration,
-        metadata,
       });
     } catch (error) {
       const duration = performance.now() - startTime;

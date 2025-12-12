@@ -94,7 +94,6 @@ export class MySqlTransactionImpl implements MySqlTransaction {
           rows: rows as unknown as T[],
           rowCount: rows.length,
           duration,
-          metadata: {},
         });
       }
 
@@ -106,14 +105,12 @@ export class MySqlTransactionImpl implements MySqlTransaction {
         rows: [],
         rowCount: resultHeader.affectedRows,
         duration,
-        metadata: {
-          lastInsertId: resultHeader.insertId
-            ? BigInt(resultHeader.insertId)
-            : undefined,
-          warnings: resultHeader.warningStatus > 0
-            ? [`${resultHeader.warningStatus} warning(s)`]
-            : undefined,
-        },
+        lastInsertId: resultHeader.insertId
+          ? BigInt(resultHeader.insertId)
+          : undefined,
+        warnings: resultHeader.warningStatus > 0
+          ? [`${resultHeader.warningStatus} warning(s)`]
+          : undefined,
       });
     } catch (error) {
       throw convertMySqlError(error);

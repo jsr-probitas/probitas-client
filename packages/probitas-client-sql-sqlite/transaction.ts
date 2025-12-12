@@ -123,7 +123,6 @@ export class SqliteTransactionImpl implements SqlTransaction {
               rows: rows,
               rowCount: rows.length,
               duration,
-              metadata: {},
             }),
           );
         } finally {
@@ -150,11 +149,9 @@ export class SqliteTransactionImpl implements SqlTransaction {
               rows: [],
               rowCount: changes,
               duration,
-              metadata: {
-                lastInsertId: lastInsertRowId > 0
-                  ? BigInt(lastInsertRowId)
-                  : undefined,
-              },
+              lastInsertId: lastInsertRowId > 0
+                ? BigInt(lastInsertRowId)
+                : undefined,
             }),
           );
         } finally {

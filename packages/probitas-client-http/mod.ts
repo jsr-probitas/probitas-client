@@ -34,7 +34,7 @@
  * console.log("Status:", res.status);
  *
  * // Extract typed data
- * const user = res.data<User>();
+ * const user = res.json<User>();
  *
  * // POST request
  * const created = await http.post("/users", {

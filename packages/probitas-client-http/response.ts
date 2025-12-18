@@ -51,7 +51,7 @@ export interface HttpResponse extends ClientResult {
    * @template T - defaults to any for test convenience
    */
   // deno-lint-ignore no-explicit-any
-  data<T = any>(): T | null;
+  json<T = any>(): T | null;
 
   // --- Additional properties ---
 
@@ -129,7 +129,7 @@ class HttpResponseImpl implements HttpResponse {
   }
 
   // deno-lint-ignore no-explicit-any
-  data<T = any>(): T | null {
+  json<T = any>(): T | null {
     if (this.body === null) {
       return null;
     }

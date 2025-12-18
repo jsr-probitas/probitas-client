@@ -72,7 +72,7 @@ Deno.test("HttpClient.get", async (t) => {
 
     assertEquals(response.ok, true);
     assertEquals(response.status, 200);
-    assertEquals(response.data(), { id: 1, name: "John" });
+    assertEquals(response.json(), { id: 1, name: "John" });
   });
 
   await t.step("includes query parameters", async () => {

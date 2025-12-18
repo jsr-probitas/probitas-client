@@ -2,6 +2,7 @@ import { assertEquals, assertInstanceOf } from "@std/assert";
 import { ClientError } from "@probitas/client";
 import {
   DenoKvAtomicCheckError,
+  DenoKvConnectionError,
   DenoKvError,
   DenoKvQuotaError,
 } from "./errors.ts";
@@ -78,6 +79,27 @@ Deno.test("DenoKvQuotaError", async (t) => {
   await t.step("supports cause option", () => {
     const cause = new Error("storage limit");
     const error = new DenoKvQuotaError("quota exceeded", { cause });
+    assertEquals(error.cause, cause);
+  });
+});
+
+Deno.test("DenoKvConnectionError", async (t) => {
+  await t.step("extends DenoKvError", () => {
+    const error = new DenoKvConnectionError("connection failed");
+    assertInstanceOf(error, DenoKvError);
+    assertInstanceOf(error, DenoKvConnectionError);
+  });
+
+  await t.step("has correct name and kind", () => {
+    const error = new DenoKvConnectionError("connection failed");
+    assertEquals(error.name, "DenoKvConnectionError");
+    assertEquals(error.kind, "connection");
+    assertEquals(error.message, "connection failed");
+  });
+
+  await t.step("supports cause option", () => {
+    const cause = new Error("network timeout");
+    const error = new DenoKvConnectionError("connection failed", { cause });
     assertEquals(error.cause, cause);
   });
 });

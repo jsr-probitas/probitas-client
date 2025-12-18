@@ -70,7 +70,6 @@ Deno.test("HttpClient.get", async (t) => {
     const response = await client.get("/users/1");
     await client.close();
 
-    if (!("status" in response)) throw new Error("Expected HttpResponse");
     assertEquals(response.ok, true);
     assertEquals(response.status, 200);
     assertEquals(response.data(), { id: 1, name: "John" });
@@ -381,7 +380,6 @@ Deno.test("HttpClient response duration", async (t) => {
     const response = await client.get("/test");
     await client.close();
 
-    if (!("status" in response)) throw new Error("Expected HttpResponse");
     assertEquals(typeof response.duration, "number");
     assertEquals(response.duration >= 0, true);
   });
@@ -403,7 +401,6 @@ Deno.test("HttpClient throwOnError option", async (t) => {
       const response = await client.get("/missing");
       await client.close();
 
-      if (!("status" in response)) throw new Error("Expected HttpResponse");
       assertEquals(response.ok, false);
       assertEquals(response.status, 404);
     },
@@ -490,7 +487,6 @@ Deno.test("HttpClient throwOnError option", async (t) => {
       const response = await client.get("/missing", { throwOnError: false });
       await client.close();
 
-      if (!("status" in response)) throw new Error("Expected HttpResponse");
       assertEquals(response.ok, false);
       assertEquals(response.status, 404);
     },
@@ -511,7 +507,6 @@ Deno.test("HttpClient throwOnError option", async (t) => {
     });
     await client.close();
 
-    if (!("status" in response)) throw new Error("Expected HttpResponse");
     assertEquals(response.status, 400);
   });
 
@@ -530,7 +525,6 @@ Deno.test("HttpClient throwOnError option", async (t) => {
     });
     await client.close();
 
-    if (!("status" in response)) throw new Error("Expected HttpResponse");
     assertEquals(response.status, 405);
   });
 });

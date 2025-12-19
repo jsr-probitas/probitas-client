@@ -1,5 +1,82 @@
 ### 2025.12.19
 
+#### @probitas/client 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-connectrpc 0.5.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-deno-kv 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-graphql 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-grpc 0.5.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-http 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-mongodb 0.5.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-rabbitmq 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-redis 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-sql 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-sql-duckdb 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-sql-mysql 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-sql-postgres 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-sql-sqlite 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+#### @probitas/client-sqs 0.4.1 (patch)
+
+- refactor(*): migrate from @probitas/logger to @logtape/logtape
+- refactor(*): reorganize .claude configuration for context efficiency
+
+### 2025.12.19
+
 #### @probitas/client 0.4.0 (minor)
 
 - feat(*)!: add processed and error properties to ClientResult interface

@@ -1,6 +1,10 @@
 import { AbortError, TimeoutError } from "@probitas/client";
 import { getLogger } from "@probitas/logger";
-import { DenoKvConnectionError, DenoKvError } from "./errors.ts";
+import {
+  DenoKvConnectionError,
+  DenoKvError,
+  type DenoKvFailureError,
+} from "./errors.ts";
 import type {
   DenoKvAtomicOptions,
   DenoKvClientConfig,
@@ -17,18 +21,18 @@ import type {
   DenoKvSetResult,
 } from "./result.ts";
 import {
-  createDenoKvDeleteResultError,
-  createDenoKvDeleteResultFailure,
-  createDenoKvDeleteResultSuccess,
-  createDenoKvGetResultError,
-  createDenoKvGetResultFailure,
-  createDenoKvGetResultSuccess,
-  createDenoKvListResultError,
-  createDenoKvListResultFailure,
-  createDenoKvListResultSuccess,
-  createDenoKvSetResultError,
-  createDenoKvSetResultFailure,
-  createDenoKvSetResultSuccess,
+  DenoKvDeleteResultErrorImpl,
+  DenoKvDeleteResultFailureImpl,
+  DenoKvDeleteResultSuccessImpl,
+  DenoKvGetResultErrorImpl,
+  DenoKvGetResultFailureImpl,
+  DenoKvGetResultSuccessImpl,
+  DenoKvListResultErrorImpl,
+  DenoKvListResultFailureImpl,
+  DenoKvListResultSuccessImpl,
+  DenoKvSetResultErrorImpl,
+  DenoKvSetResultFailureImpl,
+  DenoKvSetResultSuccessImpl,
 } from "./result.ts";
 import type { DenoKvAtomicBuilder } from "./atomic.ts";
 import { DenoKvAtomicBuilderImpl } from "./atomic.ts";
@@ -36,55 +40,22 @@ import { DenoKvAtomicBuilderImpl } from "./atomic.ts";
 const logger = getLogger("probitas", "client", "deno-kv");
 
 /**
- * Format a value for logging, truncating long values.
+ * Convert errors to DenoKv-specific errors.
  */
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return String(value);
-  if (typeof value === "string") {
-    return value.length > 200 ? value.slice(0, 200) + "..." : value;
-  }
-  try {
-    const str = JSON.stringify(value);
-    return str.length > 200 ? str.slice(0, 200) + "..." : str;
-  } catch {
-    return "<unserializable>";
-  }
-}
-
-/**
- * Check if an error is a connection error (network failure, etc.).
- */
-function isConnectionError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-
-  // Check for common network error patterns
-  const message = error.message.toLowerCase();
-  return (
-    message.includes("network") ||
-    message.includes("connection") ||
-    message.includes("timeout") ||
-    message.includes("econnrefused") ||
-    message.includes("enotfound") ||
-    message.includes("dns") ||
-    error.name === "TypeError" // fetch network errors are TypeErrors
-  );
-}
-
-/**
- * Wrap an error in the appropriate DenoKvError type.
- */
-function wrapError(error: unknown): DenoKvError | DenoKvConnectionError {
+function convertDenoKvError(error: unknown): DenoKvError | DenoKvFailureError {
   if (error instanceof DenoKvError) {
     return error;
   }
-
-  const cause = error instanceof Error ? error : new Error(String(error));
-
-  if (isConnectionError(error)) {
-    return new DenoKvConnectionError(cause.message, { cause });
+  if (error instanceof AbortError || error instanceof TimeoutError) {
+    return error;
   }
-
-  return new DenoKvError(cause.message, "kv", { cause });
+  if (error instanceof Error) {
+    if (error.name === "AbortError") {
+      return new AbortError(error.message, { cause: error });
+    }
+    return new DenoKvConnectionError(error.message, { cause: error });
+  }
+  return new DenoKvConnectionError(String(error));
 }
 
 /**
@@ -99,7 +70,8 @@ export interface DenoKvClient extends AsyncDisposable {
   /**
    * Get a single value by key.
    */
-  get<T>(
+  // deno-lint-ignore no-explicit-any
+  get<T = any>(
     key: Deno.KvKey,
     options?: DenoKvGetOptions,
   ): Promise<DenoKvGetResult<T>>;
@@ -107,7 +79,8 @@ export interface DenoKvClient extends AsyncDisposable {
   /**
    * Get multiple values by keys.
    */
-  getMany<T extends readonly unknown[]>(
+  // deno-lint-ignore no-explicit-any
+  getMany<T extends readonly any[]>(
     keys: readonly [...{ [K in keyof T]: Deno.KvKey }],
     options?: DenoKvGetOptions,
   ): Promise<{ [K in keyof T]: DenoKvGetResult<T[K]> }>;
@@ -115,7 +88,8 @@ export interface DenoKvClient extends AsyncDisposable {
   /**
    * Set a value.
    */
-  set<T>(
+  // deno-lint-ignore no-explicit-any
+  set<T = any>(
     key: Deno.KvKey,
     value: T,
     options?: DenoKvSetOptions,
@@ -132,7 +106,8 @@ export interface DenoKvClient extends AsyncDisposable {
   /**
    * List entries by selector.
    */
-  list<T>(
+  // deno-lint-ignore no-explicit-any
+  list<T = any>(
     selector: Deno.KvListSelector,
     options?: DenoKvListOptions,
   ): Promise<DenoKvListResult<T>>;
@@ -172,11 +147,13 @@ class DenoKvClientImpl implements DenoKvClient {
     return options?.throwOnError ?? this.config.throwOnError ?? false;
   }
 
-  async get<T>(
+  // deno-lint-ignore no-explicit-any
+  async get<T = any>(
     key: Deno.KvKey,
     options?: DenoKvGetOptions,
   ): Promise<DenoKvGetResult<T>> {
     const start = performance.now();
+    const shouldThrow = this.#shouldThrow(options);
 
     // Log get operation start
     logger.info("Deno KV get starting", {
@@ -194,14 +171,7 @@ class DenoKvClientImpl implements DenoKvClient {
         duration: `${duration.toFixed(2)}ms`,
       });
 
-      // Log detailed content
-      if (entry.value !== null) {
-        logger.trace("Deno KV get details", {
-          value: formatValue(entry.value),
-        });
-      }
-
-      return createDenoKvGetResultSuccess<T>({
+      return new DenoKvGetResultSuccessImpl<T>({
         key: entry.key,
         value: entry.value,
         versionstamp: entry.versionstamp,
@@ -217,29 +187,29 @@ class DenoKvClientImpl implements DenoKvClient {
 
       // Handle AbortError and TimeoutError as Failure (not processed)
       if (error instanceof AbortError || error instanceof TimeoutError) {
-        if (this.#shouldThrow(options)) {
+        if (shouldThrow) {
           throw error;
         }
-        return createDenoKvGetResultFailure<T>({
+        return new DenoKvGetResultFailureImpl<T>({
           error,
           duration,
         });
       }
 
-      const wrappedError = wrapError(error);
+      const wrappedError = convertDenoKvError(error);
 
-      if (this.#shouldThrow(options)) {
+      if (shouldThrow) {
         throw wrappedError;
       }
 
       if (wrappedError instanceof DenoKvConnectionError) {
-        return createDenoKvGetResultFailure<T>({
+        return new DenoKvGetResultFailureImpl<T>({
           error: wrappedError,
           duration,
         });
       }
 
-      return createDenoKvGetResultError<T>({
+      return new DenoKvGetResultErrorImpl<T>({
         key,
         error: wrappedError,
         duration,
@@ -247,11 +217,13 @@ class DenoKvClientImpl implements DenoKvClient {
     }
   }
 
-  async getMany<T extends readonly unknown[]>(
+  // deno-lint-ignore no-explicit-any
+  async getMany<T extends readonly any[]>(
     keys: readonly [...{ [K in keyof T]: Deno.KvKey }],
     options?: DenoKvGetOptions,
   ): Promise<{ [K in keyof T]: DenoKvGetResult<T[K]> }> {
     const start = performance.now();
+    const shouldThrow = this.#shouldThrow(options);
 
     // Log getMany operation start
     logger.info("Deno KV getMany starting", {
@@ -269,15 +241,8 @@ class DenoKvClientImpl implements DenoKvClient {
         duration: `${duration.toFixed(2)}ms`,
       });
 
-      // Log detailed content
-      logger.trace("Deno KV getMany details", {
-        entries: entries.map((e) => ({
-          value: e.value !== null ? formatValue(e.value) : null,
-        })),
-      });
-
       return entries.map((entry) =>
-        createDenoKvGetResultSuccess({
+        new DenoKvGetResultSuccessImpl({
           key: entry.key,
           value: entry.value,
           versionstamp: entry.versionstamp,
@@ -294,27 +259,27 @@ class DenoKvClientImpl implements DenoKvClient {
 
       // Handle AbortError and TimeoutError as Failure (not processed)
       if (error instanceof AbortError || error instanceof TimeoutError) {
-        if (this.#shouldThrow(options)) {
+        if (shouldThrow) {
           throw error;
         }
         return keys.map(() =>
-          createDenoKvGetResultFailure({
+          new DenoKvGetResultFailureImpl({
             error,
             duration,
           })
         ) as { [K in keyof T]: DenoKvGetResult<T[K]> };
       }
 
-      const wrappedError = wrapError(error);
+      const wrappedError = convertDenoKvError(error);
 
-      if (this.#shouldThrow(options)) {
+      if (shouldThrow) {
         throw wrappedError;
       }
 
       // Return failure results for all keys
       if (wrappedError instanceof DenoKvConnectionError) {
         return keys.map(() =>
-          createDenoKvGetResultFailure({
+          new DenoKvGetResultFailureImpl({
             error: wrappedError,
             duration,
           })
@@ -322,7 +287,7 @@ class DenoKvClientImpl implements DenoKvClient {
       }
 
       return keys.map((key) =>
-        createDenoKvGetResultError({
+        new DenoKvGetResultErrorImpl({
           key,
           error: wrappedError,
           duration,
@@ -331,12 +296,14 @@ class DenoKvClientImpl implements DenoKvClient {
     }
   }
 
-  async set<T>(
+  // deno-lint-ignore no-explicit-any
+  async set<T = any>(
     key: Deno.KvKey,
     value: T,
     options?: DenoKvSetOptions,
   ): Promise<DenoKvSetResult> {
     const start = performance.now();
+    const shouldThrow = this.#shouldThrow(options);
 
     // Log set operation start
     logger.info("Deno KV set starting", {
@@ -357,12 +324,7 @@ class DenoKvClientImpl implements DenoKvClient {
         duration: `${duration.toFixed(2)}ms`,
       });
 
-      // Log detailed content
-      logger.trace("Deno KV set details", {
-        value: formatValue(value),
-      });
-
-      return createDenoKvSetResultSuccess({
+      return new DenoKvSetResultSuccessImpl({
         versionstamp: result.versionstamp,
         duration,
       });
@@ -376,29 +338,29 @@ class DenoKvClientImpl implements DenoKvClient {
 
       // Handle AbortError and TimeoutError as Failure (not processed)
       if (error instanceof AbortError || error instanceof TimeoutError) {
-        if (this.#shouldThrow(options)) {
+        if (shouldThrow) {
           throw error;
         }
-        return createDenoKvSetResultFailure({
+        return new DenoKvSetResultFailureImpl({
           error,
           duration,
         });
       }
 
-      const wrappedError = wrapError(error);
+      const wrappedError = convertDenoKvError(error);
 
-      if (this.#shouldThrow(options)) {
+      if (shouldThrow) {
         throw wrappedError;
       }
 
       if (wrappedError instanceof DenoKvConnectionError) {
-        return createDenoKvSetResultFailure({
+        return new DenoKvSetResultFailureImpl({
           error: wrappedError,
           duration,
         });
       }
 
-      return createDenoKvSetResultError({
+      return new DenoKvSetResultErrorImpl({
         error: wrappedError,
         duration,
       });
@@ -410,6 +372,7 @@ class DenoKvClientImpl implements DenoKvClient {
     options?: DenoKvDeleteOptions,
   ): Promise<DenoKvDeleteResult> {
     const start = performance.now();
+    const shouldThrow = this.#shouldThrow(options);
 
     // Log delete operation start
     logger.info("Deno KV delete starting", {
@@ -426,7 +389,7 @@ class DenoKvClientImpl implements DenoKvClient {
         duration: `${duration.toFixed(2)}ms`,
       });
 
-      return createDenoKvDeleteResultSuccess({
+      return new DenoKvDeleteResultSuccessImpl({
         duration,
       });
     } catch (error) {
@@ -439,40 +402,42 @@ class DenoKvClientImpl implements DenoKvClient {
 
       // Handle AbortError and TimeoutError as Failure (not processed)
       if (error instanceof AbortError || error instanceof TimeoutError) {
-        if (this.#shouldThrow(options)) {
+        if (shouldThrow) {
           throw error;
         }
-        return createDenoKvDeleteResultFailure({
+        return new DenoKvDeleteResultFailureImpl({
           error,
           duration,
         });
       }
 
-      const wrappedError = wrapError(error);
+      const wrappedError = convertDenoKvError(error);
 
-      if (this.#shouldThrow(options)) {
+      if (shouldThrow) {
         throw wrappedError;
       }
 
       if (wrappedError instanceof DenoKvConnectionError) {
-        return createDenoKvDeleteResultFailure({
+        return new DenoKvDeleteResultFailureImpl({
           error: wrappedError,
           duration,
         });
       }
 
-      return createDenoKvDeleteResultError({
+      return new DenoKvDeleteResultErrorImpl({
         error: wrappedError,
         duration,
       });
     }
   }
 
-  async list<T>(
+  // deno-lint-ignore no-explicit-any
+  async list<T = any>(
     selector: Deno.KvListSelector,
     options?: DenoKvListOptions,
   ): Promise<DenoKvListResult<T>> {
     const start = performance.now();
+    const shouldThrow = this.#shouldThrow(options);
 
     // Log list operation start
     const selectorInfo = "prefix" in selector
@@ -520,14 +485,7 @@ class DenoKvClientImpl implements DenoKvClient {
         duration: `${duration.toFixed(2)}ms`,
       });
 
-      // Log detailed content
-      logger.trace("Deno KV list details", {
-        entries: entries.map((e) => ({
-          value: formatValue(e.value),
-        })),
-      });
-
-      return createDenoKvListResultSuccess<T>({
+      return new DenoKvListResultSuccessImpl<T>({
         entries,
         duration,
       });
@@ -542,29 +500,29 @@ class DenoKvClientImpl implements DenoKvClient {
 
       // Handle AbortError and TimeoutError as Failure (not processed)
       if (error instanceof AbortError || error instanceof TimeoutError) {
-        if (this.#shouldThrow(options)) {
+        if (shouldThrow) {
           throw error;
         }
-        return createDenoKvListResultFailure<T>({
+        return new DenoKvListResultFailureImpl<T>({
           error,
           duration,
         });
       }
 
-      const wrappedError = wrapError(error);
+      const wrappedError = convertDenoKvError(error);
 
-      if (this.#shouldThrow(options)) {
+      if (shouldThrow) {
         throw wrappedError;
       }
 
       if (wrappedError instanceof DenoKvConnectionError) {
-        return createDenoKvListResultFailure<T>({
+        return new DenoKvListResultFailureImpl<T>({
           error: wrappedError,
           duration,
         });
       }
 
-      return createDenoKvListResultError<T>({
+      return new DenoKvListResultErrorImpl<T>({
         error: wrappedError,
         duration,
       });

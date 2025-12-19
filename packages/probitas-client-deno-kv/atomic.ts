@@ -1,66 +1,37 @@
 import { AbortError, TimeoutError } from "@probitas/client";
 import { getLogger } from "@probitas/logger";
-import { DenoKvConnectionError, DenoKvError } from "./errors.ts";
+import {
+  DenoKvConnectionError,
+  DenoKvError,
+  type DenoKvFailureError,
+} from "./errors.ts";
 import type { DenoKvAtomicResult } from "./result.ts";
 import {
-  createDenoKvAtomicResultCheckFailed,
-  createDenoKvAtomicResultCommitted,
-  createDenoKvAtomicResultError,
-  createDenoKvAtomicResultFailure,
+  DenoKvAtomicResultCheckFailedImpl,
+  DenoKvAtomicResultCommittedImpl,
+  DenoKvAtomicResultErrorImpl,
+  DenoKvAtomicResultFailureImpl,
 } from "./result.ts";
 
 const logger = getLogger("probitas", "client", "deno-kv");
 
 /**
- * Format a value for logging, truncating long values.
+ * Convert errors to DenoKv-specific errors.
  */
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return String(value);
-  if (typeof value === "string") {
-    return value.length > 200 ? value.slice(0, 200) + "..." : value;
-  }
-  try {
-    const str = JSON.stringify(value);
-    return str.length > 200 ? str.slice(0, 200) + "..." : str;
-  } catch {
-    return "<unserializable>";
-  }
-}
-
-/**
- * Check if an error is a connection error (network failure, etc.).
- */
-function isConnectionError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-
-  // Check for common network error patterns
-  const message = error.message.toLowerCase();
-  return (
-    message.includes("network") ||
-    message.includes("connection") ||
-    message.includes("timeout") ||
-    message.includes("econnrefused") ||
-    message.includes("enotfound") ||
-    message.includes("dns") ||
-    error.name === "TypeError" // fetch network errors are TypeErrors
-  );
-}
-
-/**
- * Wrap an error in the appropriate DenoKvError type.
- */
-function wrapError(error: unknown): DenoKvError | DenoKvConnectionError {
+function convertDenoKvError(error: unknown): DenoKvError | DenoKvFailureError {
   if (error instanceof DenoKvError) {
     return error;
   }
-
-  const cause = error instanceof Error ? error : new Error(String(error));
-
-  if (isConnectionError(error)) {
-    return new DenoKvConnectionError(cause.message, { cause });
+  if (error instanceof AbortError || error instanceof TimeoutError) {
+    return error;
   }
-
-  return new DenoKvError(cause.message, "kv", { cause });
+  if (error instanceof Error) {
+    if (error.name === "AbortError") {
+      return new AbortError(error.message, { cause: error });
+    }
+    return new DenoKvConnectionError(error.message, { cause: error });
+  }
+  return new DenoKvConnectionError(String(error));
 }
 
 /**
@@ -86,7 +57,12 @@ export interface DenoKvAtomicBuilder {
   /**
    * Set a value in the KV store.
    */
-  set<T>(key: Deno.KvKey, value: T, options?: { expireIn?: number }): this;
+  // deno-lint-ignore no-explicit-any
+  set<T = any>(
+    key: Deno.KvKey,
+    value: T,
+    options?: { expireIn?: number },
+  ): this;
 
   /**
    * Delete a key from the KV store.
@@ -120,12 +96,12 @@ export interface DenoKvAtomicBuilder {
 export class DenoKvAtomicBuilderImpl implements DenoKvAtomicBuilder {
   readonly #atomic: Deno.AtomicOperation;
   readonly #checks: Deno.AtomicCheck[] = [];
-  readonly #options: AtomicBuilderOptions;
+  readonly #throwOnError: boolean;
   #operationCount: number = 0;
 
   constructor(kv: Deno.Kv, options?: AtomicBuilderOptions) {
     this.#atomic = kv.atomic();
-    this.#options = options ?? {};
+    this.#throwOnError = options?.throwOnError ?? false;
   }
 
   check(...checks: Deno.AtomicCheck[]): this {
@@ -140,16 +116,18 @@ export class DenoKvAtomicBuilderImpl implements DenoKvAtomicBuilder {
     return this;
   }
 
-  set<T>(key: Deno.KvKey, value: T, options?: { expireIn?: number }): this {
+  // deno-lint-ignore no-explicit-any
+  set<T = any>(
+    key: Deno.KvKey,
+    value: T,
+    options?: { expireIn?: number },
+  ): this {
     this.#atomic.set(key, value, options);
     this.#operationCount++;
     logger.debug("Deno KV atomic set added", {
       key: key.map((k) => typeof k === "string" ? k : String(k)),
       expireIn: options?.expireIn,
       operationCount: this.#operationCount,
-    });
-    logger.trace("Deno KV atomic set details", {
-      value: formatValue(value),
     });
     return this;
   }
@@ -218,20 +196,15 @@ export class DenoKvAtomicBuilderImpl implements DenoKvAtomicBuilder {
         duration: `${duration.toFixed(2)}ms`,
       });
 
-      // Log detailed content
-      logger.trace("Deno KV atomic commit details", {
-        versionstamp: result.ok ? result.versionstamp : null,
-      });
-
       if (result.ok) {
-        return createDenoKvAtomicResultCommitted({
+        return new DenoKvAtomicResultCommittedImpl({
           versionstamp: result.versionstamp,
           duration,
         });
       }
 
       // Check failure - NOT an error, just return the result
-      return createDenoKvAtomicResultCheckFailed({
+      return new DenoKvAtomicResultCheckFailedImpl({
         duration,
       });
     } catch (error) {
@@ -245,29 +218,29 @@ export class DenoKvAtomicBuilderImpl implements DenoKvAtomicBuilder {
 
       // Handle AbortError and TimeoutError as Failure (not processed)
       if (error instanceof AbortError || error instanceof TimeoutError) {
-        if (this.#options.throwOnError) {
+        if (this.#throwOnError) {
           throw error;
         }
-        return createDenoKvAtomicResultFailure({
+        return new DenoKvAtomicResultFailureImpl({
           error,
           duration,
         });
       }
 
-      const wrappedError = wrapError(error);
+      const wrappedError = convertDenoKvError(error);
 
-      if (this.#options.throwOnError) {
+      if (this.#throwOnError) {
         throw wrappedError;
       }
 
       if (wrappedError instanceof DenoKvConnectionError) {
-        return createDenoKvAtomicResultFailure({
+        return new DenoKvAtomicResultFailureImpl({
           error: wrappedError,
           duration,
         });
       }
 
-      return createDenoKvAtomicResultError({
+      return new DenoKvAtomicResultErrorImpl({
         error: wrappedError,
         duration,
       });

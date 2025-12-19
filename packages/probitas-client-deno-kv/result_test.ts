@@ -2,22 +2,22 @@ import { assert, assertEquals, assertFalse } from "@std/assert";
 import { DenoKvConnectionError, DenoKvError } from "./errors.ts";
 import type { DenoKvEntry } from "./result.ts";
 import {
-  createDenoKvAtomicResultCheckFailed,
-  createDenoKvAtomicResultCommitted,
-  createDenoKvAtomicResultError,
-  createDenoKvAtomicResultFailure,
-  createDenoKvDeleteResultError,
-  createDenoKvDeleteResultFailure,
-  createDenoKvDeleteResultSuccess,
-  createDenoKvGetResultError,
-  createDenoKvGetResultFailure,
-  createDenoKvGetResultSuccess,
-  createDenoKvListResultError,
-  createDenoKvListResultFailure,
-  createDenoKvListResultSuccess,
-  createDenoKvSetResultError,
-  createDenoKvSetResultFailure,
-  createDenoKvSetResultSuccess,
+  DenoKvAtomicResultCheckFailedImpl,
+  DenoKvAtomicResultCommittedImpl,
+  DenoKvAtomicResultErrorImpl,
+  DenoKvAtomicResultFailureImpl,
+  DenoKvDeleteResultErrorImpl,
+  DenoKvDeleteResultFailureImpl,
+  DenoKvDeleteResultSuccessImpl,
+  DenoKvGetResultErrorImpl,
+  DenoKvGetResultFailureImpl,
+  DenoKvGetResultSuccessImpl,
+  DenoKvListResultErrorImpl,
+  DenoKvListResultFailureImpl,
+  DenoKvListResultSuccessImpl,
+  DenoKvSetResultErrorImpl,
+  DenoKvSetResultFailureImpl,
+  DenoKvSetResultSuccessImpl,
 } from "./result.ts";
 
 function createEntry<T>(
@@ -34,7 +34,7 @@ function createEntry<T>(
 
 Deno.test("DenoKvGetResultSuccess", async (t) => {
   await t.step("has correct structure", () => {
-    const result = createDenoKvGetResultSuccess<number>({
+    const result = new DenoKvGetResultSuccessImpl<number>({
       key: ["test"],
       value: 42,
       versionstamp: "v1",
@@ -51,7 +51,7 @@ Deno.test("DenoKvGetResultSuccess", async (t) => {
   });
 
   await t.step("handles null value (key not found)", () => {
-    const result = createDenoKvGetResultSuccess<number>({
+    const result = new DenoKvGetResultSuccessImpl<number>({
       key: ["test"],
       value: null,
       versionstamp: null,
@@ -66,7 +66,7 @@ Deno.test("DenoKvGetResultSuccess", async (t) => {
 Deno.test("DenoKvGetResultError", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvError("quota exceeded", "quota");
-    const result = createDenoKvGetResultError<number>({
+    const result = new DenoKvGetResultErrorImpl<number>({
       key: ["test"],
       error,
       duration: 10,
@@ -84,7 +84,7 @@ Deno.test("DenoKvGetResultError", async (t) => {
 Deno.test("DenoKvGetResultFailure", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvConnectionError("network timeout");
-    const result = createDenoKvGetResultFailure<number>({
+    const result = new DenoKvGetResultFailureImpl<number>({
       error,
       duration: 10,
     });
@@ -104,7 +104,7 @@ Deno.test("DenoKvGetResultFailure", async (t) => {
 
 Deno.test("DenoKvSetResultSuccess", async (t) => {
   await t.step("has correct structure", () => {
-    const result = createDenoKvSetResultSuccess({
+    const result = new DenoKvSetResultSuccessImpl({
       versionstamp: "v1",
       duration: 10,
     });
@@ -119,7 +119,7 @@ Deno.test("DenoKvSetResultSuccess", async (t) => {
 Deno.test("DenoKvSetResultError", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvError("quota exceeded", "quota");
-    const result = createDenoKvSetResultError({
+    const result = new DenoKvSetResultErrorImpl({
       error,
       duration: 10,
     });
@@ -134,7 +134,7 @@ Deno.test("DenoKvSetResultError", async (t) => {
 Deno.test("DenoKvSetResultFailure", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvConnectionError("network timeout");
-    const result = createDenoKvSetResultFailure({
+    const result = new DenoKvSetResultFailureImpl({
       error,
       duration: 10,
     });
@@ -152,7 +152,7 @@ Deno.test("DenoKvSetResultFailure", async (t) => {
 
 Deno.test("DenoKvDeleteResultSuccess", async (t) => {
   await t.step("has correct structure", () => {
-    const result = createDenoKvDeleteResultSuccess({
+    const result = new DenoKvDeleteResultSuccessImpl({
       duration: 10,
     });
     assertEquals(result.kind, "deno-kv:delete");
@@ -165,7 +165,7 @@ Deno.test("DenoKvDeleteResultSuccess", async (t) => {
 Deno.test("DenoKvDeleteResultError", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvError("quota exceeded", "quota");
-    const result = createDenoKvDeleteResultError({
+    const result = new DenoKvDeleteResultErrorImpl({
       error,
       duration: 10,
     });
@@ -179,7 +179,7 @@ Deno.test("DenoKvDeleteResultError", async (t) => {
 Deno.test("DenoKvDeleteResultFailure", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvConnectionError("network timeout");
-    const result = createDenoKvDeleteResultFailure({
+    const result = new DenoKvDeleteResultFailureImpl({
       error,
       duration: 10,
     });
@@ -200,7 +200,7 @@ Deno.test("DenoKvListResultSuccess", async (t) => {
       createEntry(["a"], 1, "v1"),
       createEntry(["b"], 2, "v2"),
     ];
-    const result = createDenoKvListResultSuccess<number>({
+    const result = new DenoKvListResultSuccessImpl<number>({
       entries,
       duration: 10,
     });
@@ -217,7 +217,7 @@ Deno.test("DenoKvListResultSuccess", async (t) => {
   });
 
   await t.step("handles empty entries", () => {
-    const result = createDenoKvListResultSuccess<number>({
+    const result = new DenoKvListResultSuccessImpl<number>({
       entries: [],
       duration: 10,
     });
@@ -228,7 +228,7 @@ Deno.test("DenoKvListResultSuccess", async (t) => {
 Deno.test("DenoKvListResultError", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvError("quota exceeded", "quota");
-    const result = createDenoKvListResultError<number>({
+    const result = new DenoKvListResultErrorImpl<number>({
       error,
       duration: 10,
     });
@@ -243,7 +243,7 @@ Deno.test("DenoKvListResultError", async (t) => {
 Deno.test("DenoKvListResultFailure", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvConnectionError("network timeout");
-    const result = createDenoKvListResultFailure<number>({
+    const result = new DenoKvListResultFailureImpl<number>({
       error,
       duration: 10,
     });
@@ -261,7 +261,7 @@ Deno.test("DenoKvListResultFailure", async (t) => {
 
 Deno.test("DenoKvAtomicResultCommitted", async (t) => {
   await t.step("has correct structure", () => {
-    const result = createDenoKvAtomicResultCommitted({
+    const result = new DenoKvAtomicResultCommittedImpl({
       versionstamp: "v1",
       duration: 10,
     });
@@ -275,7 +275,7 @@ Deno.test("DenoKvAtomicResultCommitted", async (t) => {
 
 Deno.test("DenoKvAtomicResultCheckFailed", async (t) => {
   await t.step("has correct structure", () => {
-    const result = createDenoKvAtomicResultCheckFailed({
+    const result = new DenoKvAtomicResultCheckFailedImpl({
       duration: 10,
     });
     assertEquals(result.kind, "deno-kv:atomic");
@@ -289,7 +289,7 @@ Deno.test("DenoKvAtomicResultCheckFailed", async (t) => {
 Deno.test("DenoKvAtomicResultError", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvError("quota exceeded", "quota");
-    const result = createDenoKvAtomicResultError({
+    const result = new DenoKvAtomicResultErrorImpl({
       error,
       duration: 10,
     });
@@ -304,7 +304,7 @@ Deno.test("DenoKvAtomicResultError", async (t) => {
 Deno.test("DenoKvAtomicResultFailure", async (t) => {
   await t.step("has correct structure", () => {
     const error = new DenoKvConnectionError("network timeout");
-    const result = createDenoKvAtomicResultFailure({
+    const result = new DenoKvAtomicResultFailureImpl({
       error,
       duration: 10,
     });

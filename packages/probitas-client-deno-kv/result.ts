@@ -103,6 +103,87 @@ export type DenoKvGetResult<T = any> =
   | DenoKvGetResultError<T>
   | DenoKvGetResultFailure<T>;
 
+/**
+ * Implementation class for DenoKvGetResultSuccess.
+ * @internal
+ */
+// deno-lint-ignore no-explicit-any
+export class DenoKvGetResultSuccessImpl<T = any>
+  implements DenoKvGetResultSuccess<T> {
+  readonly kind = "deno-kv:get" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly key: Deno.KvKey;
+  readonly value: T | null;
+  readonly versionstamp: string | null;
+  readonly duration: number;
+
+  constructor(params: {
+    key: Deno.KvKey;
+    value: T | null;
+    versionstamp: string | null;
+    duration: number;
+  }) {
+    this.key = params.key;
+    this.value = params.value;
+    this.versionstamp = params.versionstamp;
+    this.duration = params.duration;
+  }
+}
+
+/**
+ * Implementation class for DenoKvGetResultError.
+ * @internal
+ */
+// deno-lint-ignore no-explicit-any
+export class DenoKvGetResultErrorImpl<T = any>
+  implements DenoKvGetResultError<T> {
+  readonly kind = "deno-kv:get" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: DenoKvError;
+  readonly key: Deno.KvKey;
+  readonly value = null;
+  readonly versionstamp = null;
+  readonly duration: number;
+
+  constructor(params: {
+    key: Deno.KvKey;
+    error: DenoKvError;
+    duration: number;
+  }) {
+    this.key = params.key;
+    this.error = params.error;
+    this.duration = params.duration;
+  }
+}
+
+/**
+ * Implementation class for DenoKvGetResultFailure.
+ * @internal
+ */
+// deno-lint-ignore no-explicit-any
+export class DenoKvGetResultFailureImpl<T = any>
+  implements DenoKvGetResultFailure<T> {
+  readonly kind = "deno-kv:get" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: DenoKvFailureError;
+  readonly key = null;
+  readonly value = null;
+  readonly versionstamp = null;
+  readonly duration: number;
+
+  constructor(params: {
+    error: DenoKvFailureError;
+    duration: number;
+  }) {
+    this.error = params.error;
+    this.duration = params.duration;
+  }
+}
+
 // ============================================================================
 // DenoKvSetResult
 // ============================================================================
@@ -177,6 +258,69 @@ export type DenoKvSetResult =
   | DenoKvSetResultError
   | DenoKvSetResultFailure;
 
+/**
+ * Implementation class for DenoKvSetResultSuccess.
+ * @internal
+ */
+export class DenoKvSetResultSuccessImpl implements DenoKvSetResultSuccess {
+  readonly kind = "deno-kv:set" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly versionstamp: string;
+  readonly duration: number;
+
+  constructor(params: {
+    versionstamp: string;
+    duration: number;
+  }) {
+    this.versionstamp = params.versionstamp;
+    this.duration = params.duration;
+  }
+}
+
+/**
+ * Implementation class for DenoKvSetResultError.
+ * @internal
+ */
+export class DenoKvSetResultErrorImpl implements DenoKvSetResultError {
+  readonly kind = "deno-kv:set" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: DenoKvError;
+  readonly versionstamp = null;
+  readonly duration: number;
+
+  constructor(params: {
+    error: DenoKvError;
+    duration: number;
+  }) {
+    this.error = params.error;
+    this.duration = params.duration;
+  }
+}
+
+/**
+ * Implementation class for DenoKvSetResultFailure.
+ * @internal
+ */
+export class DenoKvSetResultFailureImpl implements DenoKvSetResultFailure {
+  readonly kind = "deno-kv:set" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: DenoKvFailureError;
+  readonly versionstamp = null;
+  readonly duration: number;
+
+  constructor(params: {
+    error: DenoKvFailureError;
+    duration: number;
+  }) {
+    this.error = params.error;
+    this.duration = params.duration;
+  }
+}
+
 // ============================================================================
 // DenoKvDeleteResult
 // ============================================================================
@@ -242,6 +386,66 @@ export type DenoKvDeleteResult =
   | DenoKvDeleteResultSuccess
   | DenoKvDeleteResultError
   | DenoKvDeleteResultFailure;
+
+/**
+ * Implementation class for DenoKvDeleteResultSuccess.
+ * @internal
+ */
+export class DenoKvDeleteResultSuccessImpl
+  implements DenoKvDeleteResultSuccess {
+  readonly kind = "deno-kv:delete" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly duration: number;
+
+  constructor(params: {
+    duration: number;
+  }) {
+    this.duration = params.duration;
+  }
+}
+
+/**
+ * Implementation class for DenoKvDeleteResultError.
+ * @internal
+ */
+export class DenoKvDeleteResultErrorImpl implements DenoKvDeleteResultError {
+  readonly kind = "deno-kv:delete" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: DenoKvError;
+  readonly duration: number;
+
+  constructor(params: {
+    error: DenoKvError;
+    duration: number;
+  }) {
+    this.error = params.error;
+    this.duration = params.duration;
+  }
+}
+
+/**
+ * Implementation class for DenoKvDeleteResultFailure.
+ * @internal
+ */
+export class DenoKvDeleteResultFailureImpl
+  implements DenoKvDeleteResultFailure {
+  readonly kind = "deno-kv:delete" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: DenoKvFailureError;
+  readonly duration: number;
+
+  constructor(params: {
+    error: DenoKvFailureError;
+    duration: number;
+  }) {
+    this.error = params.error;
+    this.duration = params.duration;
+  }
+}
 
 // ============================================================================
 // DenoKvListResult
@@ -334,6 +538,75 @@ export type DenoKvListResult<T = any> =
   | DenoKvListResultSuccess<T>
   | DenoKvListResultError<T>
   | DenoKvListResultFailure<T>;
+
+/**
+ * Implementation class for DenoKvListResultSuccess.
+ * @internal
+ */
+// deno-lint-ignore no-explicit-any
+export class DenoKvListResultSuccessImpl<T = any>
+  implements DenoKvListResultSuccess<T> {
+  readonly kind = "deno-kv:list" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly entries: readonly DenoKvEntry<T>[];
+  readonly duration: number;
+
+  constructor(params: {
+    entries: readonly DenoKvEntry<T>[];
+    duration: number;
+  }) {
+    this.entries = params.entries;
+    this.duration = params.duration;
+  }
+}
+
+/**
+ * Implementation class for DenoKvListResultError.
+ * @internal
+ */
+// deno-lint-ignore no-explicit-any
+export class DenoKvListResultErrorImpl<T = any>
+  implements DenoKvListResultError<T> {
+  readonly kind = "deno-kv:list" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: DenoKvError;
+  readonly entries: readonly DenoKvEntry<T>[] = [];
+  readonly duration: number;
+
+  constructor(params: {
+    error: DenoKvError;
+    duration: number;
+  }) {
+    this.error = params.error;
+    this.duration = params.duration;
+  }
+}
+
+/**
+ * Implementation class for DenoKvListResultFailure.
+ * @internal
+ */
+// deno-lint-ignore no-explicit-any
+export class DenoKvListResultFailureImpl<T = any>
+  implements DenoKvListResultFailure<T> {
+  readonly kind = "deno-kv:list" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: DenoKvFailureError;
+  readonly entries: readonly DenoKvEntry<T>[] = [];
+  readonly duration: number;
+
+  constructor(params: {
+    error: DenoKvFailureError;
+    duration: number;
+  }) {
+    this.error = params.error;
+    this.duration = params.duration;
+  }
+}
 
 // ============================================================================
 // DenoKvAtomicResult
@@ -435,316 +708,89 @@ export type DenoKvAtomicResult =
   | DenoKvAtomicResultError
   | DenoKvAtomicResultFailure;
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
 /**
- * Create a successful get result.
+ * Implementation class for DenoKvAtomicResultCommitted.
+ * @internal
  */
-export function createDenoKvGetResultSuccess<T>(
-  params: {
-    key: Deno.KvKey;
-    value: T | null;
-    versionstamp: string | null;
-    duration: number;
-  },
-): DenoKvGetResultSuccess<T> {
-  return {
-    kind: "deno-kv:get",
-    processed: true,
-    ok: true,
-    error: null,
-    key: params.key,
-    value: params.value,
-    versionstamp: params.versionstamp,
-    duration: params.duration,
-  };
-}
+export class DenoKvAtomicResultCommittedImpl
+  implements DenoKvAtomicResultCommitted {
+  readonly kind = "deno-kv:atomic" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly versionstamp: string;
+  readonly duration: number;
 
-/**
- * Create a get result with KV error.
- */
-export function createDenoKvGetResultError<T>(
-  params: {
-    key: Deno.KvKey;
-    error: DenoKvError;
-    duration: number;
-  },
-): DenoKvGetResultError<T> {
-  return {
-    kind: "deno-kv:get",
-    processed: true,
-    ok: false,
-    error: params.error,
-    key: params.key,
-    value: null,
-    versionstamp: null,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create a get result with connection failure.
- */
-export function createDenoKvGetResultFailure<T>(
-  params: {
-    error: DenoKvFailureError;
-    duration: number;
-  },
-): DenoKvGetResultFailure<T> {
-  return {
-    kind: "deno-kv:get",
-    processed: false,
-    ok: false,
-    error: params.error,
-    key: null,
-    value: null,
-    versionstamp: null,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create a successful set result.
- */
-export function createDenoKvSetResultSuccess(
-  params: {
+  constructor(params: {
     versionstamp: string;
     duration: number;
-  },
-): DenoKvSetResultSuccess {
-  return {
-    kind: "deno-kv:set",
-    processed: true,
-    ok: true,
-    error: null,
-    versionstamp: params.versionstamp,
-    duration: params.duration,
-  };
+  }) {
+    this.versionstamp = params.versionstamp;
+    this.duration = params.duration;
+  }
 }
 
 /**
- * Create a set result with KV error.
+ * Implementation class for DenoKvAtomicResultCheckFailed.
+ * @internal
  */
-export function createDenoKvSetResultError(
-  params: {
+export class DenoKvAtomicResultCheckFailedImpl
+  implements DenoKvAtomicResultCheckFailed {
+  readonly kind = "deno-kv:atomic" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error = null;
+  readonly versionstamp = null;
+  readonly duration: number;
+
+  constructor(params: {
+    duration: number;
+  }) {
+    this.duration = params.duration;
+  }
+}
+
+/**
+ * Implementation class for DenoKvAtomicResultError.
+ * @internal
+ */
+export class DenoKvAtomicResultErrorImpl implements DenoKvAtomicResultError {
+  readonly kind = "deno-kv:atomic" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: DenoKvError;
+  readonly versionstamp = null;
+  readonly duration: number;
+
+  constructor(params: {
     error: DenoKvError;
     duration: number;
-  },
-): DenoKvSetResultError {
-  return {
-    kind: "deno-kv:set",
-    processed: true,
-    ok: false,
-    error: params.error,
-    versionstamp: null,
-    duration: params.duration,
-  };
+  }) {
+    this.error = params.error;
+    this.duration = params.duration;
+  }
 }
 
 /**
- * Create a set result with connection failure.
+ * Implementation class for DenoKvAtomicResultFailure.
+ * @internal
  */
-export function createDenoKvSetResultFailure(
-  params: {
+export class DenoKvAtomicResultFailureImpl
+  implements DenoKvAtomicResultFailure {
+  readonly kind = "deno-kv:atomic" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: DenoKvFailureError;
+  readonly versionstamp = null;
+  readonly duration: number;
+
+  constructor(params: {
     error: DenoKvFailureError;
     duration: number;
-  },
-): DenoKvSetResultFailure {
-  return {
-    kind: "deno-kv:set",
-    processed: false,
-    ok: false,
-    error: params.error,
-    versionstamp: null,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create a successful delete result.
- */
-export function createDenoKvDeleteResultSuccess(
-  params: {
-    duration: number;
-  },
-): DenoKvDeleteResultSuccess {
-  return {
-    kind: "deno-kv:delete",
-    processed: true,
-    ok: true,
-    error: null,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create a delete result with KV error.
- */
-export function createDenoKvDeleteResultError(
-  params: {
-    error: DenoKvError;
-    duration: number;
-  },
-): DenoKvDeleteResultError {
-  return {
-    kind: "deno-kv:delete",
-    processed: true,
-    ok: false,
-    error: params.error,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create a delete result with connection failure.
- */
-export function createDenoKvDeleteResultFailure(
-  params: {
-    error: DenoKvFailureError;
-    duration: number;
-  },
-): DenoKvDeleteResultFailure {
-  return {
-    kind: "deno-kv:delete",
-    processed: false,
-    ok: false,
-    error: params.error,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create a successful list result.
- */
-export function createDenoKvListResultSuccess<T>(
-  params: {
-    entries: readonly DenoKvEntry<T>[];
-    duration: number;
-  },
-): DenoKvListResultSuccess<T> {
-  return {
-    kind: "deno-kv:list",
-    processed: true,
-    ok: true,
-    error: null,
-    entries: params.entries,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create a list result with KV error.
- */
-export function createDenoKvListResultError<T>(
-  params: {
-    error: DenoKvError;
-    duration: number;
-  },
-): DenoKvListResultError<T> {
-  return {
-    kind: "deno-kv:list",
-    processed: true,
-    ok: false,
-    error: params.error,
-    entries: [],
-    duration: params.duration,
-  };
-}
-
-/**
- * Create a list result with connection failure.
- */
-export function createDenoKvListResultFailure<T>(
-  params: {
-    error: DenoKvFailureError;
-    duration: number;
-  },
-): DenoKvListResultFailure<T> {
-  return {
-    kind: "deno-kv:list",
-    processed: false,
-    ok: false,
-    error: params.error,
-    entries: [],
-    duration: params.duration,
-  };
-}
-
-/**
- * Create a committed atomic result.
- */
-export function createDenoKvAtomicResultCommitted(
-  params: {
-    versionstamp: string;
-    duration: number;
-  },
-): DenoKvAtomicResultCommitted {
-  return {
-    kind: "deno-kv:atomic",
-    processed: true,
-    ok: true,
-    error: null,
-    versionstamp: params.versionstamp,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create an atomic result for check failure.
- */
-export function createDenoKvAtomicResultCheckFailed(
-  params: {
-    duration: number;
-  },
-): DenoKvAtomicResultCheckFailed {
-  return {
-    kind: "deno-kv:atomic",
-    processed: true,
-    ok: false,
-    error: null,
-    versionstamp: null,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create an atomic result with KV error.
- */
-export function createDenoKvAtomicResultError(
-  params: {
-    error: DenoKvError;
-    duration: number;
-  },
-): DenoKvAtomicResultError {
-  return {
-    kind: "deno-kv:atomic",
-    processed: true,
-    ok: false,
-    error: params.error,
-    versionstamp: null,
-    duration: params.duration,
-  };
-}
-
-/**
- * Create an atomic result with connection failure.
- */
-export function createDenoKvAtomicResultFailure(
-  params: {
-    error: DenoKvFailureError;
-    duration: number;
-  },
-): DenoKvAtomicResultFailure {
-  return {
-    kind: "deno-kv:atomic",
-    processed: false,
-    ok: false,
-    error: params.error,
-    versionstamp: null,
-    duration: params.duration,
-  };
+  }) {
+    this.error = params.error;
+    this.duration = params.duration;
+  }
 }
 
 // ============================================================================

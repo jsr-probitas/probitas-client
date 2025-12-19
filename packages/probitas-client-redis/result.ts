@@ -344,310 +344,316 @@ export type RedisResult<T = any> =
   | RedisHashResult;
 
 // ============================================================================
-// Factory Functions
+// Result Impl Classes
 // ============================================================================
 
 /**
- * Create a successful GET result.
+ * @internal
  */
-export function createRedisGetResultSuccess(params: {
-  value: string | null;
-  duration: number;
-}): RedisGetResultSuccess {
-  return {
-    kind: "redis:get",
-    processed: true,
-    ok: true,
-    error: null,
-    value: params.value,
-    duration: params.duration,
-  };
+export class RedisGetResultSuccessImpl implements RedisGetResultSuccess {
+  readonly kind = "redis:get" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly value: string | null;
+  readonly duration: number;
+
+  constructor(value: string | null, duration: number) {
+    this.value = value;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create an error GET result.
+ * @internal
  */
-export function createRedisGetResultError(params: {
-  error: RedisOperationError;
-  duration: number;
-}): RedisGetResultError {
-  return {
-    kind: "redis:get",
-    processed: true,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisGetResultErrorImpl implements RedisGetResultError {
+  readonly kind = "redis:get" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: RedisOperationError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisOperationError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a failure GET result.
+ * @internal
  */
-export function createRedisGetResultFailure(params: {
-  error: RedisFailureError;
-  duration: number;
-}): RedisGetResultFailure {
-  return {
-    kind: "redis:get",
-    processed: false,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisGetResultFailureImpl implements RedisGetResultFailure {
+  readonly kind = "redis:get" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: RedisFailureError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisFailureError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a successful SET result.
+ * @internal
  */
-export function createRedisSetResultSuccess(params: {
-  duration: number;
-}): RedisSetResultSuccess {
-  return {
-    kind: "redis:set",
-    processed: true,
-    ok: true,
-    error: null,
-    value: "OK",
-    duration: params.duration,
-  };
+export class RedisSetResultSuccessImpl implements RedisSetResultSuccess {
+  readonly kind = "redis:set" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly value = "OK" as const;
+  readonly duration: number;
+
+  constructor(duration: number) {
+    this.duration = duration;
+  }
 }
 
 /**
- * Create an error SET result.
+ * @internal
  */
-export function createRedisSetResultError(params: {
-  error: RedisOperationError;
-  duration: number;
-}): RedisSetResultError {
-  return {
-    kind: "redis:set",
-    processed: true,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisSetResultErrorImpl implements RedisSetResultError {
+  readonly kind = "redis:set" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: RedisOperationError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisOperationError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a failure SET result.
+ * @internal
  */
-export function createRedisSetResultFailure(params: {
-  error: RedisFailureError;
-  duration: number;
-}): RedisSetResultFailure {
-  return {
-    kind: "redis:set",
-    processed: false,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisSetResultFailureImpl implements RedisSetResultFailure {
+  readonly kind = "redis:set" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: RedisFailureError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisFailureError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a successful count result.
+ * @internal
  */
-export function createRedisCountResultSuccess(params: {
-  value: number;
-  duration: number;
-}): RedisCountResultSuccess {
-  return {
-    kind: "redis:count",
-    processed: true,
-    ok: true,
-    error: null,
-    value: params.value,
-    duration: params.duration,
-  };
+export class RedisCountResultSuccessImpl implements RedisCountResultSuccess {
+  readonly kind = "redis:count" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly value: number;
+  readonly duration: number;
+
+  constructor(value: number, duration: number) {
+    this.value = value;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create an error count result.
+ * @internal
  */
-export function createRedisCountResultError(params: {
-  error: RedisOperationError;
-  duration: number;
-}): RedisCountResultError {
-  return {
-    kind: "redis:count",
-    processed: true,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisCountResultErrorImpl implements RedisCountResultError {
+  readonly kind = "redis:count" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: RedisOperationError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisOperationError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a failure count result.
+ * @internal
  */
-export function createRedisCountResultFailure(params: {
-  error: RedisFailureError;
-  duration: number;
-}): RedisCountResultFailure {
-  return {
-    kind: "redis:count",
-    processed: false,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisCountResultFailureImpl implements RedisCountResultFailure {
+  readonly kind = "redis:count" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: RedisFailureError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisFailureError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a successful array result.
+ * @internal
  */
-export function createRedisArrayResultSuccess<T = string>(params: {
-  value: readonly T[];
-  duration: number;
-}): RedisArrayResultSuccess<T> {
-  return {
-    kind: "redis:array",
-    processed: true,
-    ok: true,
-    error: null,
-    value: params.value,
-    duration: params.duration,
-  };
+export class RedisArrayResultSuccessImpl<T = string>
+  implements RedisArrayResultSuccess<T> {
+  readonly kind = "redis:array" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly value: readonly T[];
+  readonly duration: number;
+
+  constructor(value: readonly T[], duration: number) {
+    this.value = value;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create an error array result.
+ * @internal
  */
-export function createRedisArrayResultError<T = string>(params: {
-  error: RedisOperationError;
-  duration: number;
-}): RedisArrayResultError<T> {
-  return {
-    kind: "redis:array",
-    processed: true,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisArrayResultErrorImpl<T = string>
+  implements RedisArrayResultError<T> {
+  readonly kind = "redis:array" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: RedisOperationError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisOperationError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a failure array result.
+ * @internal
  */
-export function createRedisArrayResultFailure<T = string>(params: {
-  error: RedisFailureError;
-  duration: number;
-}): RedisArrayResultFailure<T> {
-  return {
-    kind: "redis:array",
-    processed: false,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisArrayResultFailureImpl<T = string>
+  implements RedisArrayResultFailure<T> {
+  readonly kind = "redis:array" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: RedisFailureError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisFailureError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a successful hash result.
+ * @internal
  */
-export function createRedisHashResultSuccess(params: {
-  value: Record<string, string>;
-  duration: number;
-}): RedisHashResultSuccess {
-  return {
-    kind: "redis:hash",
-    processed: true,
-    ok: true,
-    error: null,
-    value: params.value,
-    duration: params.duration,
-  };
+export class RedisHashResultSuccessImpl implements RedisHashResultSuccess {
+  readonly kind = "redis:hash" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly value: Record<string, string>;
+  readonly duration: number;
+
+  constructor(value: Record<string, string>, duration: number) {
+    this.value = value;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create an error hash result.
+ * @internal
  */
-export function createRedisHashResultError(params: {
-  error: RedisOperationError;
-  duration: number;
-}): RedisHashResultError {
-  return {
-    kind: "redis:hash",
-    processed: true,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisHashResultErrorImpl implements RedisHashResultError {
+  readonly kind = "redis:hash" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: RedisOperationError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisOperationError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a failure hash result.
+ * @internal
  */
-export function createRedisHashResultFailure(params: {
-  error: RedisFailureError;
-  duration: number;
-}): RedisHashResultFailure {
-  return {
-    kind: "redis:hash",
-    processed: false,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisHashResultFailureImpl implements RedisHashResultFailure {
+  readonly kind = "redis:hash" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: RedisFailureError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisFailureError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a successful common result.
+ * @internal
  */
-export function createRedisCommonResultSuccess<T>(params: {
-  value: T;
-  duration: number;
-}): RedisCommonResultSuccess<T> {
-  return {
-    kind: "redis:common",
-    processed: true,
-    ok: true,
-    error: null,
-    value: params.value,
-    duration: params.duration,
-  };
+export class RedisCommonResultSuccessImpl<T>
+  implements RedisCommonResultSuccess<T> {
+  readonly kind = "redis:common" as const;
+  readonly processed = true as const;
+  readonly ok = true as const;
+  readonly error = null;
+  readonly value: T;
+  readonly duration: number;
+
+  constructor(value: T, duration: number) {
+    this.value = value;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create an error common result.
+ * @internal
  */
-export function createRedisCommonResultError<T>(params: {
-  error: RedisOperationError;
-  duration: number;
-}): RedisCommonResultError<T> {
-  return {
-    kind: "redis:common",
-    processed: true,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisCommonResultErrorImpl<T>
+  implements RedisCommonResultError<T> {
+  readonly kind = "redis:common" as const;
+  readonly processed = true as const;
+  readonly ok = false as const;
+  readonly error: RedisOperationError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisOperationError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }
 
 /**
- * Create a failure common result.
+ * @internal
  */
-export function createRedisCommonResultFailure<T>(params: {
-  error: RedisFailureError;
-  duration: number;
-}): RedisCommonResultFailure<T> {
-  return {
-    kind: "redis:common",
-    processed: false,
-    ok: false,
-    error: params.error,
-    value: null,
-    duration: params.duration,
-  };
+export class RedisCommonResultFailureImpl<T>
+  implements RedisCommonResultFailure<T> {
+  readonly kind = "redis:common" as const;
+  readonly processed = false as const;
+  readonly ok = false as const;
+  readonly error: RedisFailureError;
+  readonly value = null;
+  readonly duration: number;
+
+  constructor(error: RedisFailureError, duration: number) {
+    this.error = error;
+    this.duration = duration;
+  }
 }

@@ -1365,6 +1365,7 @@
         "dependencies": [
           "jsr:@probitas/client@0",
           "jsr:@probitas/logger@0",
+          "jsr:@std/async@^1.0.15",
           "npm:ioredis@^5.4.1"
         ]
       },

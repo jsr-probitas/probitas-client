@@ -23,7 +23,7 @@ import {
   DynamicDispatchClient,
   ServerReflectionClient,
 } from "@lambdalisue/connectrpc-grpcreflect/client";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import { AbortError, ConnectionError, TimeoutError } from "@probitas/client";
 import type {
   ConnectProtocol,
@@ -48,7 +48,7 @@ import {
   ConnectRpcResponseSuccessImpl,
 } from "./response.ts";
 
-const logger = getLogger("probitas", "client", "connectrpc");
+const logger = getLogger(["probitas", "client", "connectrpc"]);
 
 /**
  * Convert error to appropriate failure error.

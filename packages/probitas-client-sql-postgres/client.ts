@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { ConnectionError } from "@probitas/client";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import {
   SqlConnectionError,
   type SqlIsolationLevel,
@@ -20,7 +20,7 @@ import type {
   PostgresSslConfig,
 } from "./types.ts";
 
-const logger = getLogger("probitas", "client", "sql", "postgres");
+const logger = getLogger(["probitas", "client", "sql", "postgres"]);
 
 /**
  * PostgreSQL client interface.

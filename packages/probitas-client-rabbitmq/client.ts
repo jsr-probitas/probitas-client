@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import * as amqp from "amqplib";
 import { AbortError, TimeoutError } from "@probitas/client";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import { deadline } from "@std/async/deadline";
 import type {
   RabbitMqChannel,
@@ -65,7 +65,7 @@ function isFailureError(error: unknown): error is RabbitMqFailureError {
   );
 }
 
-const logger = getLogger("probitas", "client", "rabbitmq");
+const logger = getLogger(["probitas", "client", "rabbitmq"]);
 
 /**
  * Convert DOMException to TimeoutError or AbortError.

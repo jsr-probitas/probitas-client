@@ -20,9 +20,9 @@ import {
   HttpResponseSuccessImpl,
 } from "./response.ts";
 import { CookieJar, parseSetCookie } from "./cookie.ts";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 
-const logger = getLogger("probitas", "client", "http");
+const logger = getLogger(["probitas", "client", "http"]);
 
 /**
  * Resolve URL from string or HttpConnectionConfig.

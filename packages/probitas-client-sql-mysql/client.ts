@@ -1,5 +1,5 @@
 import mysql from "mysql2/promise";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import {
   SqlConnectionError,
   type SqlQueryOptions,
@@ -15,7 +15,7 @@ import { convertMySqlError } from "./errors.ts";
 import { MySqlTransactionImpl } from "./transaction.ts";
 import type { MySqlTransaction } from "./transaction.ts";
 
-const logger = getLogger("probitas", "client", "sql", "mysql");
+const logger = getLogger(["probitas", "client", "sql", "mysql"]);
 
 /**
  * MySQL client interface.

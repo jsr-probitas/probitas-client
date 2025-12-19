@@ -1,5 +1,5 @@
 import { AbortError, TimeoutError } from "@probitas/client";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import {
   DenoKvConnectionError,
   DenoKvError,
@@ -13,7 +13,7 @@ import {
   DenoKvAtomicResultFailureImpl,
 } from "./result.ts";
 
-const logger = getLogger("probitas", "client", "deno-kv");
+const logger = getLogger(["probitas", "client", "deno-kv"]);
 
 /**
  * Convert errors to DenoKv-specific errors.

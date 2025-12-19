@@ -1,6 +1,6 @@
 import { Redis } from "ioredis";
 import { AbortError, TimeoutError } from "@probitas/client";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import { deadline } from "@std/async/deadline";
 import type {
   RedisArrayResult,
@@ -53,7 +53,7 @@ function isFailureError(error: unknown): error is RedisFailureError {
 
 type RedisInstance = InstanceType<typeof Redis>;
 
-const logger = getLogger("probitas", "client", "redis");
+const logger = getLogger(["probitas", "client", "redis"]);
 
 /**
  * Resolve Redis connection URL from string or configuration object.

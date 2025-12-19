@@ -4,7 +4,7 @@ paths: "**/*.ts"
 
 # Logging Rules
 
-Use `@probitas/logger` (powered by `@logtape/logtape`).
+Use `@logtape/logtape` directly.
 
 ## Key Rule
 

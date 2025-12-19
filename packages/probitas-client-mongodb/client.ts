@@ -6,7 +6,7 @@ import type {
   MongoClientOptions,
 } from "mongodb";
 import { AbortError, TimeoutError } from "@probitas/client";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import { deadline } from "@std/async/deadline";
 import type {
   Document,
@@ -72,7 +72,7 @@ function isFailureError(error: unknown): error is MongoFailureError {
   );
 }
 
-const logger = getLogger("probitas", "client", "mongodb");
+const logger = getLogger(["probitas", "client", "mongodb"]);
 
 /**
  * Resolve MongoDB connection URL from string or configuration object.

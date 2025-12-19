@@ -10,7 +10,7 @@
   },
   "imports": {
     "@probitas/client": "jsr:@probitas/client@^0",
-    "@probitas/logger": "jsr:@probitas/logger@^0",
+    "@logtape/logtape": "jsr:@logtape/logtape@^1",
     "@connectrpc/connect": "npm:@connectrpc/connect@^2.1.1",
     "@connectrpc/connect-node": "npm:@connectrpc/connect-node@^2.1.1",
     "@bufbuild/protobuf": "npm:@bufbuild/protobuf@^2.7.0",

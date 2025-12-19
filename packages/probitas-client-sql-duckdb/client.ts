@@ -1,6 +1,6 @@
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { DuckDBInstance } from "@duckdb/node-api";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import {
   SqlConnectionError,
   type SqlQueryOptions,
@@ -18,7 +18,7 @@ import {
   type DuckDbTransactionOptions,
 } from "./transaction.ts";
 
-const logger = getLogger("probitas", "client", "sql", "duckdb");
+const logger = getLogger(["probitas", "client", "sql", "duckdb"]);
 
 /**
  * DuckDB client interface.

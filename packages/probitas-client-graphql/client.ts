@@ -17,9 +17,9 @@ import {
   GraphqlResponseSuccessImpl,
 } from "./response.ts";
 import { AbortError, TimeoutError } from "@probitas/client";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 
-const logger = getLogger("probitas", "client", "graphql");
+const logger = getLogger(["probitas", "client", "graphql"]);
 
 /**
  * Convert fetch error to appropriate failure error.

@@ -11,7 +11,7 @@
   "imports": {
     "@probitas/client": "jsr:@probitas/client@^0",
     "@probitas/client-sql": "jsr:@probitas/client-sql@^0",
-    "@probitas/logger": "jsr:@probitas/logger@^0",
+    "@logtape/logtape": "jsr:@logtape/logtape@^1",
     "postgres": "npm:postgres@^3"
   }
 }

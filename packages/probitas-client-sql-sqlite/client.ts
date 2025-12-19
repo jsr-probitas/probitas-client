@@ -1,5 +1,5 @@
 import { type BindValue, Database } from "@db/sqlite";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import {
   SqlConnectionError,
   type SqlQueryOptions,
@@ -17,7 +17,7 @@ import {
   type SqliteTransactionOptions,
 } from "./transaction.ts";
 
-const logger = getLogger("probitas", "client", "sql", "sqlite");
+const logger = getLogger(["probitas", "client", "sql", "sqlite"]);
 
 /** Internal type alias for bind parameters */
 type BindParams = BindValue[];

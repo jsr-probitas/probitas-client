@@ -10,7 +10,7 @@
   },
   "imports": {
     "@probitas/client": "jsr:@probitas/client@^0",
-    "@probitas/logger": "jsr:@probitas/logger@^0",
+    "@logtape/logtape": "jsr:@logtape/logtape@^1",
     "@std/async": "jsr:@std/async@^1.0.15",
     "ioredis": "npm:ioredis@^5.4.1"
   }

@@ -12,7 +12,7 @@ import {
   SQSClient,
 } from "@aws-sdk/client-sqs";
 import { AbortError, TimeoutError } from "@probitas/client";
-import { getLogger } from "@probitas/logger";
+import { getLogger } from "@logtape/logtape";
 import { deadline } from "@std/async/deadline";
 import type {
   SqsBatchMessage,
@@ -70,7 +70,7 @@ import {
 
 const MAX_MESSAGE_SIZE = 256 * 1024; // 256 KB
 
-const logger = getLogger("probitas", "client", "sqs");
+const logger = getLogger(["probitas", "client", "sqs"]);
 
 /**
  * Convert DOMException to TimeoutError or AbortError.

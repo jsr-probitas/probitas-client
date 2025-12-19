@@ -98,26 +98,21 @@ import {
 export {
   // Client
   type ConnectRpcClient as GrpcClient,
+  // Errors
   ConnectRpcError as GrpcError,
   type ConnectRpcErrorOptions as GrpcErrorOptions,
-  ConnectRpcInternalError as GrpcInternalError,
   ConnectRpcNetworkError as GrpcNetworkError,
-  ConnectRpcNotFoundError as GrpcNotFoundError,
   type ConnectRpcOptions as GrpcOptions,
-  ConnectRpcPermissionDeniedError as GrpcPermissionDeniedError,
-  ConnectRpcResourceExhaustedError as GrpcResourceExhaustedError,
   // Response types
   type ConnectRpcResponse as GrpcResponse,
   type ConnectRpcResponseError as GrpcResponseError,
   type ConnectRpcResponseFailure as GrpcResponseFailure,
   type ConnectRpcResponseSuccess as GrpcResponseSuccess,
-  ConnectRpcStatus as GrpcStatus,
   // Status codes
+  ConnectRpcStatus as GrpcStatus,
   type ConnectRpcStatusCode as GrpcStatusCode,
-  ConnectRpcUnauthenticatedError as GrpcUnauthenticatedError,
-  ConnectRpcUnavailableError as GrpcUnavailableError,
-  // Errors
   type ErrorDetail,
+  // Types
   type FileDescriptorSet,
   getStatusName as getGrpcStatusName,
   isConnectRpcStatusCode as isGrpcStatusCode,
@@ -125,7 +120,6 @@ export {
   type ReflectionApi,
   type ServiceDetail,
   type ServiceInfo,
-  // Types
   type TlsConfig,
 } from "@probitas/client-connectrpc";
 

@@ -178,7 +178,8 @@ export type ConnectRpcResponse<T = any> =
 /**
  * Parameters for creating a successful ConnectRpcResponse.
  */
-export interface ConnectRpcResponseSuccessParams<T> {
+// deno-lint-ignore no-explicit-any
+export interface ConnectRpcResponseSuccessParams<T = any> {
   readonly response: T | null;
   readonly headers: Headers;
   readonly trailers: Headers;
@@ -206,8 +207,10 @@ export interface ConnectRpcResponseFailureParams {
 
 /**
  * Implementation of ConnectRpcResponseSuccess.
+ * @internal
  */
-class ConnectRpcResponseSuccessImpl<T> implements ConnectRpcResponseSuccess<T> {
+export class ConnectRpcResponseSuccessImpl<T>
+  implements ConnectRpcResponseSuccess<T> {
   readonly kind = "connectrpc" as const;
   readonly processed = true as const;
   readonly ok = true as const;
@@ -241,8 +244,10 @@ class ConnectRpcResponseSuccessImpl<T> implements ConnectRpcResponseSuccess<T> {
 
 /**
  * Implementation of ConnectRpcResponseError.
+ * @internal
  */
-class ConnectRpcResponseErrorImpl<T> implements ConnectRpcResponseError<T> {
+export class ConnectRpcResponseErrorImpl<T>
+  implements ConnectRpcResponseError<T> {
   readonly kind = "connectrpc" as const;
   readonly processed = true as const;
   readonly ok = false as const;
@@ -276,8 +281,10 @@ class ConnectRpcResponseErrorImpl<T> implements ConnectRpcResponseError<T> {
 
 /**
  * Implementation of ConnectRpcResponseFailure.
+ * @internal
  */
-class ConnectRpcResponseFailureImpl<T> implements ConnectRpcResponseFailure<T> {
+export class ConnectRpcResponseFailureImpl<T>
+  implements ConnectRpcResponseFailure<T> {
   readonly kind = "connectrpc" as const;
   readonly processed = false as const;
   readonly ok = false as const;
@@ -300,31 +307,4 @@ class ConnectRpcResponseFailureImpl<T> implements ConnectRpcResponseFailure<T> {
   raw(): null {
     return null;
   }
-}
-
-/**
- * Create a successful ConnectRPC response.
- */
-export function createConnectRpcResponseSuccess<T>(
-  params: ConnectRpcResponseSuccessParams<T>,
-): ConnectRpcResponseSuccess<T> {
-  return new ConnectRpcResponseSuccessImpl(params);
-}
-
-/**
- * Create a ConnectRPC response with gRPC error.
- */
-export function createConnectRpcResponseError<T>(
-  params: ConnectRpcResponseErrorParams,
-): ConnectRpcResponseError<T> {
-  return new ConnectRpcResponseErrorImpl(params);
-}
-
-/**
- * Create a failed ConnectRPC response.
- */
-export function createConnectRpcResponseFailure<T>(
-  params: ConnectRpcResponseFailureParams,
-): ConnectRpcResponseFailure<T> {
-  return new ConnectRpcResponseFailureImpl(params);
 }

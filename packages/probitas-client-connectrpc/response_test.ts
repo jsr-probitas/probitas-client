@@ -10,15 +10,15 @@ import {
 } from "@std/assert";
 import { ConnectError } from "@connectrpc/connect";
 import {
-  createConnectRpcResponseError,
-  createConnectRpcResponseFailure,
-  createConnectRpcResponseSuccess,
+  ConnectRpcResponseErrorImpl,
+  ConnectRpcResponseFailureImpl,
+  ConnectRpcResponseSuccessImpl,
 } from "./response.ts";
 import { ConnectRpcNetworkError, fromConnectError } from "./errors.ts";
 
-Deno.test("createConnectRpcResponseSuccess", async (t) => {
+Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
   await t.step("creates success response with data", () => {
-    const response = createConnectRpcResponseSuccess({
+    const response = new ConnectRpcResponseSuccessImpl({
       response: { user: { id: 1, name: "John" } },
       headers: new Headers(),
       trailers: new Headers(),
@@ -38,7 +38,7 @@ Deno.test("createConnectRpcResponseSuccess", async (t) => {
   await t.step("includes headers and trailers", () => {
     const headers = new Headers({ "content-type": "application/grpc" });
     const trailers = new Headers({ "grpc-status": "0" });
-    const response = createConnectRpcResponseSuccess({
+    const response = new ConnectRpcResponseSuccessImpl({
       response: { test: true },
       headers,
       trailers,
@@ -53,7 +53,7 @@ Deno.test("createConnectRpcResponseSuccess", async (t) => {
 
   await t.step("raw() returns response data", () => {
     const rawResponse = { nested: { value: 123 } };
-    const response = createConnectRpcResponseSuccess({
+    const response = new ConnectRpcResponseSuccessImpl({
       response: rawResponse,
       headers: new Headers(),
       trailers: new Headers(),
@@ -68,7 +68,7 @@ Deno.test("createConnectRpcResponseSuccess", async (t) => {
       id: number;
       name: string;
     }
-    const response = createConnectRpcResponseSuccess({
+    const response = new ConnectRpcResponseSuccessImpl({
       response: { user: { id: 1, name: "John" } },
       headers: new Headers(),
       trailers: new Headers(),
@@ -81,7 +81,7 @@ Deno.test("createConnectRpcResponseSuccess", async (t) => {
   });
 
   await t.step("handles null response", () => {
-    const response = createConnectRpcResponseSuccess({
+    const response = new ConnectRpcResponseSuccessImpl({
       response: null,
       headers: new Headers(),
       trailers: new Headers(),
@@ -93,11 +93,11 @@ Deno.test("createConnectRpcResponseSuccess", async (t) => {
   });
 });
 
-Deno.test("createConnectRpcResponseError", async (t) => {
+Deno.test("ConnectRpcResponseErrorImpl", async (t) => {
   await t.step("creates error response", () => {
     const connectError = new ConnectError("Not found", 5);
     const rpcError = fromConnectError(connectError);
-    const response = createConnectRpcResponseError({
+    const response = new ConnectRpcResponseErrorImpl({
       error: connectError,
       rpcError,
       headers: new Headers(),
@@ -117,7 +117,7 @@ Deno.test("createConnectRpcResponseError", async (t) => {
   await t.step("raw() returns ConnectError", () => {
     const connectError = new ConnectError("Internal error", 13);
     const rpcError = fromConnectError(connectError);
-    const response = createConnectRpcResponseError({
+    const response = new ConnectRpcResponseErrorImpl({
       error: connectError,
       rpcError,
       headers: new Headers(),
@@ -133,7 +133,7 @@ Deno.test("createConnectRpcResponseError", async (t) => {
     const trailers = new Headers({ "grpc-status": "5" });
     const connectError = new ConnectError("Not found", 5);
     const rpcError = fromConnectError(connectError);
-    const response = createConnectRpcResponseError({
+    const response = new ConnectRpcResponseErrorImpl({
       error: connectError,
       rpcError,
       headers,
@@ -148,10 +148,10 @@ Deno.test("createConnectRpcResponseError", async (t) => {
   });
 });
 
-Deno.test("createConnectRpcResponseFailure", async (t) => {
+Deno.test("ConnectRpcResponseFailureImpl", async (t) => {
   await t.step("creates failure response", () => {
     const error = new ConnectRpcNetworkError("Connection refused");
-    const response = createConnectRpcResponseFailure({
+    const response = new ConnectRpcResponseFailureImpl({
       error,
       duration: 10,
     });
@@ -165,7 +165,7 @@ Deno.test("createConnectRpcResponseFailure", async (t) => {
 
   await t.step("statusCode is null", () => {
     const error = new ConnectRpcNetworkError("Network error");
-    const response = createConnectRpcResponseFailure({
+    const response = new ConnectRpcResponseFailureImpl({
       error,
       duration: 5,
     });
@@ -175,7 +175,7 @@ Deno.test("createConnectRpcResponseFailure", async (t) => {
 
   await t.step("statusMessage is null", () => {
     const error = new ConnectRpcNetworkError("Network error");
-    const response = createConnectRpcResponseFailure({
+    const response = new ConnectRpcResponseFailureImpl({
       error,
       duration: 5,
     });
@@ -185,7 +185,7 @@ Deno.test("createConnectRpcResponseFailure", async (t) => {
 
   await t.step("headers is null", () => {
     const error = new ConnectRpcNetworkError("Network error");
-    const response = createConnectRpcResponseFailure({
+    const response = new ConnectRpcResponseFailureImpl({
       error,
       duration: 5,
     });
@@ -195,7 +195,7 @@ Deno.test("createConnectRpcResponseFailure", async (t) => {
 
   await t.step("trailers is null", () => {
     const error = new ConnectRpcNetworkError("Network error");
-    const response = createConnectRpcResponseFailure({
+    const response = new ConnectRpcResponseFailureImpl({
       error,
       duration: 5,
     });
@@ -205,7 +205,7 @@ Deno.test("createConnectRpcResponseFailure", async (t) => {
 
   await t.step("data() returns null", () => {
     const error = new ConnectRpcNetworkError("Network error");
-    const response = createConnectRpcResponseFailure({
+    const response = new ConnectRpcResponseFailureImpl({
       error,
       duration: 5,
     });
@@ -215,7 +215,7 @@ Deno.test("createConnectRpcResponseFailure", async (t) => {
 
   await t.step("raw() returns null", () => {
     const error = new ConnectRpcNetworkError("Network error");
-    const response = createConnectRpcResponseFailure({
+    const response = new ConnectRpcResponseFailureImpl({
       error,
       duration: 5,
     });

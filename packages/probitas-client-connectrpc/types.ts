@@ -111,7 +111,7 @@ export interface ConnectRpcClientConfig extends CommonOptions {
   readonly tls?: TlsConfig;
 
   /** Default metadata to send with every request. */
-  readonly metadata?: Record<string, string>;
+  readonly metadata?: HeadersInit;
 
   /**
    * Schema resolution configuration.
@@ -142,7 +142,7 @@ export interface ConnectRpcClientConfig extends CommonOptions {
  */
 export interface ConnectRpcOptions extends CommonOptions {
   /** Metadata to send with the request. */
-  readonly metadata?: Record<string, string>;
+  readonly metadata?: HeadersInit;
 
   /**
    * Whether to throw ConnectRpcError on non-OK responses (code !== 0) or failures.

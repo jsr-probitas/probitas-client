@@ -106,6 +106,32 @@ export interface ReflectionApi {
 
 /**
  * ConnectRPC client interface.
+ *
+ * ## Field Name Conventions
+ *
+ * This client automatically handles field name conversion between protobuf and JavaScript:
+ *
+ * - **Request fields**: Accept both `snake_case` (protobuf style) and `camelCase` (JavaScript style)
+ * - **Response fields**: Converted to JavaScript conventions based on response type:
+ *   - `response.data`: Plain JSON object with `camelCase` field names (no `$typeName`)
+ *   - `response.raw`: Original protobuf Message object with all metadata (includes `$typeName`)
+ *
+ * @example
+ * ```ts
+ * const client = createConnectRpcClient({ url: "http://localhost:50051" });
+ *
+ * // Request: Both formats work
+ * await client.call("echo.Echo", "echoWithDelay", {
+ *   message: "hello",
+ *   delayMs: 100,        // camelCase (recommended)
+ *   // delay_ms: 100,    // snake_case also works
+ * });
+ *
+ * // Response: data is JSON, raw is protobuf Message
+ * const response = await client.call("echo.Echo", "echo", { message: "test" });
+ * console.log(response.data);  // { message: "test", metadata: {...} }
+ * console.log(response.raw);   // { $typeName: "echo.EchoResponse", message: "test", ... }
+ * ```
  */
 export interface ConnectRpcClient extends AsyncDisposable {
   /** Client configuration */
@@ -732,8 +758,16 @@ class ConnectRpcClientImpl implements ConnectRpcClient {
       );
       const duration = performance.now() - startTime;
 
+      // Get output message schema for toJson conversion
+      const registry = await this.#getFileRegistry();
+      const service = registry.getService(serviceName);
+      // Match by localName (camelCase) since that's what users provide
+      const method = service?.methods.find((m) => m.localName === methodName);
+      const outputSchema = method?.output;
+
       return new ConnectRpcResponseSuccessImpl({
         response,
+        schema: outputSchema ?? null,
         headers,
         trailers,
         duration,
@@ -821,6 +855,13 @@ class ConnectRpcClientImpl implements ConnectRpcClient {
       },
     };
 
+    // Get output message schema for toJson conversion
+    const registry = await this.#getFileRegistry();
+    const service = registry.getService(serviceName);
+    // Match by localName (camelCase) since that's what users provide
+    const method = service?.methods.find((m) => m.localName === methodName);
+    const outputSchema = method?.output;
+
     const stream = dynamicClient.serverStream(
       serviceName,
       methodName,
@@ -833,6 +874,7 @@ class ConnectRpcClientImpl implements ConnectRpcClient {
         const duration = performance.now() - startTime;
         yield new ConnectRpcResponseSuccessImpl({
           response: message,
+          schema: outputSchema ?? null,
           headers,
           trailers,
           duration,
@@ -929,8 +971,16 @@ class ConnectRpcClientImpl implements ConnectRpcClient {
       );
       const duration = performance.now() - startTime;
 
+      // Get output message schema for toJson conversion
+      const registry = await this.#getFileRegistry();
+      const service = registry.getService(serviceName);
+      // Match by localName (camelCase) since that's what users provide
+      const method = service?.methods.find((m) => m.localName === methodName);
+      const outputSchema = method?.output;
+
       return new ConnectRpcResponseSuccessImpl({
         response,
+        schema: outputSchema ?? null,
         headers,
         trailers,
         duration,
@@ -1017,6 +1067,13 @@ class ConnectRpcClientImpl implements ConnectRpcClient {
       },
     };
 
+    // Get output message schema for toJson conversion
+    const registry = await this.#getFileRegistry();
+    const service = registry.getService(serviceName);
+    // Match by localName (camelCase) since that's what users provide
+    const method = service?.methods.find((m) => m.localName === methodName);
+    const outputSchema = method?.output;
+
     const stream = dynamicClient.bidiStream(
       serviceName,
       methodName,
@@ -1029,6 +1086,7 @@ class ConnectRpcClientImpl implements ConnectRpcClient {
         const duration = performance.now() - startTime;
         yield new ConnectRpcResponseSuccessImpl({
           response: message,
+          schema: outputSchema ?? null,
           headers,
           trailers,
           duration,

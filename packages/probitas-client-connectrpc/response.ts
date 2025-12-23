@@ -5,6 +5,9 @@
  */
 
 import type { ConnectError } from "@connectrpc/connect";
+import type { DescMessage } from "@bufbuild/protobuf";
+import { toJson } from "@bufbuild/protobuf";
+import { getLogger } from "@logtape/logtape";
 import type { ClientResult } from "@probitas/client";
 import type {
   ConnectRpcError,
@@ -12,6 +15,8 @@ import type {
   ConnectRpcNetworkError,
 } from "./errors.ts";
 import type { ConnectRpcStatusCode } from "./status.ts";
+
+const logger = getLogger(["probitas", "client", "connectrpc", "response"]);
 
 /**
  * ConnectRPC error type union.
@@ -24,6 +29,45 @@ export type ConnectRpcErrorType = ConnectRpcError | ConnectRpcNetworkError;
 
 /**
  * Base interface for all ConnectRPC response types.
+ *
+ * ## Field Name Conversion
+ *
+ * Response messages are automatically converted from protobuf format to JavaScript format:
+ *
+ * - **data field**: Plain JSON object with `camelCase` field names (e.g., `delayMs`)
+ *   - No `$typeName` metadata
+ *   - Ready for JSON serialization
+ *   - Suitable for logging, storage, and API responses
+ *
+ * - **raw field**: Original protobuf Message object
+ *   - Includes `$typeName` metadata
+ *   - Access to protobuf-specific features
+ *   - Use for field presence checking or binary operations
+ *
+ * @example
+ * ```ts
+ * import { createConnectRpcClient } from "@probitas/client-connectrpc";
+ *
+ * const client = createConnectRpcClient({ url: "http://localhost:50051" });
+ *
+ * const response = await client.call("echo.Echo", "echoWithDelay", {
+ *   message: "hello",
+ *   delayMs: 100
+ * });
+ *
+ * // data: Plain JSON (camelCase, no $typeName)
+ * console.log(response.data);
+ * // { message: "hello", metadata: {...} }
+ *
+ * // raw: Protobuf Message (with $typeName)
+ * console.log(response.raw);
+ * // { $typeName: "echo.EchoResponse", message: "hello", metadata: {...} }
+ *
+ * // Serialize to JSON
+ * const json = JSON.stringify(response.data);  // Works cleanly
+ *
+ * await client.close();
+ * ```
  */
 // deno-lint-ignore no-explicit-any
 interface ConnectRpcResponseBase<T = any> extends ClientResult {
@@ -66,14 +110,17 @@ interface ConnectRpcResponseBase<T = any> extends ClientResult {
   readonly duration: number;
 
   /**
-   * Deserialized response data.
-   * The response message as-is (already deserialized by Connect).
+   * Response data as plain JavaScript object (converted using toJson).
+   * This is the JSON representation with camelCase field names,
+   * suitable for serialization and general use.
    * Null if the response is an error or has no data.
    */
   readonly data: T | null;
 
   /**
-   * Raw response or error.
+   * Raw protobuf Message object with all protobuf metadata.
+   * Use this when you need access to protobuf-specific features
+   * like field presence checking or working with binary data.
    * Null for failure responses.
    */
   readonly raw: unknown | null;
@@ -101,10 +148,10 @@ export interface ConnectRpcResponseSuccess<T = any>
   /** Response trailers (sent at end of RPC). */
   readonly trailers: Headers;
 
-  /** Raw response. */
+  /** Raw protobuf Message object. */
   readonly raw: unknown;
 
-  /** Response data. */
+  /** Response data as plain JavaScript object (JSON representation). */
   readonly data: T | null;
 }
 
@@ -193,6 +240,7 @@ export type ConnectRpcResponse<T = any> =
 // deno-lint-ignore no-explicit-any
 export interface ConnectRpcResponseSuccessParams<T = any> {
   readonly response: T | null;
+  readonly schema: DescMessage | null;
   readonly headers: Headers;
   readonly trailers: Headers;
   readonly duration: number;
@@ -233,14 +281,33 @@ export class ConnectRpcResponseSuccessImpl<T>
   readonly trailers: Headers;
   readonly duration: number;
   readonly data: T | null;
-  readonly raw: T | null;
+  readonly raw: unknown | null;
 
   constructor(params: ConnectRpcResponseSuccessParams<T>) {
     this.headers = params.headers;
     this.trailers = params.trailers;
     this.duration = params.duration;
-    this.data = params.response;
     this.raw = params.response;
+
+    // Convert protobuf message to JSON if schema is available
+    if (params.response && params.schema) {
+      try {
+        // deno-lint-ignore no-explicit-any
+        this.data = toJson(params.schema, params.response as any) as T;
+      } catch (error) {
+        // If toJson fails, fall back to raw response
+        logger.debug(
+          "Failed to convert protobuf message to JSON, using raw message",
+          {
+            schema: params.schema.typeName,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
+        this.data = params.response;
+      }
+    } else {
+      this.data = params.response;
+    }
   }
 }
 

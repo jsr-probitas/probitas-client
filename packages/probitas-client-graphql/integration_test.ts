@@ -48,9 +48,9 @@ Deno.test({
 
       assert(res.ok);
       assertEquals(res.status, 200);
-      assertExists(res.data());
+      assertExists(res.data);
 
-      assertEquals(res.data()?.__typename, "Query");
+      assertEquals(res.data?.__typename, "Query");
     });
 
     await t.step("introspection query - __schema", async () => {
@@ -59,9 +59,9 @@ Deno.test({
       }>("{ __schema { queryType { name } } }");
 
       assert(res.ok);
-      assertExists(res.data());
+      assertExists(res.data);
 
-      assertEquals(res.data()?.__schema.queryType.name, "Query");
+      assertEquals(res.data?.__schema.queryType.name, "Query");
     });
 
     await t.step("echo query - basic message", async () => {
@@ -75,8 +75,8 @@ Deno.test({
       );
 
       assert(res.ok);
-      assertExists(res.data());
-      assertEquals(res.data()?.echo, "Hello, Probitas!");
+      assertExists(res.data);
+      assertEquals(res.data?.echo, "Hello, Probitas!");
     });
 
     await t.step("echoWithDelay for latency testing", async () => {
@@ -92,8 +92,8 @@ Deno.test({
       const elapsed = Date.now() - start;
 
       assert(res.ok);
-      assertExists(res.data());
-      assertEquals(res.data()?.echoWithDelay, "Delayed message");
+      assertExists(res.data);
+      assertEquals(res.data?.echoWithDelay, "Delayed message");
 
       // Should have taken at least 500ms
       assertEquals(
@@ -150,8 +150,8 @@ Deno.test({
         );
 
         assert(res.ok);
-        assertExists(res.data());
-        const results = res.data()?.echoPartialError;
+        assertExists(res.data);
+        const results = res.data?.echoPartialError;
         // First and third should succeed, second should have error
         assertEquals(results?.[0]?.message, "success");
         assertEquals(results?.[0]?.error, null);
@@ -193,7 +193,7 @@ Deno.test({
     await t.step("includes raw response", async () => {
       const res = await client.query("{ __typename }");
 
-      assertInstanceOf(res.raw(), Response);
+      assertInstanceOf(res.raw, Response);
     });
 
     await t.step("using await using (AsyncDisposable)", async () => {
@@ -301,9 +301,9 @@ Deno.test({
       );
 
       assert(res.ok);
-      assertExists(res.data());
+      assertExists(res.data);
 
-      const message = res.data()?.createMessage;
+      const message = res.data?.createMessage;
       assertEquals(message?.text, "Hello from integration test");
       assertEquals(typeof message?.id, "string");
       assertEquals(typeof message?.createdAt, "string");
@@ -314,8 +314,8 @@ Deno.test({
 
       assert(res.ok);
       assertEquals(res.status, 200);
-      assertExists(res.data());
-      assertEquals(res.data()?.__typename, "Query");
+      assertExists(res.data);
+      assertEquals(res.data?.__typename, "Query");
       assertLess(res.duration, 5000);
     });
 
@@ -334,8 +334,8 @@ Deno.test({
         );
 
         assert(res.ok);
-        assertExists(res.data());
-        assertEquals(res.data()?.echoWithExtensions, "Hello");
+        assertExists(res.data);
+        assertEquals(res.data?.echoWithExtensions, "Hello");
         // Server includes timing and tracing extensions
         assertEquals(typeof res.extensions?.timing, "object");
         assertEquals(typeof res.extensions?.tracing, "object");
@@ -358,7 +358,7 @@ Deno.test({
         { text: "Original text" },
       );
 
-      const messageId = createRes.data()?.createMessage.id;
+      const messageId = createRes.data?.createMessage.id;
 
       // Then update it
       const updateRes = await client.mutation<{
@@ -376,9 +376,9 @@ Deno.test({
       );
 
       assert(updateRes.ok);
-      assertExists(updateRes.data());
-      assertEquals(updateRes.data()?.updateMessage.id, messageId);
-      assertEquals(updateRes.data()?.updateMessage.text, "Updated text");
+      assertExists(updateRes.data);
+      assertEquals(updateRes.data?.updateMessage.id, messageId);
+      assertEquals(updateRes.data?.updateMessage.text, "Updated text");
     });
 
     await t.step("mutation - deleteMessage", async () => {
@@ -396,7 +396,7 @@ Deno.test({
         { text: "To be deleted" },
       );
 
-      const messageId = createRes.data()?.createMessage.id;
+      const messageId = createRes.data?.createMessage.id;
 
       // Then delete it
       const deleteRes = await client.mutation<{
@@ -411,8 +411,8 @@ Deno.test({
       );
 
       assert(deleteRes.ok);
-      assertExists(deleteRes.data());
-      assertEquals(deleteRes.data()?.deleteMessage, true);
+      assertExists(deleteRes.data);
+      assertEquals(deleteRes.data?.deleteMessage, true);
     });
 
     await t.step("subscription - countdown", async () => {
@@ -434,8 +434,8 @@ Deno.test({
           )
         ) {
           assert(res.ok);
-          assertExists(res.data());
-          numbers.push(res.data()?.countdown ?? -1);
+          assertExists(res.data);
+          numbers.push(res.data?.countdown ?? -1);
         }
 
         assertEquals(numbers, [3, 2, 1, 0]);
@@ -475,9 +475,9 @@ Deno.test({
         );
 
         assert(res.ok);
-        assertExists(res.data());
+        assertExists(res.data);
 
-        const headers = res.data()?.echoHeaders;
+        const headers = res.data?.echoHeaders;
         // Verify config-level headers were sent
         assertEquals(headers?.authorization, "Bearer test-token-123");
         assertEquals(headers?.custom, "probitas-integration-test");

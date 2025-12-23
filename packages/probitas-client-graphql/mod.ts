@@ -31,7 +31,7 @@
  *     user(id: $id) { id name email }
  *   }
  * `, { id: "123" });
- * console.log("User:", res.data());
+ * console.log("User:", res.data);
  *
  * // Mutation
  * const created = await client.mutation(outdent`
@@ -39,7 +39,7 @@
  *     createUser(input: $input) { id name }
  *   }
  * `, { input: { name: "Jane", email: "jane@example.com" } });
- * console.log("Created:", created.data());
+ * console.log("Created:", created.data);
  *
  * await client.close();
  * ```
@@ -52,7 +52,7 @@
  * await using client = createGraphqlClient({ url: "http://localhost:4000/graphql" });
  *
  * const res = await client.query(`{ __typename }`);
- * console.log(res.data());
+ * console.log(res.data);
  * // Client automatically closed when block exits
  * ```
  *

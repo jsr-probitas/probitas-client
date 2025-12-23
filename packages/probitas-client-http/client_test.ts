@@ -75,7 +75,7 @@ Deno.test("HttpClient.get", async (t) => {
 
     assert(response.ok);
     assertEquals(response.status, 200);
-    assertEquals(response.json(), { id: 1, name: "John" });
+    assertEquals(response.json, { id: 1, name: "John" });
   });
 
   await t.step("includes query parameters", async () => {
@@ -938,11 +938,11 @@ Deno.test("HttpClient network failure handling", async (t) => {
     await client.close();
 
     assert(!response.processed);
-    assertEquals(response.raw(), null);
-    assertEquals(response.arrayBuffer(), null);
-    assertEquals(response.blob(), null);
-    assertEquals(response.text(), null);
-    assertEquals(response.json(), null);
+    assertEquals(response.raw, null);
+    assertEquals(response.arrayBuffer, null);
+    assertEquals(response.blob, null);
+    assertEquals(response.text, null);
+    assertEquals(response.json, null);
   });
 
   await t.step(

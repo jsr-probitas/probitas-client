@@ -88,51 +88,51 @@ Deno.test("HttpResponseSuccessImpl", async (t) => {
     const raw = new Response("hello world", { status: 200 });
     const response = await createSuccessResponse(raw, 10);
 
-    assertEquals(response.text(), "hello world");
+    assertEquals(response.text, "hello world");
   });
 
   await t.step("text() returns null when no body", async () => {
     const raw = new Response(null, { status: 204 });
     const response = await createSuccessResponse(raw, 10);
 
-    assertEquals(response.text(), null);
+    assertEquals(response.text, null);
   });
 
   await t.step("text() can be called multiple times", async () => {
     const raw = new Response("hello", { status: 200 });
     const response = await createSuccessResponse(raw, 10);
 
-    assertEquals(response.text(), "hello");
-    assertEquals(response.text(), "hello");
-    assertEquals(response.text(), "hello");
+    assertEquals(response.text, "hello");
+    assertEquals(response.text, "hello");
+    assertEquals(response.text, "hello");
   });
 
-  await t.step("json() returns parsed JSON", async () => {
+  await t.step("json returns parsed JSON", async () => {
     const data = { name: "John", age: 30 };
     const raw = new Response(JSON.stringify(data), { status: 200 });
     const response = await createSuccessResponse(raw, 10);
 
-    assertEquals(response.json(), data);
+    assertEquals(response.json, data);
   });
 
-  await t.step("json() returns null when no body", async () => {
+  await t.step("json returns null when no body", async () => {
     const raw = new Response(null, { status: 204 });
     const response = await createSuccessResponse(raw, 10);
 
-    assertEquals(response.json(), null);
+    assertEquals(response.json, null);
   });
 
-  await t.step("json() can be called multiple times", async () => {
+  await t.step("json can be accessed multiple times", async () => {
     const data = { id: 1 };
     const raw = new Response(JSON.stringify(data), { status: 200 });
     const response = await createSuccessResponse(raw, 10);
 
-    assertEquals(response.json(), data);
-    assertEquals(response.json(), data);
-    assertEquals(response.json(), data);
+    assertEquals(response.json, data);
+    assertEquals(response.json, data);
+    assertEquals(response.json, data);
   });
 
-  await t.step("json() supports generic type hint", async () => {
+  await t.step("json supports type assertion", async () => {
     interface User {
       id: number;
       name: string;
@@ -142,52 +142,52 @@ Deno.test("HttpResponseSuccessImpl", async (t) => {
     });
     const response = await createSuccessResponse(raw, 10);
 
-    const user = response.json<User>();
+    const user = response.json as User;
     assertEquals(user?.id, 1);
     assertEquals(user?.name, "Alice");
   });
 
-  await t.step("arrayBuffer() returns ArrayBuffer", async () => {
+  await t.step("arrayBuffer returns ArrayBuffer", async () => {
     const bytes = new Uint8Array([1, 2, 3, 4, 5]);
     const raw = new Response(bytes, { status: 200 });
     const response = await createSuccessResponse(raw, 10);
 
-    const buffer = response.arrayBuffer();
+    const buffer = response.arrayBuffer;
     assertInstanceOf(buffer, ArrayBuffer);
     assertEquals(new Uint8Array(buffer!), bytes);
   });
 
-  await t.step("arrayBuffer() returns null when no body", async () => {
+  await t.step("arrayBuffer returns null when no body", async () => {
     const raw = new Response(null, { status: 204 });
     const response = await createSuccessResponse(raw, 10);
 
-    assertEquals(response.arrayBuffer(), null);
+    assertEquals(response.arrayBuffer, null);
   });
 
-  await t.step("blob() returns Blob", async () => {
+  await t.step("blob returns Blob", async () => {
     const raw = new Response("hello", {
       status: 200,
       headers: { "Content-Type": "text/plain" },
     });
     const response = await createSuccessResponse(raw, 10);
 
-    const blob = response.blob();
+    const blob = response.blob;
     assertInstanceOf(blob, Blob);
     assertEquals(await blob!.text(), "hello");
   });
 
-  await t.step("blob() returns null when no body", async () => {
+  await t.step("blob returns null when no body", async () => {
     const raw = new Response(null, { status: 204 });
     const response = await createSuccessResponse(raw, 10);
 
-    assertEquals(response.blob(), null);
+    assertEquals(response.blob, null);
   });
 
-  await t.step("raw() method returns original Response", async () => {
+  await t.step("raw returns original Response", async () => {
     const original = new Response("test", { status: 200 });
     const response = await createSuccessResponse(original, 10);
 
-    assertEquals(response.raw(), original);
+    assertEquals(response.raw, original);
   });
 
   await t.step("url property reflects Response url", async () => {
@@ -235,15 +235,15 @@ Deno.test("HttpResponseErrorImpl", async (t) => {
     });
     const response = await createErrorResponse(raw, 10);
 
-    assertEquals(response.text(), errorBody);
-    assertEquals(response.json(), { error: "not found" });
+    assertEquals(response.text, errorBody);
+    assertEquals(response.json, { error: "not found" });
     assertInstanceOf(response.body, Uint8Array);
   });
 
-  await t.step("raw() returns original Response", async () => {
+  await t.step("raw returns original Response", async () => {
     const original = new Response("error", { status: 500 });
     const response = await createErrorResponse(original, 10);
 
-    assertEquals(response.raw(), original);
+    assertEquals(response.raw, original);
   });
 });

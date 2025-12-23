@@ -533,7 +533,7 @@ class GraphqlClientImpl implements GraphqlClient {
  *   }
  * `, { id: "123" });
  *
- * console.log(response.data());
+ * console.log(response.data);
  * await client.close();
  * ```
  *
@@ -560,7 +560,7 @@ class GraphqlClientImpl implements GraphqlClient {
  * `, { input: { name: "Alice", email: "alice@example.com" } });
  *
  * if (response.ok) {
- *   console.log("Created user:", response.data().createUser.id);
+ *   console.log("Created user:", (response.data as any).createUser.id);
  * }
  *
  * await client.close();

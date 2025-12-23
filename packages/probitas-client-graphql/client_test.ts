@@ -119,7 +119,7 @@ Deno.test("GraphqlClient.query", async (t) => {
     await client.close();
 
     assert(response.ok);
-    assertEquals(response.data(), { user: { id: 1, name: "John" } });
+    assertEquals(response.data, { user: { id: 1, name: "John" } });
     assertEquals(response.error, null);
   });
 
@@ -271,7 +271,7 @@ Deno.test("GraphqlClient.execute", async (t) => {
     const response = await client.execute("query { test }");
     await client.close();
 
-    assertEquals(response.data(), { test: true });
+    assertEquals(response.data, { test: true });
   });
 
   await t.step("works for mutations", async () => {
@@ -287,7 +287,7 @@ Deno.test("GraphqlClient.execute", async (t) => {
     const response = await client.execute("mutation { updateSomething }");
     await client.close();
 
-    assertEquals(response.data(), { updated: true });
+    assertEquals(response.data, { updated: true });
   });
 });
 
@@ -432,7 +432,7 @@ Deno.test("GraphqlClient response", async (t) => {
     const response = await client.query("query { test }");
     await client.close();
 
-    assertInstanceOf(response.raw(), Response);
+    assertInstanceOf(response.raw, Response);
   });
 });
 
@@ -458,8 +458,8 @@ Deno.test("GraphqlClient network errors", async (t) => {
       assertEquals(response.error?.message, "fetch failed");
       assertEquals(response.status, null);
       assertEquals(response.headers, null);
-      assertEquals(response.data(), null);
-      assertEquals(response.raw(), null);
+      assertEquals(response.data, null);
+      assertEquals(response.raw, null);
     },
   );
 
@@ -604,7 +604,7 @@ Deno.test("GraphqlClient partial data with errors", async (t) => {
       await client.close();
 
       assertFalse(response.ok);
-      assertEquals(response.data(), { user: { id: 1 }, posts: null });
+      assertEquals(response.data, { user: { id: 1 }, posts: null });
       assertInstanceOf(response.error, GraphqlExecutionError);
     },
   );

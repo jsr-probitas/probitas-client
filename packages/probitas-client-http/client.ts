@@ -394,7 +394,7 @@ class HttpClientImpl implements HttpClient {
  * const http = createHttpClient({ url: "http://localhost:3000" });
  *
  * const response = await http.get("/users/123");
- * console.log(response.json());
+ * console.log(response.json);
  *
  * await http.close();
  * ```

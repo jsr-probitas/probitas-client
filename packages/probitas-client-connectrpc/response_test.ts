@@ -31,7 +31,7 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
     assertEquals(response.error, null);
     assertEquals(response.statusCode, 0);
     assertEquals(response.statusMessage, null);
-    assertEquals(response.data(), { user: { id: 1, name: "John" } });
+    assertEquals(response.data, { user: { id: 1, name: "John" } });
     assertEquals(response.duration, 100);
   });
 
@@ -51,7 +51,7 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
     assertEquals(response.trailers.get("grpc-status"), "0");
   });
 
-  await t.step("raw() returns response data", () => {
+  await t.step("raw returns response data", () => {
     const rawResponse = { nested: { value: 123 } };
     const response = new ConnectRpcResponseSuccessImpl({
       response: rawResponse,
@@ -60,10 +60,10 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
       duration: 10,
     });
 
-    assertEquals(response.raw(), rawResponse);
+    assertEquals(response.raw, rawResponse);
   });
 
-  await t.step("data() method returns typed data", () => {
+  await t.step("data supports type assertion", () => {
     interface User {
       id: number;
       name: string;
@@ -75,7 +75,7 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
       duration: 100,
     });
 
-    const result = response.data<{ user: User }>();
+    const result = response.data as { user: User } | null;
     assertEquals(result?.user.id, 1);
     assertEquals(result?.user.name, "John");
   });
@@ -88,8 +88,8 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
       duration: 100,
     });
 
-    assertEquals(response.data(), null);
-    assertEquals(response.raw(), null);
+    assertEquals(response.data, null);
+    assertEquals(response.raw, null);
   });
 });
 
@@ -111,10 +111,10 @@ Deno.test("ConnectRpcResponseErrorImpl", async (t) => {
     assertEquals(response.error, rpcError);
     assertEquals(response.statusCode, 5);
     assertEquals(response.statusMessage, "Not found");
-    assertEquals(response.data(), null);
+    assertEquals(response.data, null);
   });
 
-  await t.step("raw() returns ConnectError", () => {
+  await t.step("raw returns ConnectError", () => {
     const connectError = new ConnectError("Internal error", 13);
     const rpcError = fromConnectError(connectError);
     const response = new ConnectRpcResponseErrorImpl({
@@ -125,7 +125,7 @@ Deno.test("ConnectRpcResponseErrorImpl", async (t) => {
       duration: 10,
     });
 
-    assertEquals(response.raw(), connectError);
+    assertEquals(response.raw, connectError);
   });
 
   await t.step("includes headers and trailers", () => {
@@ -203,23 +203,23 @@ Deno.test("ConnectRpcResponseFailureImpl", async (t) => {
     assertEquals(response.trailers, null);
   });
 
-  await t.step("data() returns null", () => {
+  await t.step("data is null", () => {
     const error = new ConnectRpcNetworkError("Network error");
     const response = new ConnectRpcResponseFailureImpl({
       error,
       duration: 5,
     });
 
-    assertEquals(response.data(), null);
+    assertEquals(response.data, null);
   });
 
-  await t.step("raw() returns null", () => {
+  await t.step("raw is null", () => {
     const error = new ConnectRpcNetworkError("Network error");
     const response = new ConnectRpcResponseFailureImpl({
       error,
       duration: 5,
     });
 
-    assertEquals(response.raw(), null);
+    assertEquals(response.raw, null);
   });
 });

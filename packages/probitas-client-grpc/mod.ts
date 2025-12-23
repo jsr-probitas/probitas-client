@@ -37,7 +37,7 @@
  *   "echo",
  *   { message: "Hello!" }
  * );
- * console.log(response.data());
+ * console.log(response.data);
  *
  * await client.close();
  * ```
@@ -68,7 +68,7 @@
  * await using client = createGrpcClient({ url: "http://localhost:50051" });
  *
  * const res = await client.call("echo.EchoService", "echo", { message: "test" });
- * console.log(res.data());
+ * console.log(res.data);
  * // Client automatically closed when block exits
  * ```
  *
@@ -154,7 +154,7 @@ export interface GrpcClientConfig
  *   "echo",
  *   { message: "Hello!" }
  * );
- * console.log(response.data());
+ * console.log(response.data);
  *
  * await client.close();
  * ```
@@ -207,7 +207,7 @@ export interface GrpcClientConfig
  * });
  *
  * const res = await client.call("echo.EchoService", "echo", { message: "test" });
- * console.log(res.data());
+ * console.log(res.data);
  * // Client automatically closed when scope exits
  * ```
  */

@@ -26,7 +26,7 @@ Deno.test("GraphqlResponseSuccessImpl", async (t) => {
     assertEquals(response.processed, true);
     assert(response.ok);
     assertEquals(response.error, null);
-    assertEquals(response.data(), { user: { id: 1, name: "John" } });
+    assertEquals(response.data, { user: { id: 1, name: "John" } });
     assertEquals(response.duration, 100);
     assertEquals(response.status, 200);
     assertEquals(response.url, "http://localhost:4000/graphql");
@@ -56,7 +56,7 @@ Deno.test("GraphqlResponseSuccessImpl", async (t) => {
       raw: rawResponse,
     });
 
-    assertEquals(response.raw(), rawResponse);
+    assertEquals(response.raw, rawResponse);
   });
 
   await t.step("includes headers from raw response", () => {
@@ -76,7 +76,7 @@ Deno.test("GraphqlResponseSuccessImpl", async (t) => {
     assertEquals(response.headers.get("X-Custom-Header"), "test-value");
   });
 
-  await t.step("data() method returns typed data", () => {
+  await t.step("data supports type assertion", () => {
     interface User {
       id: number;
       name: string;
@@ -90,7 +90,7 @@ Deno.test("GraphqlResponseSuccessImpl", async (t) => {
       raw: new Response(),
     });
 
-    const result = response.data<{ user: User }>();
+    const result = response.data as { user: User } | null;
     assertEquals(result?.user.id, 1);
     assertEquals(result?.user.name, "John");
   });
@@ -115,7 +115,7 @@ Deno.test("GraphqlResponseErrorImpl", async (t) => {
     assertEquals(response.processed, true);
     assertFalse(response.ok);
     assertEquals(response.error, error);
-    assertEquals(response.data(), null);
+    assertEquals(response.data, null);
     assertEquals(response.status, 200);
   });
 
@@ -134,7 +134,7 @@ Deno.test("GraphqlResponseErrorImpl", async (t) => {
     });
 
     assertFalse(response.ok);
-    assertEquals(response.data(), { user: { id: 1 }, posts: null });
+    assertEquals(response.data, { user: { id: 1 }, posts: null });
   });
 
   await t.step("includes raw response", () => {
@@ -152,7 +152,7 @@ Deno.test("GraphqlResponseErrorImpl", async (t) => {
       raw: rawResponse,
     });
 
-    assertEquals(response.raw(), rawResponse);
+    assertEquals(response.raw, rawResponse);
   });
 });
 
@@ -195,7 +195,7 @@ Deno.test("GraphqlResponseFailureImpl", async (t) => {
     assertEquals(response.headers, null);
   });
 
-  await t.step("data() returns null", () => {
+  await t.step("data is null", () => {
     const error = new GraphqlNetworkError("Network error");
     const response = new GraphqlResponseFailureImpl({
       url: "http://localhost:4000/graphql",
@@ -203,10 +203,10 @@ Deno.test("GraphqlResponseFailureImpl", async (t) => {
       duration: 5,
     });
 
-    assertEquals(response.data(), null);
+    assertEquals(response.data, null);
   });
 
-  await t.step("raw() returns null", () => {
+  await t.step("raw is null", () => {
     const error = new GraphqlNetworkError("Network error");
     const response = new GraphqlResponseFailureImpl({
       url: "http://localhost:4000/graphql",
@@ -214,6 +214,6 @@ Deno.test("GraphqlResponseFailureImpl", async (t) => {
       duration: 5,
     });
 
-    assertEquals(response.raw(), null);
+    assertEquals(response.raw, null);
   });
 });

@@ -189,9 +189,9 @@ Deno.test({
 
       assert(response.ok);
       assertEquals(response.statusCode, 0);
-      assertExists(response.data());
+      assertExists(response.data);
 
-      const data = response.data<{ message: string }>();
+      const data = response.data as { message: string } | null;
       assertExists(data);
       assertEquals(data.message, "Hello Reflection!");
     });
@@ -205,8 +205,8 @@ Deno.test({
 
       assert(response.ok);
       assertEquals(response.statusCode, 0);
-      assertExists(response.data());
-      const data = response.data<{ message: string }>();
+      assertExists(response.data);
+      const data = response.data as { message: string } | null;
       assertEquals(data?.message, "Test message");
       assertLess(response.duration, 5000);
     });
@@ -377,7 +377,7 @@ Deno.test({
       )
     ) {
       assert(response.ok);
-      messages.push(response.data());
+      messages.push(response.data);
     }
 
     assertEquals(messages.length, 3);
@@ -507,7 +507,7 @@ Deno.test({
 
       assertFalse(response.ok);
       assertEquals(response.statusCode !== 0, true);
-      assertEquals(response.data(), null);
+      assertEquals(response.data, null);
     });
   },
 });

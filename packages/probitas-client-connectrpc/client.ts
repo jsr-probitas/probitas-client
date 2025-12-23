@@ -292,7 +292,7 @@ function toMethodInfo(
  *   "echo",
  *   { message: "Hello!" }
  * );
- * console.log(response.data());
+ * console.log(response.data);
  *
  * await client.close();
  * ```

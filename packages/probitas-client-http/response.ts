@@ -7,7 +7,8 @@ import { HttpError, type HttpFailureError } from "./errors.ts";
  *
  * Provides common properties and methods shared by Success, Error, and Failure responses.
  */
-interface HttpResponseBase extends ClientResult {
+// deno-lint-ignore no-explicit-any
+interface HttpResponseBase<T = any> extends ClientResult {
   /** Result kind discriminator. Always `"http"` for HTTP responses. */
   readonly kind: "http";
 
@@ -30,26 +31,24 @@ interface HttpResponseBase extends ClientResult {
   readonly body: Uint8Array | null;
 
   /** Get body as ArrayBuffer (null if no body or failure). */
-  arrayBuffer(): ArrayBuffer | null;
+  readonly arrayBuffer: ArrayBuffer | null;
 
   /** Get body as Blob (null if no body or failure). */
-  blob(): Blob | null;
+  readonly blob: Blob | null;
 
   /**
    * Get body as text (null if no body or failure).
    */
-  text(): string | null;
+  readonly text: string | null;
 
   /**
    * Get body as parsed JSON (null if no body or failure).
-   * @template T - defaults to any for test convenience
    * @throws SyntaxError if body is not valid JSON
    */
-  // deno-lint-ignore no-explicit-any
-  json<T = any>(): T | null;
+  readonly json: T | null;
 
-  /** Get raw Web standard Response (null for failure). */
-  raw(): globalThis.Response | null;
+  /** Raw Web standard Response (null for failure). */
+  readonly raw: globalThis.Response | null;
 }
 
 /**
@@ -58,7 +57,8 @@ interface HttpResponseBase extends ClientResult {
  * Wraps Web standard Response, allowing body to be read synchronously
  * and multiple times (unlike the streaming-based standard Response).
  */
-export interface HttpResponseSuccess extends HttpResponseBase {
+// deno-lint-ignore no-explicit-any
+export interface HttpResponseSuccess<T = any> extends HttpResponseBase<T> {
   /** Server processed the request. */
   readonly processed: true;
 
@@ -77,8 +77,8 @@ export interface HttpResponseSuccess extends HttpResponseBase {
   /** Response headers. */
   readonly headers: Headers;
 
-  /** Get raw Web standard Response. */
-  raw(): globalThis.Response;
+  /** Raw Web standard Response. */
+  readonly raw: globalThis.Response;
 }
 
 /**
@@ -86,7 +86,8 @@ export interface HttpResponseSuccess extends HttpResponseBase {
  *
  * Server received and processed the request, but returned an error status.
  */
-export interface HttpResponseError extends HttpResponseBase {
+// deno-lint-ignore no-explicit-any
+export interface HttpResponseError<T = any> extends HttpResponseBase<T> {
   /** Server processed the request. */
   readonly processed: true;
 
@@ -105,8 +106,8 @@ export interface HttpResponseError extends HttpResponseBase {
   /** Response headers. */
   readonly headers: Headers;
 
-  /** Get raw Web standard Response. */
-  raw(): globalThis.Response;
+  /** Raw Web standard Response. */
+  readonly raw: globalThis.Response;
 }
 
 /**
@@ -115,7 +116,8 @@ export interface HttpResponseError extends HttpResponseBase {
  * Request could not be processed by the server (network error, DNS failure,
  * connection refused, timeout, aborted, etc.).
  */
-export interface HttpResponseFailure extends HttpResponseBase {
+// deno-lint-ignore no-explicit-any
+export interface HttpResponseFailure<T = any> extends HttpResponseBase<T> {
   /** Server did not process the request. */
   readonly processed: false;
 
@@ -138,7 +140,7 @@ export interface HttpResponseFailure extends HttpResponseBase {
   readonly body: null;
 
   /** No raw response (request didn't reach server). */
-  raw(): null;
+  readonly raw: null;
 }
 
 /**
@@ -178,16 +180,19 @@ export interface HttpResponseFailure extends HttpResponseBase {
  * }
  * ```
  */
-export type HttpResponse =
-  | HttpResponseSuccess
-  | HttpResponseError
-  | HttpResponseFailure;
+// deno-lint-ignore no-explicit-any
+export type HttpResponse<T = any> =
+  | HttpResponseSuccess<T>
+  | HttpResponseError<T>
+  | HttpResponseFailure<T>;
 
 /**
  * Implementation of HttpResponseSuccess.
  * @internal
  */
-export class HttpResponseSuccessImpl implements HttpResponseSuccess {
+// deno-lint-ignore no-explicit-any
+export class HttpResponseSuccessImpl<T = any>
+  implements HttpResponseSuccess<T> {
   readonly kind = "http" as const;
   readonly processed = true as const;
   readonly ok = true as const;
@@ -219,24 +224,23 @@ export class HttpResponseSuccessImpl implements HttpResponseSuccess {
     return this.#body.bytes;
   }
 
-  arrayBuffer(): ArrayBuffer | null {
-    return this.#body.arrayBuffer();
+  get arrayBuffer(): ArrayBuffer | null {
+    return this.#body.arrayBuffer;
   }
 
-  blob(): Blob | null {
-    return this.#body.blob();
+  get blob(): Blob | null {
+    return this.#body.blob;
   }
 
-  text(): string | null {
-    return this.#body.text();
+  get text(): string | null {
+    return this.#body.text;
   }
 
-  // deno-lint-ignore no-explicit-any
-  json<T = any>(): T | null {
-    return this.#body.json<T>();
+  get json(): T | null {
+    return this.#body.json as T | null;
   }
 
-  raw(): globalThis.Response {
+  get raw(): globalThis.Response {
     return this.#raw;
   }
 }
@@ -246,7 +250,8 @@ export class HttpResponseSuccessImpl implements HttpResponseSuccess {
  * Proxies body methods to the HttpError instance.
  * @internal
  */
-export class HttpResponseErrorImpl implements HttpResponseError {
+// deno-lint-ignore no-explicit-any
+export class HttpResponseErrorImpl<T = any> implements HttpResponseError<T> {
   readonly kind = "http" as const;
   readonly processed = true as const;
   readonly ok = false as const;
@@ -278,24 +283,23 @@ export class HttpResponseErrorImpl implements HttpResponseError {
     return this.error.body;
   }
 
-  arrayBuffer(): ArrayBuffer | null {
-    return this.error.arrayBuffer();
+  get arrayBuffer(): ArrayBuffer | null {
+    return this.error.arrayBuffer;
   }
 
-  blob(): Blob | null {
-    return this.error.blob();
+  get blob(): Blob | null {
+    return this.error.blob;
   }
 
-  text(): string | null {
-    return this.error.text();
+  get text(): string | null {
+    return this.error.text;
   }
 
-  // deno-lint-ignore no-explicit-any
-  json<T = any>(): T | null {
-    return this.error.json<T>();
+  get json(): T | null {
+    return this.error.json as T | null;
   }
 
-  raw(): globalThis.Response {
+  get raw(): globalThis.Response {
     return this.#raw;
   }
 }
@@ -304,7 +308,9 @@ export class HttpResponseErrorImpl implements HttpResponseError {
  * Implementation of HttpResponseFailure.
  * @internal
  */
-export class HttpResponseFailureImpl implements HttpResponseFailure {
+// deno-lint-ignore no-explicit-any
+export class HttpResponseFailureImpl<T = any>
+  implements HttpResponseFailure<T> {
   readonly kind = "http" as const;
   readonly processed = false as const;
   readonly ok = false as const;
@@ -316,30 +322,15 @@ export class HttpResponseFailureImpl implements HttpResponseFailure {
   readonly body = null;
   readonly duration: number;
 
+  readonly arrayBuffer = null;
+  readonly blob = null;
+  readonly text = null;
+  readonly json = null;
+  readonly raw = null;
+
   constructor(url: string, duration: number, error: HttpFailureError) {
     this.url = url;
     this.duration = duration;
     this.error = error;
-  }
-
-  arrayBuffer(): null {
-    return null;
-  }
-
-  blob(): null {
-    return null;
-  }
-
-  text(): null {
-    return null;
-  }
-
-  // deno-lint-ignore no-explicit-any
-  json<T = any>(): T | null {
-    return null;
-  }
-
-  raw(): null {
-    return null;
   }
 }

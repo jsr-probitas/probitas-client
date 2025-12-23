@@ -66,17 +66,17 @@ interface ConnectRpcResponseBase<T = any> extends ClientResult {
   readonly duration: number;
 
   /**
-   * Get deserialized response data.
-   * Returns the response message as-is (already deserialized by Connect).
-   * Returns null if the response is an error or has no data.
+   * Deserialized response data.
+   * The response message as-is (already deserialized by Connect).
+   * Null if the response is an error or has no data.
    */
-  data<U = T>(): U | null;
+  readonly data: T | null;
 
   /**
-   * Get raw response or error.
-   * Returns null for failure responses.
+   * Raw response or error.
+   * Null for failure responses.
    */
-  raw(): unknown | null;
+  readonly raw: unknown | null;
 }
 
 /**
@@ -101,7 +101,11 @@ export interface ConnectRpcResponseSuccess<T = any>
   /** Response trailers (sent at end of RPC). */
   readonly trailers: Headers;
 
-  raw(): unknown;
+  /** Raw response. */
+  readonly raw: unknown;
+
+  /** Response data. */
+  readonly data: T | null;
 }
 
 /**
@@ -128,7 +132,11 @@ export interface ConnectRpcResponseError<T = any>
   /** Response trailers (sent at end of RPC). */
   readonly trailers: Headers;
 
-  raw(): ConnectError;
+  /** Raw ConnectError. */
+  readonly raw: ConnectError;
+
+  /** No data for error responses. */
+  readonly data: null;
 }
 
 /**
@@ -155,7 +163,11 @@ export interface ConnectRpcResponseFailure<T = any>
   /** Response trailers (null for failures). */
   readonly trailers: null;
 
-  raw(): null;
+  /** No raw response (request didn't reach server). */
+  readonly raw: null;
+
+  /** No data (request didn't reach server). */
+  readonly data: null;
 }
 
 /**
@@ -220,25 +232,15 @@ export class ConnectRpcResponseSuccessImpl<T>
   readonly headers: Headers;
   readonly trailers: Headers;
   readonly duration: number;
-
-  readonly #response: T | null;
+  readonly data: T | null;
+  readonly raw: T | null;
 
   constructor(params: ConnectRpcResponseSuccessParams<T>) {
     this.headers = params.headers;
     this.trailers = params.trailers;
     this.duration = params.duration;
-    this.#response = params.response;
-  }
-
-  data<U = T>(): U | null {
-    if (this.#response === null || this.#response === undefined) {
-      return null;
-    }
-    return this.#response as U;
-  }
-
-  raw(): T | null {
-    return this.#response;
+    this.data = params.response;
+    this.raw = params.response;
   }
 }
 
@@ -257,25 +259,17 @@ export class ConnectRpcResponseErrorImpl<T>
   readonly headers: Headers;
   readonly trailers: Headers;
   readonly duration: number;
-
-  readonly #connectError: ConnectError;
+  readonly data = null;
+  readonly raw: ConnectError;
 
   constructor(params: ConnectRpcResponseErrorParams) {
     this.headers = params.headers;
     this.trailers = params.trailers;
     this.duration = params.duration;
     this.error = params.rpcError;
-    this.#connectError = params.error;
+    this.raw = params.error;
     this.statusCode = params.rpcError.statusCode;
     this.statusMessage = params.rpcError.statusMessage;
-  }
-
-  data<U = T>(): U | null {
-    return null;
-  }
-
-  raw(): ConnectError {
-    return this.#connectError;
   }
 }
 
@@ -294,17 +288,11 @@ export class ConnectRpcResponseFailureImpl<T>
   readonly headers = null;
   readonly trailers = null;
   readonly duration: number;
+  readonly data = null;
+  readonly raw = null;
 
   constructor(params: ConnectRpcResponseFailureParams) {
     this.error = params.error;
     this.duration = params.duration;
-  }
-
-  data(): null {
-    return null;
-  }
-
-  raw(): null {
-    return null;
   }
 }

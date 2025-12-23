@@ -1,4 +1,4 @@
-import { assertEquals, assertInstanceOf, assertThrows } from "@std/assert";
+import { assertEquals, assertInstanceOf } from "@std/assert";
 import { ClientError } from "@probitas/client";
 import { HttpError } from "./errors.ts";
 
@@ -56,83 +56,83 @@ Deno.test("HttpError", async (t) => {
   await t.step("text() returns body as string", () => {
     const body = new TextEncoder().encode("error message");
     const error = new HttpError(500, "Internal Server Error", { body });
-    assertEquals(error.text(), "error message");
+    assertEquals(error.text, "error message");
   });
 
   await t.step("text() returns null when no body", () => {
     const error = new HttpError(500, "Internal Server Error");
-    assertEquals(error.text(), null);
+    assertEquals(error.text, null);
   });
 
   await t.step("text() can be called multiple times", () => {
     const body = new TextEncoder().encode("error message");
     const error = new HttpError(500, "Internal Server Error", { body });
-    assertEquals(error.text(), error.text());
+    assertEquals(error.text, error.text);
   });
 
-  await t.step("json() returns parsed JSON", () => {
+  await t.step("json returns parsed JSON", () => {
     const body = new TextEncoder().encode('{"code": "NOT_FOUND", "id": 123}');
     const error = new HttpError(404, "Not Found", { body });
-    assertEquals(error.json(), { code: "NOT_FOUND", id: 123 });
+    assertEquals(error.json, { code: "NOT_FOUND", id: 123 });
   });
 
-  await t.step("json() returns null when no body", () => {
+  await t.step("json returns null when no body", () => {
     const error = new HttpError(500, "Internal Server Error");
-    assertEquals(error.json(), null);
+    assertEquals(error.json, null);
   });
 
-  await t.step("json() throws when body is not valid JSON", () => {
+  await t.step("json returns null when body is not valid JSON", () => {
     const body = new TextEncoder().encode("not json");
     const error = new HttpError(500, "Internal Server Error", { body });
-    assertThrows(() => error.json(), SyntaxError);
+    assertEquals(error.json, null);
   });
 
-  await t.step("json() can be called multiple times", () => {
+  await t.step("json can be accessed multiple times", () => {
     const body = new TextEncoder().encode('{"error": true}');
     const error = new HttpError(500, "Internal Server Error", { body });
-    assertEquals(error.json(), error.json());
+    assertEquals(error.json, error.json);
   });
 
-  await t.step("json() supports generic type hint", () => {
+  await t.step("json supports type assertion", () => {
     interface ErrorResponse {
       code: string;
       message: string;
     }
     const body = new TextEncoder().encode('{"code": "ERR", "message": "fail"}');
     const error = new HttpError(500, "Internal Server Error", { body });
-    const data = error.json<ErrorResponse>();
+    const data = error.json as ErrorResponse;
     assertEquals(data?.code, "ERR");
     assertEquals(data?.message, "fail");
   });
 
-  await t.step("arrayBuffer() returns ArrayBuffer", () => {
+  await t.step("arrayBuffer returns ArrayBuffer", () => {
     const body = new TextEncoder().encode("data");
     const error = new HttpError(500, "Internal Server Error", { body });
-    const buffer = error.arrayBuffer();
+    const buffer = error.arrayBuffer;
     assertInstanceOf(buffer, ArrayBuffer);
     assertEquals(buffer?.byteLength, 4);
   });
 
-  await t.step("arrayBuffer() returns null when no body", () => {
+  await t.step("arrayBuffer returns null when no body", () => {
     const error = new HttpError(500, "Internal Server Error");
-    assertEquals(error.arrayBuffer(), null);
+    assertEquals(error.arrayBuffer, null);
   });
 
-  await t.step("blob() returns Blob with content type", () => {
+  await t.step("blob returns Blob with content type", () => {
     const body = new TextEncoder().encode('{"test": true}');
     const headers = new Headers({ "Content-Type": "application/json" });
     const error = new HttpError(500, "Internal Server Error", {
       body,
       headers,
     });
-    const blob = error.blob();
+    const blob = error.blob;
     assertInstanceOf(blob, Blob);
     assertEquals(blob?.type, "application/json");
     assertEquals(blob?.size, body.length);
   });
 
-  await t.step("blob() returns null when no body", () => {
+  await t.step("blob returns null when no body", () => {
     const error = new HttpError(500, "Internal Server Error");
-    assertEquals(error.blob(), null);
+    assertEquals(error.blob, null);
   });
 });

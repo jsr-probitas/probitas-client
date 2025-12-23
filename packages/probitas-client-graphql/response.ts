@@ -57,16 +57,16 @@ interface GraphqlResponseBase<T = any> extends ClientResult {
   readonly url: string;
 
   /**
-   * Get response data (null if no data or request failed).
+   * Response data (null if no data or request failed).
    * Does not throw even if errors are present.
    */
-  data<U = T>(): U | null;
+  readonly data: T | null;
 
   /**
-   * Get the raw Web standard Response object.
-   * Returns null for failure responses.
+   * Raw Web standard Response object.
+   * Null for failure responses.
    */
-  raw(): globalThis.Response | null;
+  readonly raw: globalThis.Response | null;
 }
 
 /**
@@ -88,7 +88,11 @@ export interface GraphqlResponseSuccess<T = any>
   /** Response extensions. */
   readonly extensions: Record<string, unknown> | null;
 
-  raw(): globalThis.Response;
+  /** Raw Web standard Response. */
+  readonly raw: globalThis.Response;
+
+  /** Response data (null if no data). */
+  readonly data: T | null;
 }
 
 /**
@@ -112,7 +116,11 @@ export interface GraphqlResponseError<T = any> extends GraphqlResponseBase<T> {
   /** Response extensions. */
   readonly extensions: Record<string, unknown> | null;
 
-  raw(): globalThis.Response;
+  /** Raw Web standard Response. */
+  readonly raw: globalThis.Response;
+
+  /** Response data (null if no data, may be partial data with errors). */
+  readonly data: T | null;
 }
 
 /**
@@ -136,7 +144,11 @@ export interface GraphqlResponseFailure<T = any>
   /** HTTP response headers (null for failures). */
   readonly headers: null;
 
-  raw(): null;
+  /** No raw response (request didn't reach server). */
+  readonly raw: null;
+
+  /** No data (request didn't reach server). */
+  readonly data: null;
 }
 
 /**
@@ -206,25 +218,17 @@ export class GraphqlResponseSuccessImpl<T>
   readonly status: number;
   readonly headers: Headers;
 
-  readonly #data: T | null;
-  readonly #raw: globalThis.Response;
+  readonly data: T | null;
+  readonly raw: globalThis.Response;
 
   constructor(params: GraphqlResponseSuccessParams<T>) {
     this.url = params.url;
-    this.#data = params.data;
-    this.#raw = params.raw;
+    this.data = params.data;
+    this.raw = params.raw;
     this.extensions = params.extensions;
     this.duration = params.duration;
     this.status = params.status;
     this.headers = params.raw.headers;
-  }
-
-  data<U = T>(): U | null {
-    return this.#data as U | null;
-  }
-
-  raw(): globalThis.Response {
-    return this.#raw;
   }
 }
 
@@ -243,26 +247,18 @@ export class GraphqlResponseErrorImpl<T> implements GraphqlResponseError<T> {
   readonly status: number;
   readonly headers: Headers;
 
-  readonly #data: T | null;
-  readonly #raw: globalThis.Response;
+  readonly data: T | null;
+  readonly raw: globalThis.Response;
 
   constructor(params: GraphqlResponseErrorParams<T>) {
     this.url = params.url;
-    this.#data = params.data;
-    this.#raw = params.raw;
+    this.data = params.data;
+    this.raw = params.raw;
     this.error = params.error;
     this.extensions = params.extensions;
     this.duration = params.duration;
     this.status = params.status;
     this.headers = params.raw.headers;
-  }
-
-  data<U = T>(): U | null {
-    return this.#data as U | null;
-  }
-
-  raw(): globalThis.Response {
-    return this.#raw;
   }
 }
 
@@ -281,18 +277,12 @@ export class GraphqlResponseFailureImpl<T>
   readonly headers = null;
   readonly duration: number;
   readonly url: string;
+  readonly data = null;
+  readonly raw = null;
 
   constructor(params: GraphqlResponseFailureParams) {
     this.url = params.url;
     this.error = params.error;
     this.duration = params.duration;
-  }
-
-  data(): null {
-    return null;
-  }
-
-  raw(): null {
-    return null;
   }
 }

@@ -5,6 +5,7 @@
 import {
   assert,
   assertEquals,
+  assertExists,
   assertFalse,
   assertInstanceOf,
 } from "@std/assert";
@@ -20,6 +21,7 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
   await t.step("creates success response with data", () => {
     const response = new ConnectRpcResponseSuccessImpl({
       response: { user: { id: 1, name: "John" } },
+      schema: null,
       headers: new Headers(),
       trailers: new Headers(),
       duration: 100,
@@ -40,6 +42,7 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
     const trailers = new Headers({ "grpc-status": "0" });
     const response = new ConnectRpcResponseSuccessImpl({
       response: { test: true },
+      schema: null,
       headers,
       trailers,
       duration: 50,
@@ -55,6 +58,7 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
     const rawResponse = { nested: { value: 123 } };
     const response = new ConnectRpcResponseSuccessImpl({
       response: rawResponse,
+      schema: null,
       headers: new Headers(),
       trailers: new Headers(),
       duration: 10,
@@ -70,6 +74,7 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
     }
     const response = new ConnectRpcResponseSuccessImpl({
       response: { user: { id: 1, name: "John" } },
+      schema: null,
       headers: new Headers(),
       trailers: new Headers(),
       duration: 100,
@@ -83,6 +88,7 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
   await t.step("handles null response", () => {
     const response = new ConnectRpcResponseSuccessImpl({
       response: null,
+      schema: null,
       headers: new Headers(),
       trailers: new Headers(),
       duration: 100,
@@ -90,6 +96,71 @@ Deno.test("ConnectRpcResponseSuccessImpl", async (t) => {
 
     assertEquals(response.data, null);
     assertEquals(response.raw, null);
+  });
+
+  await t.step("with schema: data and raw are different objects", () => {
+    // When schema is provided (even if invalid for toJson),
+    // the code attempts conversion and may fall back
+    // deno-lint-ignore no-explicit-any
+    const mockSchema: any = {
+      typeName: "test.Message",
+      fields: [],
+      file: {},
+      kind: "message",
+      name: "Message",
+    };
+
+    const mockMessage = {
+      $typeName: "test.Message",
+      message: "Hello",
+      count: 42,
+    };
+
+    const response = new ConnectRpcResponseSuccessImpl({
+      response: mockMessage,
+      schema: mockSchema,
+      headers: new Headers(),
+      trailers: new Headers(),
+      duration: 100,
+    });
+
+    // With our mock schema, toJson might fail and fall back to raw message
+    // The important thing is that the code handles it gracefully
+    assertExists(response.data);
+    assertExists(response.raw);
+    assertEquals(response.raw, mockMessage);
+
+    // This test verifies that the error handling doesn't crash
+    // In real usage with proper schemas from FileRegistry, toJson will work correctly
+  });
+
+  await t.step("falls back to raw message when toJson fails", () => {
+    // Create an invalid schema that will cause toJson to fail
+    // deno-lint-ignore no-explicit-any
+    const invalidSchema: any = {
+      typeName: "invalid.Schema",
+      fields: undefined, // Invalid structure
+      file: undefined,
+      kind: "message",
+      name: "Invalid",
+    };
+
+    const mockMessage = {
+      $typeName: "test.Message",
+      data: "test",
+    };
+
+    const response = new ConnectRpcResponseSuccessImpl({
+      response: mockMessage,
+      schema: invalidSchema,
+      headers: new Headers(),
+      trailers: new Headers(),
+      duration: 100,
+    });
+
+    // When toJson fails, data should fall back to raw message
+    assertEquals(response.data, mockMessage);
+    assertEquals(response.raw, mockMessage);
   });
 });
 

@@ -10,6 +10,7 @@
  *
  * - **Native gRPC**: Uses gRPC protocol (HTTP/2 with binary protobuf)
  * - **Server Reflection**: Auto-discover services and methods at runtime
+ * - **Field Name Conversion**: Automatic snake_case ↔ camelCase conversion
  * - **TLS Support**: Configure secure connections with custom certificates
  * - **Duration Tracking**: Built-in timing for performance monitoring
  * - **Error Handling**: Test error responses without throwing exceptions
@@ -56,6 +57,38 @@
  * // Get method information
  * const info = await client.reflection.getServiceInfo("echo.EchoService");
  * console.log("Methods:", info.methods);
+ *
+ * await client.close();
+ * ```
+ *
+ * ## Field Name Conventions
+ *
+ * The client automatically handles field name conversion between protobuf and JavaScript:
+ *
+ * - **Request**: Accept both `snake_case` (protobuf) and `camelCase` (JavaScript) field names
+ * - **Response**:
+ *   - `response.data` — Plain JSON with `camelCase` fields (no `$typeName`)
+ *   - `response.raw` — Original protobuf Message with metadata (includes `$typeName`)
+ *
+ * ```ts
+ * import { createGrpcClient } from "@probitas/client-grpc";
+ *
+ * const client = createGrpcClient({ url: "http://localhost:50051" });
+ *
+ * // Request: Both camelCase and snake_case work
+ * const response = await client.call("echo.Echo", "echoWithDelay", {
+ *   message: "hello",
+ *   delayMs: 100,        // camelCase (recommended for JavaScript)
+ *   // delay_ms: 100,    // snake_case (protobuf style) also works
+ * });
+ *
+ * // Response data: JSON with camelCase fields
+ * console.log(response.data);
+ * // { message: "hello", metadata: {...} }  ← no $typeName
+ *
+ * // Response raw: protobuf Message with metadata
+ * console.log(response.raw);
+ * // { $typeName: "echo.EchoResponse", message: "hello", ... }
  *
  * await client.close();
  * ```
